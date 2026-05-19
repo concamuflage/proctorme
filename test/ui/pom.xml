@@ -1,0 +1,115 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.asianfit</groupId>
+  <artifactId>ui-tests</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <selenium.version>4.29.0</selenium.version>
+    <testng.version>7.10.2</testng.version>
+    <cucumber.version>7.20.1</cucumber.version>
+    <webdrivermanager.version>5.9.3</webdrivermanager.version>
+    <restassured.version>5.5.1</restassured.version>
+    <jbcrypt.version>0.4</jbcrypt.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>${selenium.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.bonigarcia</groupId>
+      <artifactId>webdrivermanager</artifactId>
+      <version>${webdrivermanager.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-java</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-testng</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>${testng.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.7.7</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <version>${restassured.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mindrot</groupId>
+      <artifactId>jbcrypt</artifactId>
+      <version>${jbcrypt.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.2</version>
+        <configuration>
+          <includes>
+            <include>**/*Runner.java</include>
+            <include>**/*Test.java</include>
+          </includes>
+
+          <!-- Enable parallel execution for TestNG methods (Cucumber scenarios) -->
+          <parallel>methods</parallel>
+
+          <!-- Maximum number of parallel threads -->
+          <threadCount>5</threadCount>
+
+          <!-- Thread count specifically for Cucumber DataProvider (scenarios) -->
+          <dataproviderthreadcount>5</dataproviderthreadcount>
+
+
+          <properties>
+            <property>
+              
+              <name>listener</name>
+              <value>com.asianfit.ui.listeners.FailFastListener</value>
+            </property>
+          </properties>
+          <systemPropertyVariables>
+            <baseUrl>${baseUrl}</baseUrl>
+            <headless>${headless}</headless>
+            <testUserEmail>${testUserEmail}</testUserEmail>
+            <testUserPassword>${testUserPassword}</testUserPassword>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,10 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.maven.enabled": true,
+    "cucumber.features": [
+        "test/ui/src/test/resources/features/**/*.feature"
+    ],
+    "cucumber.glue": [
+        "test/ui/src/test/java/**/*.java"
+    ]
+}

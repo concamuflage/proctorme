@@ -1,0 +1,13 @@
+auth.csrf: /api/auth/csrf
+auth.credentials: /api/auth/callback/credentials
+auth.session: /api/auth/session
+profile.current: /api/profile
+account.current: /api/account
+cart.current: /api/cart
+orders.mockPayment: /api/orders/mock-payment
+orders.list: /api/profile/orders
+orders.single: /api/profile/orders/{orderId}
+orders.invoicePayload: /api/profile/orders/{orderId}/invoice
+orders.invoicePdf: /api/profile/orders/{orderId}/invoice/pdf
+invoice.generatePdf: /api/invoice
+stripe.webhook: /api/stripe/webhook
