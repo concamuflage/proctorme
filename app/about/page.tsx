@@ -1,52 +1,54 @@
+import Link from "next/link";
+import { SITE_NAME } from "@/lib/proctor";
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14 lg:py-16">
-        <h1 className="text-3xl font-semibold tracking-tight">About</h1>
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:py-16">
+        <section className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              Interview proctoring
+            </div>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
+              Book a verified proctor for the room where interviews happen.
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-zinc-700">
+              {SITE_NAME} helps interviewers reserve trained proctors for in-person hiring
+              sessions, assessments, and panel interviews. Pick the proctoring profile that
+              matches the session, choose the location details at checkout, and keep payment
+              handled through the existing secure flow.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/proctors"
+                className="rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+              >
+                Find proctors
+              </Link>
+              <Link
+                href="/contact"
+                className="rounded-full border border-zinc-300 px-5 py-3 text-sm font-medium text-zinc-900 hover:border-zinc-500"
+              >
+                Contact scheduling
+              </Link>
+            </div>
+          </div>
 
-        <div className="mt-6 max-w-3xl space-y-5 text-base leading-8 text-zinc-700">
-          <p>
-            As someone who&apos;s 5&apos;5&quot; living in the U.S., I know how frustrating it can
-            be to find clothes that actually fit. Even the smallest sizes from brands like Nike
-            often have body lengths that are too long, and sleeves on jackets or hoodies almost
-            always extend past where they should.
-          </p>
-
-          <p>
-            Pants are a bit easier to deal with. You can usually get them hemmed, and some brands
-            even offer that service in-store. But tops are a different story. Many pieces have
-            design details on the sleeves or cuffs, which makes alterations difficult without
-            ruining the original look. I once had a Paul &amp; Shark jacket altered, and honestly,
-            I wasn&apos;t satisfied with the result. That&apos;s why I&apos;m focusing on topwear first:
-            it&apos;s the bigger problem.
-          </p>
-
-          <p>
-            Unlike brands like Ash &amp; Erie, Abbreviated, or Under 5&apos;10, I&apos;m not trying to
-            create a new label specifically for shorter men. Instead, the goal is to bring
-            mainstream brands that already work better for shorter builds. Right now, we&apos;re
-            starting with Nike, and we&apos;ll gradually add more brands. Pants will come in a
-            later phase.
-          </p>
-
-          <p>
-            At the moment, our prices aren&apos;t the most competitive. We&apos;re currently purchasing
-            items at retail prices in China and shipping them to customers. As we grow, we plan
-            to source directly from wholesalers to offer better pricing.
-          </p>
-
-          <p>
-            If demand continues to grow, the next step will be importing products directly into
-            the U.S. and shipping locally, which will help reduce both costs and delivery times.
-          </p>
-
-          <p>
-            Our mission is simple: to provide well-fitting products at reasonable prices for
-            people who struggle to find the right fit.
-          </p>
-
-          <p>Happy shopping!</p>
-        </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              ["Identity checks", "Confirm candidate and interviewer attendance before the session starts."],
+              ["Room readiness", "Validate the specified site, seating, device setup, and basic ground rules."],
+              ["Live observation", "Monitor the interview room and document session incidents when needed."],
+              ["Checkout ready", "Reserve the assignment and pay without changing the existing account flow."],
+            ].map(([title, copy]) => (
+              <div key={title} className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-600">{copy}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
     </div>
   );

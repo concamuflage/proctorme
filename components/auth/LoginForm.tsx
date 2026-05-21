@@ -64,7 +64,7 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
     // In production, you normally would NOT do this.
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const callbackUrl = searchParams.get("callbackUrl") ?? "/products";
+    const callbackUrl = searchParams.get("callbackUrl") ?? "/proctors";
 
     // Ask NextAuth to validate credentials without doing a full redirect.
     // Call NextAuth's credentials provider.

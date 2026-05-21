@@ -1,11 +1,11 @@
 export type InvoiceAddress = {
-  name: string;
   street: string;
   city: string;
   state: string;
   zipCode: string;
   country: string;
-  phone: string;
+  name?: string;
+  phone?: string;
 };
 
 export type InvoiceItem = {
@@ -33,8 +33,8 @@ export type InvoicePayload = {
 };
 
 type PdfCommand = string;
-const BUSINESS_EMAIL = "info@outlierfit.shop";
-const BUSINESS_WEBSITE = "www.outlierfit.shop";
+const BUSINESS_EMAIL = "info@proctorme.shop";
+const BUSINESS_WEBSITE = "www.proctorme.shop";
 
 function toPdfSafeText(value: string) {
   return value
@@ -99,12 +99,10 @@ function wrapText(text: string, maxWidth: number, fontSize: number) {
 
 function formatAddress(address: InvoiceAddress) {
   return [
-    address.name,
     address.street,
     `${address.city}, ${address.state} ${address.zipCode}`,
     address.country,
-    address.phone,
-  ];
+  ].filter(Boolean);
 }
 
 function pdfText(x: number, y: number, text: string, options?: { size?: number; font?: "F1" | "F2"; color?: [number, number, number] }) {
@@ -203,7 +201,7 @@ export function createInvoiceNumber(date = new Date(), sequenceNumber?: number |
 
   const sequence = sequenceNumber == null ? "" : `-${String(sequenceNumber)}`;
 
-  return `OF-${stamp}${sequence}`;
+  return `PM-${stamp}${sequence}`;
 }
 
 export function buildInvoicePdf(payload: InvoicePayload) {
@@ -224,7 +222,7 @@ export function buildInvoicePdf(payload: InvoicePayload) {
     radius: 22,
   }));
 
-  commands.push(pdfText(margin + 24, headerY + headerHeight - 44, "OutlierFit", { size: 24, font: "F2" }));
+  commands.push(pdfText(margin + 24, headerY + headerHeight - 44, SITE_NAME, { size: 24, font: "F2" }));
   let businessY = headerY + headerHeight - 82;
   const businessLines = ["", BUSINESS_WEBSITE, BUSINESS_EMAIL];
   for (const line of businessLines) {
@@ -265,7 +263,7 @@ export function buildInvoicePdf(payload: InvoicePayload) {
   }
 
   const addressTop = 572;
-  drawAddressCard(commands, margin, addressTop, addressWidth, "Shipping address", payload.shippingAddress);
+  drawAddressCard(commands, margin, addressTop, addressWidth, "Interview location", payload.shippingAddress);
   drawAddressCard(commands, margin + addressWidth + gap, addressTop, addressWidth, "Billing address", payload.billingAddress);
 
   const cardX = margin;
@@ -277,14 +275,14 @@ export function buildInvoicePdf(payload: InvoicePayload) {
     radius: 22,
   }));
 
-  commands.push(pdfText(cardX + 26, cardY + cardHeight - 34, "Order summary", { size: 16, font: "F2" }));
+  commands.push(pdfText(cardX + 26, cardY + cardHeight - 34, "Booking summary", { size: 16, font: "F2" }));
 
   const rightColumnX = cardX + contentWidth - 26;
   const itemTopY = cardY + cardHeight - 106;
   const itemColumnWidth = contentWidth - 52;
   let currentItemY = itemTopY - 10;
 
-  commands.push(pdfText(cardX + 26, itemTopY + 22, "Item", { size: 10, font: "F2", color: [0.42, 0.44, 0.49] }));
+  commands.push(pdfText(cardX + 26, itemTopY + 22, "Proctor", { size: 10, font: "F2", color: [0.42, 0.44, 0.49] }));
   commands.push(pdfText(cardX + 250, itemTopY + 22, "Details", { size: 10, font: "F2", color: [0.42, 0.44, 0.49] }));
   const totalHeader = "Line total";
   commands.push(
@@ -300,8 +298,8 @@ export function buildInvoicePdf(payload: InvoicePayload) {
   for (const item of payload.items) {
     const itemDetails = [
       `Qty ${item.quantity}`,
-      item.color ? `Color ${item.color}` : null,
-      item.size ? `Size ${item.size}` : null,
+      item.color ? `Location ${item.color}` : null,
+      item.size ? `Session ${item.size}` : null,
       `Unit ${formatUsd(item.unitPriceUsd)}`,
     ]
       .filter(Boolean)
@@ -323,7 +321,7 @@ export function buildInvoicePdf(payload: InvoicePayload) {
 
   const totals = [
     ["Subtotal", formatUsd(payload.subtotalUsd), false],
-    [`Shipping (${payload.shippingModeLabel})`, formatUsd(payload.shippingUsd), false],
+    [`Site coordination (${payload.shippingModeLabel})`, formatUsd(payload.shippingUsd), false],
     ...(payload.discountAmountUsd && payload.discountAmountUsd > 0
       ? [[`Discount${payload.promotionCode ? ` (${payload.promotionCode})` : ""}`, `-${formatUsd(payload.discountAmountUsd)}`, false] as const]
       : []),
@@ -372,3 +370,4 @@ export function buildInvoicePdf(payload: InvoicePayload) {
 
   return new TextEncoder().encode(pdf);
 }
+import { SITE_NAME } from "@/lib/proctor";

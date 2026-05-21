@@ -1,11 +1,10 @@
-require("dotenv").config();
+require("./config/env");
 const express = require("express");
 const cors = require("cors");
 
 const app = express();
-const productsRouter = require("./routes/products");
+const proctorsRouter = require("./routes/proctors");
 const authRouter = require("./routes/auth");
-const shippingRouter = require("./routes/shipping");
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN;
 const authRateLimitStore = new Map();
 
@@ -85,8 +84,7 @@ authRateLimitCleanupTimer.unref();
 
 // The paths
 
-app.use("/products", productsRouter);
-app.use("/shipping", shippingRouter);
+app.use("/proctors", proctorsRouter);
 app.use("/auth", authRateLimiter, authRouter);
 
 const PORT = process.env.PORT;

@@ -32,7 +32,7 @@ function loadEnvFile(filePath) {
   }
 }
 
-loadEnvFile(path.join(process.cwd(), ".env.local"));
+loadEnvFile(path.join(process.cwd(), ".env"));
 
 function requiredEnv(name) {
   const value = process.env[name];

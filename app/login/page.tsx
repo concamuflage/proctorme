@@ -16,7 +16,7 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    const callbackUrl = searchParams.get("callbackUrl") ?? "/products";
+    const callbackUrl = searchParams.get("callbackUrl") ?? "/proctors";
     router.replace(callbackUrl);
   }, [router, searchParams, status]);
 

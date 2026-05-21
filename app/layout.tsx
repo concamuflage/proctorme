@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer";
 import CartDrawer from "@/components/cart/CartDrawer";
 import PageTitle from "@/components/layout/PageTitle";
 import Providers from "@/app/providers";
+import { SITE_NAME } from "@/lib/proctor";
 
 const GOOGLE_TAG_ID = "G-SBD4K910T7";
 
@@ -21,8 +22,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OutlierFit",
-  description: "Mainstream Brands for Shorter Men",
+  title: SITE_NAME,
+  description: "Book verified proctors for in-person interview sessions.",
 };
 
 export default function RootLayout({

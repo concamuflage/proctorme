@@ -2,9 +2,19 @@
     "java.configuration.updateBuildConfiguration": "automatic",
     "java.import.maven.enabled": true,
     "cucumber.features": [
-        "test/ui/src/test/resources/features/**/*.feature"
+        "test/ui/src/test/resources/features/**/*.feature",
+        "playwright-tests/features/**/*.feature"
     ],
     "cucumber.glue": [
-        "test/ui/src/test/java/**/*.java"
+        "test/ui/src/test/java/**/*.java",
+        "playwright-tests/features/step-definitions/**/*.js"
+    ],
+    "cucumberautocomplete.steps": [
+        "test/ui/src/test/java/**/*.java",
+        "playwright-tests/features/step-definitions/**/*.js"
+    ],
+    "cucumberautocomplete.syncfeatures": [
+        "test/ui/src/test/resources/features/**/*.feature",
+        "playwright-tests/features/**/*.feature"
     ]
 }

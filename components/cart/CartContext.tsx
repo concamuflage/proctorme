@@ -9,10 +9,6 @@ import React, {
   useRef      // Hook to persist mutable values across renders without triggering re-renders
 } from "react";
 import { useSession } from "next-auth/react";
-import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
-
-const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
-
 // Represents a single item in the shopping cart with all necessary details and quantity
 type CartItem = {
   id: string;
@@ -274,70 +270,58 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (state.items.length === 0) return;
 
-    const productIds = Array.from(
+    const proctorIds = Array.from(
       new Set(
         state.items
           .map((item) => {
-            const [productId] = item.id.split("-");
-            return productId;
+            const [, proctorId] = item.id.split("-");
+            return proctorId;
           })
-          .filter((productId) => productId.length > 0)
+          .filter((proctorId) => proctorId.length > 0)
       )
     );
 
-    if (productIds.length === 0) return;
+    if (proctorIds.length === 0) return;
 
     let cancelled = false;
 
-    const syncCartWeights = async () => {
+    const syncCartProctors = async () => {
       try {
-        const products = await Promise.all(
-          productIds.map(async (productId) => {
-            const res = await fetch(`${CLIENT_API_BASE_PATH}/products/${productId}`);
+        const proctors = await Promise.all(
+          proctorIds.map(async (proctorId) => {
+            const res = await fetch(`/api/proctors/${proctorId}`);
             if (!res.ok) return null;
             const data = await res.json();
             return {
-              productId,
-              variants: Array.isArray(data?.variants) ? data.variants : [],
-              weightKg:
-                data?.weight_kg === null || data?.weight_kg === undefined
-                  ? null
-                  : Number(data.weight_kg),
+              proctorId,
+              rateUsd: data?.rateUsd == null ? null : Number(data.rateUsd),
             };
           })
         );
 
         if (cancelled) return;
 
-        const productById = new Map(
-          products
+        const proctorById = new Map(
+          proctors
             .filter(
               (
-                product
-              ): product is {
-                productId: string;
-                weightKg: number | null;
-                variants: Array<{ variant_id?: number; cost_rmb?: number | null }>;
-              } => product !== null
+                proctor
+              ): proctor is {
+                proctorId: string;
+                rateUsd: number | null;
+              } => proctor !== null
             )
-            .map((product) => [product.productId, product])
+            .map((proctor) => [proctor.proctorId, proctor])
         );
 
         const mergedItems = state.items
           .map((item) => {
-            const [productId, variantIdText] = item.id.split("-");
-            const product = productById.get(productId);
-            if (!product) return null;
+            const [, proctorId] = item.id.split("-");
+            const proctor = proctorById.get(proctorId);
+            if (!proctor) return null;
 
-            const nextWeightKg = product.weightKg ?? null;
-            const variantId = Number(variantIdText);
-            const matchedVariant = product.variants.find(
-              (variant) => Number(variant.variant_id) === variantId
-            );
-            const nextPrice =
-              matchedVariant?.cost_rmb == null
-                ? item.price
-                : Math.round(Number(matchedVariant.cost_rmb) * RMB_TO_USD);
+            const nextWeightKg = 1;
+            const nextPrice = proctor.rateUsd == null ? item.price : proctor.rateUsd;
 
             if (item.weightKg === nextWeightKg && item.price === nextPrice) return null;
 
@@ -348,7 +332,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             };
           })
           .filter(
-            (item): item is { id: string; weightKg: number | null; price: number } => item !== null
+            (item): item is { id: string; weightKg: number; price: number } => item !== null
           );
 
         if (mergedItems.length > 0) {
@@ -359,7 +343,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    syncCartWeights();
+    syncCartProctors();
 
     return () => {
       cancelled = true;

@@ -2,14 +2,14 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-const SITE_NAME = "OutlierFit";
+import { SITE_NAME } from "@/lib/proctor";
 
 const STATIC_TITLES: Record<string, string> = {
-  "/": "About OutlierFit",
-  "/about": "About OutlierFit",
-  "/contact": "Contact OutlierFit",
-  "/products": "Browse Products",
-  "/cart": "Shopping Cart",
+  "/": `About ${SITE_NAME}`,
+  "/about": `About ${SITE_NAME}`,
+  "/contact": `Contact ${SITE_NAME}`,
+  "/proctors": "Find Proctors",
+  "/cart": "Booking Review",
   "/checkout/success": "Order Confirmation",
   "/login": "Sign In",
   "/signup": "Create Account",
@@ -18,8 +18,8 @@ const STATIC_TITLES: Record<string, string> = {
   "/verify-email": "Verify Email",
   "/profile": "Profile",
   "/profile/orders": "Orders",
-  "/policies/returns": "Returns Policy",
-  "/policies/shipping": "Shipping Policy",
+  "/policies/returns": "Cancellation Policy",
+  "/policies/shipping": "Service Areas",
 };
 
 function withSiteName(title: string) {
@@ -36,7 +36,7 @@ export default function PageTitle() {
   useEffect(() => {
     if (!pathname) return;
 
-    if (pathname.match(/^\/products\/[^/]+$/)) return;
+    if (pathname.match(/^\/proctors\/[^/]+$/)) return;
 
     document.title = withSiteName(staticTitleForPath(pathname));
   }, [pathname]);

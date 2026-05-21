@@ -36,7 +36,7 @@ export default function CartItemRow({
           <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs text-zinc-500">
-            No image
+            Proctor
           </div>
         )}
       </div>
@@ -48,13 +48,13 @@ export default function CartItemRow({
           <div className="min-w-0">
             <div className="text-sm font-medium text-zinc-900 sm:truncate">{item.name}</div>
             <div className="mt-1 text-xs text-zinc-500">
-              {item.color ? `Color: ${item.color}` : ""}
+              {item.color ? `Location: ${item.color}` : ""}
               {item.color && item.size ? " · " : ""}
-              {item.size ? `Size: ${item.size}` : ""}
+              {item.size ? `Session: ${item.size}` : ""}
             </div>
             {item.weightKg != null ? (
               <div className="mt-1 text-xs text-zinc-500">
-                Estimated weight per item: {item.weightKg.toFixed(2)} kg
+                Coordination units: {item.weightKg.toFixed(2)}
               </div>
             ) : null}
           </div>
@@ -75,7 +75,7 @@ export default function CartItemRow({
   
               onClick={() => onUpdateQty(item.id, item.qty - 1)}
               className="h-8 w-8 rounded-full border border-zinc-200 text-sm hover:border-zinc-400"
-              aria-label="Decrease quantity"
+              aria-label="Decrease sessions"
               data-testid={`${testIdPrefix}-item-decrease-${item.id}`}
             >
               -
@@ -88,7 +88,7 @@ export default function CartItemRow({
               // Calls onUpdateQty with the new quantity increased by 1
               onClick={() => onUpdateQty(item.id, item.qty + 1)}
               className="h-8 w-8 rounded-full border border-zinc-200 text-sm hover:border-zinc-400"
-              aria-label="Increase quantity"
+              aria-label="Increase sessions"
               data-testid={`${testIdPrefix}-item-increase-${item.id}`}
             >
               +

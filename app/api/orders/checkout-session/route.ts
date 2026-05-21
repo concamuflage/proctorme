@@ -101,7 +101,7 @@ export async function POST(request: Request) {
           currency: "usd",
           unit_amount: Math.round(Number(checkoutPayload.shippingUsd) * 100),
           product_data: {
-            name: "Shipping",
+            name: "Site coordination",
           },
         },
       });

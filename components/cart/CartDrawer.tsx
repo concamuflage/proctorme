@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useCart } from "@/components/cart/CartContext"; // useCart is a custom hook that provides access to the shopping cart's state and actions.
 import ItemsPanel from "@/components/cart/ItemsPanel";
 import OrderSummary from "@/components/cart/OrderSummary";
-import { useShippingOptions } from "@/components/cart/useShippingOptions";
-import { getBoxWeightKg } from "@/lib/shipping";
 
 export default function CartDrawer() {
   
@@ -22,21 +20,11 @@ export default function CartDrawer() {
     isOpen,
     subtotal,
     totalWeightKg,
-    selectedShippingModeId,
-    setSelectedShippingModeId,
     closeCart,
     removeItem,
     updateQty,
     clearCart,
   } = useCart();
-  const boxWeightKg = getBoxWeightKg(totalWeightKg);
-  const shipmentWeightKg = totalWeightKg + boxWeightKg;
-  const {
-    shippingError,
-    shippingLoading,
-    shippingOptions,
-    selectedShippingOption,
-  } = useShippingOptions(shipmentWeightKg, selectedShippingModeId, setSelectedShippingModeId);
 
   return (
     <div
@@ -68,12 +56,12 @@ export default function CartDrawer() {
         }
         role="dialog"
         aria-modal="true"
-        aria-label="Shopping cart"
+        aria-label="Booking cart"
         data-testid="cart-drawer"
       >
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4 sm:px-6">
-            <div className="text-base font-semibold">Cart</div>
+            <div className="text-base font-semibold">Booking cart</div>
             <button
               type="button"
               onClick={closeCart} // Close button closes the cart drawer
@@ -90,21 +78,17 @@ export default function CartDrawer() {
               onRemove={removeItem}
               onUpdateQty={updateQty}
               priceFractionDigits={0}
+              title="Selected proctors"
+              emptyMessage="No proctors selected."
               testIdPrefix="cart-drawer"
             />
             <section className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
               <OrderSummary
                 subtotal={subtotal}
                 totalWeightKg={totalWeightKg}
-                shippingOptions={shippingOptions}
-                selectedShippingModeId={selectedShippingModeId}
-                selectedShippingOption={selectedShippingOption}
-                onSelectShippingMode={setSelectedShippingModeId}
-                shippingError={shippingError}
-                shippingLoading={shippingLoading}
-                radioName="drawer-shipping-mode"
                 testIdPrefix="cart-drawer"
                 legacySubtotalTestId="cart-drawer-subtotal"
+                title="Booking summary"
               />
             </section>
           </div>
@@ -118,7 +102,7 @@ export default function CartDrawer() {
                 onClick={closeCart}
                 data-testid="cart-drawer-view-cart"
               >
-                View cart
+                Review booking
               </Link>
               {/* If there are items, show a Clear cart button to remove all items */}
               {items.length > 0 ? (
@@ -128,7 +112,7 @@ export default function CartDrawer() {
                   className="text-xs text-zinc-500 hover:text-zinc-900"
                   data-testid="cart-drawer-clear-cart"
                 >
-                  Clear cart
+                  Clear booking
                 </button>
               ) : null}
             </div>

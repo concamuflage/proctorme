@@ -11,7 +11,7 @@ function isValidAddress(address: unknown) {
   if (!address || typeof address !== "object") return false;
 
   const candidate = address as Record<string, unknown>;
-  return ["name", "street", "city", "state", "zipCode", "country", "phone"].every(
+  return ["street", "city", "state", "zipCode", "country"].every(
     (field) => typeof candidate[field] === "string" && candidate[field]?.toString().trim().length > 0
   );
 }

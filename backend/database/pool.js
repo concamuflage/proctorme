@@ -1,22 +1,8 @@
-const path = require("path");
-const fs = require("fs");
-const dotenv = require("dotenv");
+require("../config/env");
 const { Pool } = require("pg");
 
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return {};
-  }
-
-  return dotenv.parse(fs.readFileSync(filePath));
-}
-
-const projectRoot = process.cwd();
-const databaseEnv = readEnvFile(path.resolve(projectRoot, "backend", "database", ".env"));
-const backendEnv = readEnvFile(path.resolve(projectRoot, "backend", ".env"));
-
 function resolveEnvValue(key) {
-  const value = process.env[key] ?? backendEnv[key] ?? databaseEnv[key];
+  const value = process.env[key];
   return typeof value === "string" ? value : undefined;
 }
 

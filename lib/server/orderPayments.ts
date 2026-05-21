@@ -1,9 +1,6 @@
 import pool from "@/backend/database/pool";
 import { createInvoiceNumber } from "@/lib/invoice";
-import { calculateShippingCostRmb, getBoxWeightKg } from "@/lib/shipping";
 import type Stripe from "stripe";
-
-const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
 export type CheckoutOrderItem = {
   cartItemId: string;
@@ -27,11 +24,7 @@ export type CheckoutOrderPayload = {
   items: CheckoutOrderItem[];
 };
 
-type AddressOwnershipRow = {
-  address_id: unknown;
-};
-
-type VariantExistenceRow = {
+type ProctorExistenceRow = {
   id: unknown;
 };
 
@@ -76,25 +69,16 @@ export type StripePaymentDiscountDetails = {
 };
 
 type CartCheckoutRow = {
-  shipping_address_id: unknown;
-  billing_address_id: unknown;
-  shipping_id: unknown;
   quantity: unknown;
-  variant_id: unknown;
-  cost_rmb: unknown;
-  product_id: unknown;
-  product_name: unknown;
-  color: unknown;
-  size: unknown;
-  weight_kg: unknown;
-};
-
-type ShippingCostRow = {
-  id: unknown;
-  mode: unknown;
-  delivery_time: unknown;
-  first_kg_cost_rmb: unknown;
-  additional_kg_cost_rmb: unknown;
+  proctor_user_id: unknown;
+  booking_rate_usd: unknown;
+  first_name: unknown;
+  last_name: unknown;
+  address_street: unknown;
+  address_city: unknown;
+  address_state: unknown;
+  address_zip_code: unknown;
+  session_window: unknown;
 };
 
 function getUtcDayBounds(date: Date) {
@@ -132,13 +116,6 @@ function toNumber(value: unknown) {
 
 function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function priceUsdFromRmb(costRmb: unknown) {
-  if (costRmb == null) {
-    return 0;
-  }
-  return Math.round(toNumber(costRmb) * RMB_TO_USD);
 }
 
 export function expectedStripeAmountCents(payload: CheckoutOrderPayload) {
@@ -181,10 +158,24 @@ export function assertStripePaymentMatchesCheckoutPayload({
   }
 }
 
-export function parseVariantId(cartItemId: string) {
-  const [, variantIdText] = cartItemId.split("-");
-  const variantId = Number(variantIdText);
-  return Number.isInteger(variantId) && variantId > 0 ? variantId : null;
+export function parseProctorUserId(cartItemId: string) {
+  const [, proctorUserIdText] = cartItemId.split("-");
+  const proctorUserId = Number(proctorUserIdText);
+  return Number.isInteger(proctorUserId) && proctorUserId > 0 ? proctorUserId : null;
+}
+
+function proctorName(row: Pick<CartCheckoutRow, "first_name" | "last_name">) {
+  return [row.first_name, row.last_name]
+    .map((part) => (typeof part === "string" ? part.trim() : ""))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function proctorAddress(row: Pick<CartCheckoutRow, "address_street" | "address_city" | "address_state" | "address_zip_code">) {
+  return [row.address_street, row.address_city, row.address_state, row.address_zip_code]
+    .map((part) => (typeof part === "string" ? part.trim() : ""))
+    .filter(Boolean)
+    .join(", ");
 }
 
 export function isValidCheckoutOrderPayload(payload: unknown): payload is CheckoutOrderPayload {
@@ -200,9 +191,6 @@ export function isValidCheckoutOrderPayload(payload: unknown): payload is Checko
     "clothesWeightKg",
     "boxWeightKg",
     "shippingWeightKg",
-    "shippingId",
-    "shippingAddressId",
-    "billingAddressId",
   ];
 
   if (!numericFields.every((field) => Number.isFinite(toNumber(candidate[field])))) {
@@ -227,7 +215,45 @@ export function isValidCheckoutOrderPayload(payload: unknown): payload is Checko
   });
 }
 
+async function ensureOrderTables() {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS orders (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      shipment_status TEXT NOT NULL DEFAULT 'unshipped',
+      payment_status TEXT NOT NULL DEFAULT 'pending',
+      payment_provider TEXT,
+      payment_reference TEXT,
+      paid_at TIMESTAMPTZ,
+      currency_code TEXT NOT NULL DEFAULT 'USD',
+      subtotal_usd NUMERIC(10,2) NOT NULL DEFAULT 0,
+      shipping_usd NUMERIC(10,2) NOT NULL DEFAULT 0,
+      total_usd NUMERIC(10,2) NOT NULL DEFAULT 0,
+      clothes_weight_kg NUMERIC(8,2),
+      box_weight_kg NUMERIC(8,2),
+      shipping_weight_kg NUMERIC(8,2),
+      invoice_number TEXT,
+      invoice_generated_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (payment_provider, payment_reference)
+    )`
+  );
+  await pool.query("ALTER TABLE orders ALTER COLUMN shipping_id DROP NOT NULL").catch(() => undefined);
+  await pool.query("ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_shipping_id_fkey").catch(() => undefined);
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS orders_proctors (
+      id BIGSERIAL PRIMARY KEY,
+      order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      proctor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      quantity INTEGER NOT NULL CHECK (quantity > 0),
+      snapshot_price NUMERIC(10,2) NOT NULL
+    )`
+  );
+}
+
 export async function ensureStripeCheckoutSessionTable() {
+  await ensureOrderTables();
   await pool.query(
     `CREATE TABLE IF NOT EXISTS stripe_checkout_sessions (
       stripe_session_id TEXT PRIMARY KEY,
@@ -373,9 +399,6 @@ export async function assertStripeCheckoutSessionRateLimit(userId: number) {
 
 export async function buildAuthoritativeCheckoutOrderPayload({
   userId,
-  shippingAddressId,
-  billingAddressId,
-  shippingId,
 }: {
   userId: number;
   shippingAddressId?: number | null;
@@ -387,116 +410,61 @@ export async function buildAuthoritativeCheckoutOrderPayload({
   const cartResult = await pool.query<CartCheckoutRow>(
     `
       SELECT
-        cts.shipping_address_id,
-        cts.billing_address_id,
-        cts.shipping_id,
-        ci.quantity,
-        pv.id AS variant_id,
-        pv.cost_rmb,
-        p.id AS product_id,
-        p.name AS product_name,
-        c.color,
-        s.size,
-        st.weight_kg
+        cart_item.quantity,
+        u.id AS proctor_user_id,
+        COALESCE(u.hourly_rate, 0) * COALESCE(u.minimum_hours, 1) AS booking_rate_usd,
+        u.first_name,
+        u.last_name,
+        a.street AS address_street,
+        city.name AS address_city,
+        s.code AS address_state,
+        a.zip_code AS address_zip_code,
+        CASE
+          WHEN COALESCE(u.minimum_hours, 1) = COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1))
+            THEN CONCAT(COALESCE(u.minimum_hours, 1), ' hr')
+          ELSE CONCAT(COALESCE(u.minimum_hours, 1), '-', COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1)), ' hr')
+        END AS session_window
       FROM carts cts
-      LEFT JOIN cart_items ci
-        ON ci.cart_id = cts.id
-      LEFT JOIN product_variants pv
-        ON pv.id = ci.variant_id
-      LEFT JOIN products p
-        ON p.id = pv.product_id
-      LEFT JOIN colors c
-        ON c.id = pv.color_id
-      LEFT JOIN sizes s
-        ON s.id = pv.size_id
-      LEFT JOIN styles st
-        ON st.id = p.style_id
+      LEFT JOIN cart_items cart_item
+        ON cart_item.cart_id = cts.id
+      LEFT JOIN users u
+        ON u.id = cart_item.proctor_user_id
+      LEFT JOIN addresses a
+        ON a.id = u.proctor_address_id
+      LEFT JOIN cities city
+        ON city.id = a.city_id
+      LEFT JOIN states s
+        ON s.id = a.state_id
       WHERE cts.user_id = $1
-      ORDER BY ci.created_at ASC NULLS LAST, pv.id ASC NULLS LAST
+      ORDER BY cart_item.created_at ASC NULLS LAST, u.id ASC NULLS LAST
     `,
     [userId]
   );
 
-  const cartItems = cartResult.rows.filter((row: CartCheckoutRow) => row.variant_id != null);
+  const cartItems = cartResult.rows.filter((row: CartCheckoutRow) => row.proctor_user_id != null);
   if (cartItems.length === 0) {
     throw new Error("Your cart is empty.");
   }
 
-  const cartMetadata = cartResult.rows[0];
-  const selectedShippingAddressId =
-    shippingAddressId == null ? toNumber(cartMetadata?.shipping_address_id) : Number(shippingAddressId);
-  const selectedBillingAddressId =
-    billingAddressId == null ? toNumber(cartMetadata?.billing_address_id) : Number(billingAddressId);
-  const selectedShippingId =
-    shippingId == null ? toNumber(cartMetadata?.shipping_id) : Number(shippingId);
-
-  if (
-    !Number.isInteger(selectedShippingAddressId) ||
-    !Number.isInteger(selectedBillingAddressId) ||
-    !Number.isInteger(selectedShippingId)
-  ) {
-    throw new Error("Select shipping, billing, and delivery details before checkout.");
-  }
-
-  const addressOwnershipResult = await pool.query<AddressOwnershipRow>(
-    `
-      SELECT address_id
-      FROM user_addresses
-      WHERE user_id = $1
-        AND address_id = ANY($2::int[])
-    `,
-    [userId, [selectedShippingAddressId, selectedBillingAddressId]]
-  );
-  const ownedAddressIds = new Set(
-    addressOwnershipResult.rows.map((row: AddressOwnershipRow) => Number(row.address_id))
-  );
-  if (!ownedAddressIds.has(selectedShippingAddressId) || !ownedAddressIds.has(selectedBillingAddressId)) {
-    throw new Error("Selected addresses do not belong to the current user.");
-  }
-
-  const shippingResult = await pool.query<ShippingCostRow>(
-    `
-      SELECT id, mode, delivery_time, first_kg_cost_rmb, additional_kg_cost_rmb
-      FROM shipping_cost
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [selectedShippingId]
-  );
-  if (shippingResult.rows.length === 0) {
-    throw new Error("Selected shipping option no longer exists.");
-  }
-
   const items = cartItems.map((row: CartCheckoutRow) => ({
-    cartItemId: `${toNumber(row.product_id)}-${toNumber(row.variant_id)}`,
+    cartItemId: `proctor-${toNumber(row.proctor_user_id)}`,
     quantity: toNumber(row.quantity),
-    unitPriceUsd: priceUsdFromRmb(row.cost_rmb),
-    name: String(row.product_name ?? ""),
-    color: row.color == null ? null : String(row.color),
-    size: row.size == null ? null : String(row.size),
+    unitPriceUsd: row.booking_rate_usd == null ? 0 : toNumber(row.booking_rate_usd),
+    name: proctorName(row),
+    color: proctorAddress(row) || null,
+    size: row.session_window == null ? null : String(row.session_window),
   }));
 
   const subtotalUsd = roundMoney(
     items.reduce((total: number, item: CheckoutOrderItem) => total + item.unitPriceUsd * item.quantity, 0)
   );
   const clothesWeightKg = cartItems.reduce(
-    (total: number, row: CartCheckoutRow) =>
-      total + (row.weight_kg == null ? 0 : toNumber(row.weight_kg)) * toNumber(row.quantity),
+    (total: number, row: CartCheckoutRow) => total + toNumber(row.quantity),
     0
   );
-  const boxWeightKg = getBoxWeightKg(clothesWeightKg);
-  const shippingWeightKg = clothesWeightKg + boxWeightKg;
-  const shippingRow = shippingResult.rows[0];
-  const shippingUsd = roundMoney(
-    calculateShippingCostRmb(shippingWeightKg, {
-      id: Number(shippingRow.id),
-      mode: String(shippingRow.mode ?? ""),
-      delivery_time: shippingRow.delivery_time == null ? null : String(shippingRow.delivery_time),
-      first_kg_cost_rmb: shippingRow.first_kg_cost_rmb == null ? null : toNumber(shippingRow.first_kg_cost_rmb),
-      additional_kg_cost_rmb:
-        shippingRow.additional_kg_cost_rmb == null ? null : toNumber(shippingRow.additional_kg_cost_rmb),
-    }) * RMB_TO_USD
-  );
+  const boxWeightKg = 0;
+  const shippingWeightKg = clothesWeightKg;
+  const shippingUsd = 0;
 
   return {
     subtotalUsd,
@@ -505,9 +473,9 @@ export async function buildAuthoritativeCheckoutOrderPayload({
     clothesWeightKg,
     boxWeightKg,
     shippingWeightKg,
-    shippingId: selectedShippingId,
-    shippingAddressId: selectedShippingAddressId,
-    billingAddressId: selectedBillingAddressId,
+    shippingId: 0,
+    shippingAddressId: 0,
+    billingAddressId: 0,
     items,
   };
 }
@@ -892,17 +860,15 @@ export async function finalizePaidOrder({
   paymentReference: string;
   paidAt: Date;
 }) {
-  const shippingId = Number(payload.shippingId);
-  const shippingAddressId = Number(payload.shippingAddressId);
-  const billingAddressId = Number(payload.billingAddressId);
-  const variantItems = payload.items.map((item) => ({
-    variantId: parseVariantId(item.cartItemId),
+  await ensureOrderTables();
+  const proctorItems = payload.items.map((item) => ({
+    proctorUserId: parseProctorUserId(item.cartItemId),
     quantity: Number(item.quantity),
     unitPriceUsd: Number(item.unitPriceUsd),
   }));
 
-  if (variantItems.some((item) => item.variantId == null)) {
-    throw new Error("Unable to determine one or more cart variant ids.");
+  if (proctorItems.some((item) => item.proctorUserId == null)) {
+    throw new Error("Unable to determine one or more proctor ids.");
   }
 
   const client = await pool.connect();
@@ -949,57 +915,29 @@ export async function finalizePaidOrder({
       };
     }
 
-    const addressOwnershipResult = await client.query<AddressOwnershipRow>(
+    const proctorUserIds = proctorItems
+      .map((item) => item.proctorUserId)
+      .filter((proctorUserId): proctorUserId is number => proctorUserId != null);
+
+    const proctorExistenceResult = await client.query<ProctorExistenceRow>(
       `
-        SELECT address_id
-        FROM user_addresses
-        WHERE user_id = $1
-          AND address_id = ANY($2::int[])
+        SELECT u.id
+        FROM users u
+        JOIN roles r
+          ON r.id = u.role_id
+        WHERE u.id = ANY($1::int[])
+          AND r.name = 'proctor'
+          AND u.deleted_at IS NULL
       `,
-      [userId, [shippingAddressId, billingAddressId]]
+      [proctorUserIds]
     );
 
-    const ownedAddressIds = new Set(
-      addressOwnershipResult.rows.map((row: AddressOwnershipRow) => Number(row.address_id))
+    const proctorIdsInDatabase = new Set(
+      proctorExistenceResult.rows.map((row: ProctorExistenceRow) => Number(row.id))
     );
 
-    if (!ownedAddressIds.has(shippingAddressId) || !ownedAddressIds.has(billingAddressId)) {
-      throw new Error("Selected addresses do not belong to the current user.");
-    }
-
-    const shippingExistsResult = await client.query(
-      `
-        SELECT id
-        FROM shipping_cost
-        WHERE id = $1
-        LIMIT 1
-      `,
-      [shippingId]
-    );
-
-    if (shippingExistsResult.rows.length === 0) {
-      throw new Error("Selected shipping option no longer exists.");
-    }
-
-    const variantIds = variantItems
-      .map((item) => item.variantId)
-      .filter((variantId): variantId is number => variantId != null);
-
-    const variantExistenceResult = await client.query<VariantExistenceRow>(
-      `
-        SELECT id
-        FROM product_variants
-        WHERE id = ANY($1::int[])
-      `,
-      [variantIds]
-    );
-
-    const variantIdsInDatabase = new Set(
-      variantExistenceResult.rows.map((row: VariantExistenceRow) => Number(row.id))
-    );
-
-    if (variantIds.some((variantId) => !variantIdsInDatabase.has(variantId))) {
-      throw new Error("One or more product variants no longer exist.");
+    if (proctorUserIds.some((proctorUserId) => !proctorIdsInDatabase.has(proctorUserId))) {
+      throw new Error("One or more proctors no longer exist.");
     }
 
     const orderInsertResult = await client.query(
@@ -1018,9 +956,6 @@ export async function finalizePaidOrder({
           clothes_weight_kg,
           box_weight_kg,
           shipping_weight_kg,
-          shipping_id,
-          shipping_address_id,
-          billing_address_id,
           created_at,
           updated_at
         )
@@ -1038,9 +973,6 @@ export async function finalizePaidOrder({
           $8,
           $9,
           $10,
-          $11,
-          $12,
-          $13,
           NOW(),
           NOW()
         )
@@ -1057,9 +989,6 @@ export async function finalizePaidOrder({
         payload.clothesWeightKg,
         payload.boxWeightKg,
         payload.shippingWeightKg,
-        shippingId,
-        shippingAddressId,
-        billingAddressId,
       ]
     );
 
@@ -1095,13 +1024,13 @@ export async function finalizePaidOrder({
       [orderId, invoiceNumber]
     );
 
-    for (const item of variantItems) {
+    for (const item of proctorItems) {
       await client.query(
         `
-          INSERT INTO orders_variants (order_id, variant_id, quantity, snapshot_price)
+          INSERT INTO orders_proctors (order_id, proctor_user_id, quantity, snapshot_price)
           VALUES ($1, $2, $3, $4)
         `,
-        [orderId, item.variantId, item.quantity, item.unitPriceUsd]
+        [orderId, item.proctorUserId, item.quantity, item.unitPriceUsd]
       );
     }
 
@@ -1117,17 +1046,7 @@ export async function finalizePaidOrder({
       [userId]
     );
 
-    await client.query(
-      `
-        UPDATE carts
-        SET shipping_address_id = NULL,
-            billing_address_id = NULL,
-            shipping_id = NULL,
-            updated_at = NOW()
-        WHERE user_id = $1
-      `,
-      [userId]
-    );
+    await client.query("UPDATE carts SET updated_at = NOW() WHERE user_id = $1", [userId]);
 
     const sessionUpdateResult = await client.query(
       `

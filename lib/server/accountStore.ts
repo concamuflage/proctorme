@@ -31,65 +31,7 @@ async function hasRetainedRecords(client: QueryableClient, userId: number) {
 }
 
 async function deleteEphemeralAccountData(client: QueryableClient, userId: number) {
-  const measurementResult = await client.query(
-    "SELECT measurement_id FROM user_measurement WHERE user_id = $1",
-    [userId]
-  );
-  const addressResult = await client.query(
-    "SELECT address_id FROM user_addresses WHERE user_id = $1",
-    [userId]
-  );
-
-  const measurementIds = (measurementResult.rows as Array<{ measurement_id: unknown }>)
-    .map((row) => Number(row.measurement_id));
-  const addressIds = (addressResult.rows as Array<{ address_id: unknown }>)
-    .map((row) => Number(row.address_id));
-
   await client.query("DELETE FROM carts WHERE user_id = $1", [userId]);
-  await client.query("DELETE FROM user_measurement WHERE user_id = $1", [userId]);
-  await client.query("DELETE FROM user_addresses WHERE user_id = $1", [userId]);
-
-  if (measurementIds.length > 0) {
-    await client.query(
-      `
-        DELETE FROM measurements m
-        WHERE m.id = ANY($1::int[])
-          AND NOT EXISTS (
-            SELECT 1
-            FROM user_measurement um
-            WHERE um.measurement_id = m.id
-          )
-      `,
-      [measurementIds]
-    );
-  }
-
-  if (addressIds.length > 0) {
-    await client.query(
-      `
-        DELETE FROM addresses a
-        WHERE a.id = ANY($1::int[])
-          AND NOT EXISTS (
-            SELECT 1
-            FROM user_addresses ua
-            WHERE ua.address_id = a.id
-          )
-          AND NOT EXISTS (
-            SELECT 1
-            FROM carts c
-            WHERE c.shipping_address_id = a.id
-               OR c.billing_address_id = a.id
-          )
-          AND NOT EXISTS (
-            SELECT 1
-            FROM orders o
-            WHERE o.shipping_address_id = a.id
-               OR o.billing_address_id = a.id
-          )
-      `,
-      [addressIds]
-    );
-  }
 }
 
 async function softDeleteUser(client: QueryableClient, userId: number) {

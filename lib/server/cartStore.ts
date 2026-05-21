@@ -1,7 +1,5 @@
 import pool from "@/backend/database/pool";
 
-const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
-
 export type PersistedCartItem = {
   id: string;
   name: string;
@@ -32,21 +30,19 @@ type SaveCartSelection = {
 };
 
 type CartRow = {
-  shipping_address_id: unknown;
-  billing_address_id: unknown;
-  shipping_id: unknown;
   quantity: unknown;
-  variant_id: unknown;
-  cost_rmb: unknown;
-  product_id: unknown;
-  product_name: unknown;
-  color: unknown;
-  size: unknown;
-  weight_kg: unknown;
-  image_link: unknown;
+  proctor_user_id: unknown;
+  booking_rate_usd: unknown;
+  first_name: unknown;
+  last_name: unknown;
+  address_street: unknown;
+  address_city: unknown;
+  address_state: unknown;
+  address_zip_code: unknown;
+  session_window: unknown;
 };
 
-type VariantExistenceRow = {
+type ProctorExistenceRow = {
   id: unknown;
 };
 
@@ -54,17 +50,24 @@ function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
-function parseVariantId(cartItemId: string) {
-  const [, variantIdText] = cartItemId.split("-");
-  const variantId = Number(variantIdText);
-  return Number.isInteger(variantId) && variantId > 0 ? variantId : null;
+function parseProctorUserId(cartItemId: string) {
+  const [, proctorUserIdText] = cartItemId.split("-");
+  const proctorUserId = Number(proctorUserIdText);
+  return Number.isInteger(proctorUserId) && proctorUserId > 0 ? proctorUserId : null;
 }
 
-function priceUsdFromRmb(costRmb: unknown) {
-  if (costRmb == null) {
-    return 0;
-  }
-  return Math.round(toNumber(costRmb) * RMB_TO_USD);
+function formatName(row: Pick<CartRow, "first_name" | "last_name">) {
+  return [row.first_name, row.last_name]
+    .map((part) => (typeof part === "string" ? part.trim() : ""))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function formatAddress(row: Pick<CartRow, "address_street" | "address_city" | "address_state" | "address_zip_code">) {
+  return [row.address_street, row.address_city, row.address_state, row.address_zip_code]
+    .map((part) => (typeof part === "string" ? part.trim() : ""))
+    .filter(Boolean)
+    .join(", ");
 }
 
 async function ensureCartTables() {
@@ -72,9 +75,6 @@ async function ensureCartTables() {
     `CREATE TABLE IF NOT EXISTS carts (
       id BIGSERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-      shipping_address_id INTEGER REFERENCES addresses(id) ON DELETE SET NULL,
-      billing_address_id INTEGER REFERENCES addresses(id) ON DELETE SET NULL,
-      shipping_id INTEGER REFERENCES shipping_cost(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`
@@ -83,11 +83,11 @@ async function ensureCartTables() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS cart_items (
       cart_id BIGINT NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
-      variant_id INTEGER NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+      proctor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       quantity INTEGER NOT NULL CHECK (quantity > 0),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (cart_id, variant_id)
+      PRIMARY KEY (cart_id, proctor_user_id)
     )`
   );
 }
@@ -98,82 +98,73 @@ export async function getCart(userId: number): Promise<PersistedCart> {
   const result = await pool.query<CartRow>(
     `
       SELECT
-        cts.shipping_address_id,
-        cts.billing_address_id,
-        cts.shipping_id,
-        ci.quantity,
-        pv.id AS variant_id,
-        pv.cost_rmb,
-        p.id AS product_id,
-        p.name AS product_name,
-        c.color,
-        s.size,
-        st.weight_kg,
-        pvi.image_link
+        cart_item.quantity,
+        u.id AS proctor_user_id,
+        COALESCE(u.hourly_rate, 0) * COALESCE(u.minimum_hours, 1) AS booking_rate_usd,
+        u.first_name,
+        u.last_name,
+        a.street AS address_street,
+        city.name AS address_city,
+        s.code AS address_state,
+        a.zip_code AS address_zip_code,
+        CASE
+          WHEN COALESCE(u.minimum_hours, 1) = COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1))
+            THEN CONCAT(COALESCE(u.minimum_hours, 1), ' hr')
+          ELSE CONCAT(COALESCE(u.minimum_hours, 1), '-', COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1)), ' hr')
+        END AS session_window
       FROM carts cts
-      LEFT JOIN cart_items ci
-        ON ci.cart_id = cts.id
-      LEFT JOIN product_variants pv
-        ON pv.id = ci.variant_id
-      LEFT JOIN products p
-        ON p.id = pv.product_id
-      LEFT JOIN colors c
-        ON c.id = pv.color_id
-      LEFT JOIN sizes s
-        ON s.id = pv.size_id
-      LEFT JOIN styles st
-        ON st.id = p.style_id
-      LEFT JOIN LATERAL (
-        SELECT image_link
-        FROM product_variant_images
-        WHERE product_variant_id = pv.id
-        ORDER BY id ASC
-        LIMIT 1
-      ) pvi ON true
+      LEFT JOIN cart_items cart_item
+        ON cart_item.cart_id = cts.id
+      LEFT JOIN users u
+        ON u.id = cart_item.proctor_user_id
+      LEFT JOIN addresses a
+        ON a.id = u.proctor_address_id
+      LEFT JOIN cities city
+        ON city.id = a.city_id
+      LEFT JOIN states s
+        ON s.id = a.state_id
       WHERE cts.user_id = $1
-      ORDER BY ci.created_at ASC NULLS LAST, pv.id ASC NULLS LAST
+      ORDER BY cart_item.created_at ASC NULLS LAST, u.id ASC NULLS LAST
     `,
     [userId]
   );
 
   const items = result.rows
-    .filter((row: CartRow) => row.variant_id != null)
+    .filter((row: CartRow) => row.proctor_user_id != null)
     .map((row: CartRow) => ({
-      id: `${toNumber(row.product_id)}-${toNumber(row.variant_id)}`,
-      name: String(row.product_name ?? ""),
-      price: priceUsdFromRmb(row.cost_rmb),
-      weightKg: row.weight_kg == null ? null : toNumber(row.weight_kg),
-      imageUrl: row.image_link ? String(row.image_link) : null,
-      color: row.color ? String(row.color) : null,
-      size: row.size ? String(row.size) : null,
+      id: `proctor-${toNumber(row.proctor_user_id)}`,
+      name: formatName(row),
+      price: row.booking_rate_usd == null ? 0 : toNumber(row.booking_rate_usd),
+      weightKg: 1,
+      imageUrl: null,
+      color: formatAddress(row) || null,
+      size: row.session_window ? String(row.session_window) : null,
       qty: toNumber(row.quantity),
     }));
 
-  const metadataRow = result.rows[0];
-
   return {
     items,
-    shippingAddressId: metadataRow?.shipping_address_id == null ? null : toNumber(metadataRow.shipping_address_id),
-    billingAddressId: metadataRow?.billing_address_id == null ? null : toNumber(metadataRow.billing_address_id),
-    shippingId: metadataRow?.shipping_id == null ? null : toNumber(metadataRow.shipping_id),
+    shippingAddressId: null,
+    billingAddressId: null,
+    shippingId: null,
   };
 }
 
-export async function saveCart(userId: number, items: SaveCartItem[], selections?: SaveCartSelection) {
+export async function saveCart(userId: number, items: SaveCartItem[], _selections?: SaveCartSelection) {
   await ensureCartTables();
 
-  const variantItems = items.map((item) => ({
-    variantId: parseVariantId(item.id),
+  const proctorItems = items.map((item) => ({
+    proctorUserId: parseProctorUserId(item.id),
     qty: Number(item.qty),
   }));
 
-  if (variantItems.some((item) => item.variantId == null || !Number.isInteger(item.qty) || item.qty <= 0)) {
+  if (proctorItems.some((item) => item.proctorUserId == null || !Number.isInteger(item.qty) || item.qty <= 0)) {
     throw new Error("Invalid cart items.");
   }
 
-  const variantIds = variantItems
-    .map((item) => item.variantId)
-    .filter((variantId): variantId is number => variantId != null);
+  const proctorUserIds = proctorItems
+    .map((item) => item.proctorUserId)
+    .filter((proctorUserId): proctorUserId is number => proctorUserId != null);
 
   const client = await pool.connect();
 
@@ -182,53 +173,49 @@ export async function saveCart(userId: number, items: SaveCartItem[], selections
 
     const cartResult = await client.query(
       `
-        INSERT INTO carts (user_id, shipping_address_id, billing_address_id, shipping_id, updated_at)
-        VALUES ($1, $2, $3, $4, NOW())
+        INSERT INTO carts (user_id, updated_at)
+        VALUES ($1, NOW())
         ON CONFLICT (user_id)
         DO UPDATE SET
-          shipping_address_id = EXCLUDED.shipping_address_id,
-          billing_address_id = EXCLUDED.billing_address_id,
-          shipping_id = EXCLUDED.shipping_id,
           updated_at = NOW()
         RETURNING id
       `,
-      [
-        userId,
-        selections?.shippingAddressId ?? null,
-        selections?.billingAddressId ?? null,
-        selections?.shippingId ?? null,
-      ]
+      [userId]
     );
 
     const cartId = toNumber(cartResult.rows[0].id);
 
-    if (variantIds.length > 0) {
-      const existingVariants = await client.query<VariantExistenceRow>(
+    if (proctorUserIds.length > 0) {
+      const existingProctors = await client.query<ProctorExistenceRow>(
         `
-          SELECT id
-          FROM product_variants
-          WHERE id = ANY($1::int[])
+          SELECT u.id
+          FROM users u
+          JOIN roles r
+            ON r.id = u.role_id
+          WHERE u.id = ANY($1::int[])
+            AND r.name = 'proctor'
+            AND u.deleted_at IS NULL
         `,
-        [variantIds]
+        [proctorUserIds]
       );
 
-      const existingVariantIds = new Set(
-        existingVariants.rows.map((row: VariantExistenceRow) => toNumber(row.id))
+      const existingProctorIds = new Set(
+        existingProctors.rows.map((row: ProctorExistenceRow) => toNumber(row.id))
       );
-      if (variantIds.some((variantId) => !existingVariantIds.has(variantId))) {
+      if (proctorUserIds.some((proctorUserId) => !existingProctorIds.has(proctorUserId))) {
         throw new Error("One or more cart items no longer exist.");
       }
     }
 
     await client.query("DELETE FROM cart_items WHERE cart_id = $1", [cartId]);
 
-    for (const item of variantItems) {
+    for (const item of proctorItems) {
       await client.query(
         `
-          INSERT INTO cart_items (cart_id, variant_id, quantity, created_at, updated_at)
+          INSERT INTO cart_items (cart_id, proctor_user_id, quantity, created_at, updated_at)
           VALUES ($1, $2, $3, NOW(), NOW())
         `,
-        [cartId, item.variantId, item.qty]
+        [cartId, item.proctorUserId, item.qty]
       );
     }
 

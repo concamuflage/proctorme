@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "Unable to save order.";
     const status =
       message.includes("do not belong") ? 403 :
-      message.includes("Selected shipping option") || message.includes("product variants") ? 400 :
+      message.includes("Selected shipping option") || message.includes("proctors") ? 400 :
       500;
     return NextResponse.json({ error: message }, { status });
   }

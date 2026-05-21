@@ -20,6 +20,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/products/:path*",
+        destination: "/proctors/:path*",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

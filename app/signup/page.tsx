@@ -15,7 +15,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    router.replace("/products");
+    router.replace("/proctors");
   }, [router, status]);
 
   return (

@@ -8,6 +8,7 @@ import CartButton from "@/components/cart/CartButton";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
 import LoginModal from "@/components/auth/LoginModal";
 import SignupModal from "@/components/auth/SignupModal";
+import { SITE_NAME } from "@/lib/proctor";
 
 /**
  * Site header with auth actions and cart entry point.
@@ -28,18 +29,18 @@ export default function Header() {
   const router = useRouter();
   const openedFromAuthPage = pathname === "/login" || pathname === "/signup";
   const trialBannerText =
-    "If you want to buy some clothes that are not on the site, you can send us the link so we can list them on the site. If you have any suggestions, you can also write to us. All products are original, but they are bought in China and only have tags in Chinese. Shipping takes 7-60 days depending on the shipping services you choose. If U.S. Customs applies import tariffs or duties to your shipment, those charges would be the customer's responsibility.";
+    "Book verified proctors for interviews, assessments, and hiring events at the location you specify. Choose a proctor, select the session window, confirm the site address, and pay securely before the assignment is scheduled.";
 
   const handleLoginModalSuccess = () => {
     closeAuthModal();
     if (openedFromAuthPage) {
-      router.push("/products");
+      router.push("/proctors");
       router.refresh();
     }
   };
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/products" });
+    await signOut({ callbackUrl: "/proctors" });
   };
 
   return (
@@ -50,7 +51,9 @@ export default function Header() {
         </div>
       </div>
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="text-lg font-semibold tracking-tight sm:text-xl">OutlierFit</div>
+        <Link href="/" className="text-lg font-semibold tracking-tight sm:text-xl">
+          {SITE_NAME}
+        </Link>
         <nav className="flex flex-wrap items-center gap-3 text-sm sm:gap-4 lg:justify-end lg:gap-6">
           <Link className="whitespace-nowrap hover:underline" href="/about">
             About
@@ -60,9 +63,9 @@ export default function Header() {
           </Link>
           <Link
             className="whitespace-nowrap rounded-full bg-zinc-900 px-3 py-2 text-white hover:bg-zinc-800 sm:px-4"
-            href="/products"
+            href="/proctors"
           >
-            Browse Items
+            Find Proctors
           </Link>
           {session?.user ? (
             <div className="flex items-center gap-3">

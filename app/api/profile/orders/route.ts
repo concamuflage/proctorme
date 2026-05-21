@@ -25,8 +25,7 @@ function toIsoString(value: unknown) {
 }
 
 type OrderItemRow = {
-  productId: unknown;
-  variantId: unknown;
+  proctorId: unknown;
   name: unknown;
   quantity: unknown;
   unitPriceUsd: unknown;
@@ -34,7 +33,7 @@ type OrderItemRow = {
   size: unknown;
   weightKg: unknown;
   imageUrl: unknown;
-  variantExists: unknown;
+  proctorExists: unknown;
 };
 
 type ProfileOrderRow = {
@@ -91,41 +90,36 @@ export async function GET() {
           COALESCE(
             json_agg(
               json_build_object(
-                'productId', p.id,
-                'variantId', pv.id,
-                'name', p.name,
-                'quantity', ov.quantity,
-                'unitPriceUsd', ov.snapshot_price,
-                'color', c.color,
-                'size', s.size,
-                'weightKg', st.weight_kg,
-                'imageUrl', pvi.image_link,
-                'variantExists', pv.id IS NOT NULL
+                'proctorId', u.id,
+                'name', CONCAT_WS(' ', u.first_name, u.last_name),
+                'quantity', op.quantity,
+                'unitPriceUsd', op.snapshot_price,
+                'color', CONCAT_WS(', ', a.street, ci.name, s.code, a.zip_code),
+                'size',
+                  CASE
+                    WHEN COALESCE(u.minimum_hours, 1) = COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1))
+                      THEN CONCAT(COALESCE(u.minimum_hours, 1), ' hr')
+                    ELSE CONCAT(COALESCE(u.minimum_hours, 1), '-', COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1)), ' hr')
+                  END,
+                'weightKg', 1,
+                'imageUrl', NULL,
+                'proctorExists', u.id IS NOT NULL
               )
-              ORDER BY ov.id ASC
-            ) FILTER (WHERE ov.id IS NOT NULL),
+              ORDER BY op.id ASC
+            ) FILTER (WHERE op.id IS NOT NULL),
             '[]'::json
           ) AS items
         FROM orders o
-        LEFT JOIN orders_variants ov
-          ON ov.order_id = o.id
-        LEFT JOIN product_variants pv
-          ON pv.id = ov.variant_id
-        LEFT JOIN products p
-          ON p.id = pv.product_id
-        LEFT JOIN colors c
-          ON c.id = pv.color_id
-        LEFT JOIN sizes s
-          ON s.id = pv.size_id
-        LEFT JOIN styles st
-          ON st.id = p.style_id
-        LEFT JOIN LATERAL (
-          SELECT image_link
-          FROM product_variant_images
-          WHERE product_variant_id = pv.id
-          ORDER BY id ASC
-          LIMIT 1
-        ) pvi ON true
+        LEFT JOIN orders_proctors op
+          ON op.order_id = o.id
+        LEFT JOIN users u
+          ON u.id = op.proctor_user_id
+        LEFT JOIN addresses a
+          ON a.id = u.proctor_address_id
+        LEFT JOIN cities ci
+          ON ci.id = a.city_id
+        LEFT JOIN states s
+          ON s.id = a.state_id
         WHERE o.user_id = $1
         GROUP BY o.id
         ORDER BY COALESCE(paid_at, created_at) DESC, id DESC
@@ -146,8 +140,7 @@ export async function GET() {
         createdAt: toIsoString(row.created_at),
         items: Array.isArray(row.items)
           ? row.items.map((item: OrderItemRow) => ({
-              productId: toNumber(item.productId),
-              variantId: toNumber(item.variantId),
+              proctorId: toNumber(item.proctorId),
               name: String(item.name ?? ""),
               quantity: toNumber(item.quantity),
               unitPriceUsd: toNumber(item.unitPriceUsd),
@@ -155,7 +148,7 @@ export async function GET() {
               size: item.size ? String(item.size) : null,
               weightKg: item.weightKg == null ? null : toNumber(item.weightKg),
               imageUrl: item.imageUrl ? String(item.imageUrl) : null,
-              variantExists: Boolean(item.variantExists),
+              proctorExists: Boolean(item.proctorExists),
             }))
           : [],
       }))

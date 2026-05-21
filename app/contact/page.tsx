@@ -4,7 +4,7 @@ import { useState } from "react";
 
 function buildEmail() {
   return String.fromCharCode(
-    105, 110, 102, 111, 64, 111, 117, 116, 108, 105, 101, 114, 102, 105, 116,
+    105, 110, 102, 111, 64, 112, 114, 111, 99, 116, 111, 114, 109, 101,
     46, 115, 104, 111, 112
   );
 }
@@ -21,8 +21,8 @@ export default function ContactPage() {
 
         <div className="mt-6 max-w-3xl space-y-4 text-base leading-8 text-zinc-700">
           <p>
-            If you have any questions about sizing, shipping, returns, or your order,
-            please reach out by email.
+            If you need help matching a proctor to an interview format, confirming
+            location requirements, or updating an existing booking, please reach out by email.
           </p>
 
           <div className="space-y-3">

@@ -1,38 +1,17 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { SITE_NAME } from "@/lib/proctor";
 
 // Base URL used as fallback when no valid environment URL is provided in production
-const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
+const PRODUCTION_APP_BASE_URL = "https://proctorme.shop";
 // Store email that will also receive a copy of the invoice email
 const STORE_EMAIL = "unodostreszlm@gmail.com";
-const BACKEND_ENV_PATHS = ["backend/.env.local", "backend/.env"];
 
 // Normalizes a base URL by trimming whitespace and removing trailing slashes
 function normalizeAppBaseUrl(value: string | undefined) {
   return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
 }
 
-function readEnvValueFromFile(filePath: string, key: string) {
-  try {
-    const content = readFileSync(resolve(process.cwd(), filePath), "utf8");
-    const line = content
-      .split(/\r?\n/)
-      .find((entry) => entry.trim().startsWith(`${key}=`));
-    if (!line) {
-      return "";
-    }
-
-    return line
-      .slice(line.indexOf("=") + 1)
-      .trim()
-      .replace(/^['"]|['"]$/g, "");
-  } catch {
-    return "";
-  }
-}
-
 function invoiceEmailEnv(key: "RESEND_API_KEY" | "RESEND_FROM_EMAIL") {
-  return process.env[key] || BACKEND_ENV_PATHS.map((path) => readEnvValueFromFile(path, key)).find(Boolean) || "";
+  return process.env[key] || "";
 }
 
 // Checks whether a given URL points to a localhost environment
@@ -137,11 +116,11 @@ export async function sendInvoiceLinkEmail({
     apiKey,
     from,
     to: customerEmail,
-    subject: `Your OutlierFit invoice ${invoiceNumber}`,
+    subject: `Your ${SITE_NAME} invoice ${invoiceNumber}`,
     html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #18181b;">
           <p>Hi there,</p>
-          <p>Thank you for your OutlierFit order. Your payment was received on ${paidDate}.</p>
+          <p>Thank you for your ${SITE_NAME} booking. Your payment was received on ${paidDate}.</p>
           <p>Your invoice ${invoiceNumber} is ready to download.</p>
           <p>
             <a
@@ -153,28 +132,28 @@ export async function sendInvoiceLinkEmail({
           </p>
           <p>If the button does not work, please copy and paste the following link into your browser:</p>
           <p><a href="${invoiceLink}">${invoiceLink}</a></p>
-          <p>Thank you for shopping with OutlierFit.</p>
+          <p>Thank you for booking with ${SITE_NAME}.</p>
         </div>
       `,
     text:
       `Hi there,\n\n` +
-      `Thank you for your OutlierFit order. Your payment was received on ${paidDate}.\n\n` +
+      `Thank you for your ${SITE_NAME} booking. Your payment was received on ${paidDate}.\n\n` +
       `Your invoice ${invoiceNumber} is ready to download:\n\n` +
       `${invoiceLink}\n\n` +
-      `Thank you for shopping with OutlierFit.\n`,
+      `Thank you for booking with ${SITE_NAME}.\n`,
   });
 
   await sendResendEmail({
     apiKey,
     from,
     to: STORE_EMAIL,
-    subject: `Paid order invoice ${invoiceNumber}`,
+    subject: `Paid booking invoice ${invoiceNumber}`,
     html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #18181b;">
-          <p>Hi OutlierFit team,</p>
-          <p>A customer payment was completed and invoice ${invoiceNumber} is available.</p>
+          <p>Hi ${SITE_NAME} team,</p>
+          <p>A booking payment was completed and invoice ${invoiceNumber} is available.</p>
           <p><strong>Customer email:</strong> ${customerEmail}</p>
-          <p><strong>Order ID:</strong> ${orderId}</p>
+          <p><strong>Booking ID:</strong> ${orderId}</p>
           <p><strong>Paid at:</strong> ${paidDate}</p>
           <p>
             <a
@@ -189,10 +168,10 @@ export async function sendInvoiceLinkEmail({
         </div>
       `,
     text:
-      `Hi OutlierFit team,\n\n` +
-      `A customer payment was completed and invoice ${invoiceNumber} is available.\n\n` +
+      `Hi ${SITE_NAME} team,\n\n` +
+      `A booking payment was completed and invoice ${invoiceNumber} is available.\n\n` +
       `Customer email: ${customerEmail}\n` +
-      `Order ID: ${orderId}\n` +
+      `Booking ID: ${orderId}\n` +
       `Paid at: ${paidDate}\n\n` +
       `Invoice link:\n\n` +
       `${invoiceLink}\n`,

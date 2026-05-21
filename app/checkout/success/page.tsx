@@ -220,7 +220,7 @@ function CheckoutSuccessPageContent() {
               View order history
             </Link>
             <Link
-              href="/products"
+              href="/proctors"
               className="rounded-full border border-zinc-300 px-5 py-2 text-sm text-zinc-700 hover:border-zinc-500 hover:text-zinc-900"
             >
               Continue shopping

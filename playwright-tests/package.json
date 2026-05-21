@@ -4,12 +4,17 @@
   "private": true,
   "scripts": {
     "install:browsers": "playwright install",
-    "test": "playwright test",
+    "test": "cucumber-js",
+    "test:playwright": "playwright test",
+    "test:cucumber": "cucumber-js",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0"
+  },
+  "dependencies": {
+    "@cucumber/cucumber": "^12.9.0"
   }
 }
