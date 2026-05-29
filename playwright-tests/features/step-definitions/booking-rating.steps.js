@@ -6,12 +6,8 @@ const {
   seedInstitutionUser,
 } = require("../support/db");
 
-// Creates an institution user in the test database so the rating scenario has a valid user account.
 Given("an institution user exists", async function () {
-  // Store the seeded institution user's id on the Cucumber World for later steps, such as signing in.
   this.institutionUserId = await seedInstitutionUser(this.email, this.password);
-
-  // Confirm that the seed helper successfully created a valid user record.
   assert.ok(this.institutionUserId > 0);
 });
 
