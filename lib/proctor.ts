@@ -1,4 +1,4 @@
-export const SITE_NAME = "ProctorMe";
+export const SITE_NAME = process.env.NEXT_PUBLIC_BRAND_NAME || "ProctorMe";
 
 const PROCTOR_NAMES = [
   "Avery Chen",

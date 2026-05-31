@@ -12,6 +12,8 @@ export type InvoiceItem = {
   name: string;
   quantity: number;
   unitPriceUsd: number;
+  hourlyRateUsd?: number | null;
+  sessionHours?: number | null;
   color?: string | null;
   size?: string | null;
 };
@@ -98,11 +100,14 @@ function wrapText(text: string, maxWidth: number, fontSize: number) {
 }
 
 function formatAddress(address: InvoiceAddress) {
-  return [
-    address.street,
-    `${address.city}, ${address.state} ${address.zipCode}`,
-    address.country,
-  ].filter(Boolean);
+  const cityLine = [address.city, address.state, address.zipCode]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(", ");
+
+  return [address.street, cityLine, address.country]
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function pdfText(x: number, y: number, text: string, options?: { size?: number; font?: "F1" | "F2"; color?: [number, number, number] }) {
@@ -296,23 +301,34 @@ export function buildInvoicePdf(payload: InvoicePayload) {
   commands.push(pdfLine(cardX + 26, itemTopY + 12, cardX + contentWidth - 26, itemTopY + 12, [0.9, 0.91, 0.93]));
 
   for (const item of payload.items) {
+    const sessionHours =
+      typeof item.sessionHours === "number" && Number.isFinite(item.sessionHours) && item.sessionHours > 0
+        ? item.sessionHours
+        : item.quantity;
+    const hourlyRate =
+      typeof item.hourlyRateUsd === "number" && Number.isFinite(item.hourlyRateUsd) && item.hourlyRateUsd >= 0
+        ? item.hourlyRateUsd
+        : sessionHours > 0
+          ? item.unitPriceUsd / sessionHours
+          : item.unitPriceUsd;
     const itemDetails = [
-      `Qty ${item.quantity}`,
-      item.color ? `Location ${item.color}` : null,
       item.size ? `Session ${item.size}` : null,
-      `Unit ${formatUsd(item.unitPriceUsd)}`,
+      `Hourly rate ${formatUsd(hourlyRate)}`,
+      `Hours ${sessionHours}`,
     ]
-      .filter(Boolean)
-      .join(" · ");
+      .filter((detail): detail is string => detail !== null);
 
     commands.push(pdfText(cardX + 26, currentItemY, item.name, { size: 11, font: "F2" }));
     const lineTotal = formatUsd(item.unitPriceUsd * item.quantity);
     commands.push(pdfText(rightColumnX - estimateTextWidth(lineTotal, 11), currentItemY, lineTotal, { size: 11, font: "F2" }));
-    currentItemY = drawWrappedText(commands, cardX + 250, currentItemY, itemColumnWidth - 340, itemDetails, {
-      size: 10,
-      color: [0.42, 0.44, 0.49],
-      lineHeight: 14,
-    });
+
+    for (const detail of itemDetails) {
+      currentItemY = drawWrappedText(commands, cardX + 250, currentItemY, itemColumnWidth - 340, detail, {
+        size: 10,
+        color: [0.42, 0.44, 0.49],
+        lineHeight: 14,
+      });
+    }
     currentItemY -= 14;
   }
 
@@ -321,7 +337,7 @@ export function buildInvoicePdf(payload: InvoicePayload) {
 
   const totals = [
     ["Subtotal", formatUsd(payload.subtotalUsd), false],
-    [`Site coordination (${payload.shippingModeLabel})`, formatUsd(payload.shippingUsd), false],
+    ["Service fee (9%)", formatUsd(payload.shippingUsd), false],
     ...(payload.discountAmountUsd && payload.discountAmountUsd > 0
       ? [[`Discount${payload.promotionCode ? ` (${payload.promotionCode})` : ""}`, `-${formatUsd(payload.discountAmountUsd)}`, false] as const]
       : []),

@@ -1,0 +1,30 @@
+import { NextResponse } from "next/server";
+import { getPrivateObjectReadUrl, parseGcsUri } from "@/lib/server/gcsUploads";
+import { requireAdminUserId } from "@/lib/server/sessionUser";
+
+export const runtime = "nodejs";
+
+export async function GET(request: Request) {
+  const adminUserId = await requireAdminUserId();
+  if (!adminUserId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const url = searchParams.get("url") || "";
+  if (url.startsWith("/uploads/")) {
+    return NextResponse.redirect(new URL(url, request.url));
+  }
+
+  const parsed = parseGcsUri(url);
+  if (!parsed || !/^proctor-applications\/[^/]+\/government-ids\//.test(parsed.objectName)) {
+    return NextResponse.json({ error: "Government ID file not found." }, { status: 404 });
+  }
+
+  const signedUrl = await getPrivateObjectReadUrl(url);
+  if (!signedUrl) {
+    return NextResponse.json({ error: "Government ID file not found." }, { status: 404 });
+  }
+
+  return NextResponse.redirect(signedUrl);
+}

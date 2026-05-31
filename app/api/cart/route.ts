@@ -8,6 +8,14 @@ type SaveCartPayload = {
   items: Array<{
     id: string;
     qty: number;
+    sessionHours?: number | null;
+    startIso?: string | null;
+    endIso?: string | null;
+    bookingAddressStreet?: string | null;
+    bookingAddressCity?: string | null;
+    bookingAddressState?: string | null;
+    bookingAddressZip?: string | null;
+    size?: string | null;
   }>;
   shippingAddressId?: number | null;
   billingAddressId?: number | null;
@@ -52,7 +60,15 @@ function isValidPayload(payload: unknown): payload is SaveCartPayload {
       typeof typedItem.id === "string" &&
       typedItem.id.trim().length > 0 &&
       Number.isInteger(Number(typedItem.qty)) &&
-      Number(typedItem.qty) > 0
+      Number(typedItem.qty) > 0 &&
+      (typedItem.sessionHours == null || (Number.isFinite(Number(typedItem.sessionHours)) && Number(typedItem.sessionHours) > 0)) &&
+      (typedItem.startIso == null || typeof typedItem.startIso === "string") &&
+      (typedItem.endIso == null || typeof typedItem.endIso === "string") &&
+      (typedItem.bookingAddressStreet == null || typeof typedItem.bookingAddressStreet === "string") &&
+      (typedItem.bookingAddressCity == null || typeof typedItem.bookingAddressCity === "string") &&
+      (typedItem.bookingAddressState == null || typeof typedItem.bookingAddressState === "string") &&
+      (typedItem.bookingAddressZip == null || typeof typedItem.bookingAddressZip === "string") &&
+      (typedItem.size == null || typeof typedItem.size === "string")
     );
   });
 }

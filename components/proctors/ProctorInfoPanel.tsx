@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, type ReactNode } from "react";
+import React, { useMemo } from "react";
 import { formatUsd } from "@/lib/formatters";
 
 export type ProctorMaterial = {
@@ -8,59 +8,115 @@ export type ProctorMaterial = {
   percentage: number | null;
 };
 
+export type ProctorEducation = {
+  degree: string;
+  school: string;
+  major: string;
+  startMonth: string | null;
+  endMonth: string | null;
+};
+
 export type ProctorInfoPanelProctor = {
-  assignmentCode: string;
-  sessionWindow: string;
-  coordinationUnits: number | null;
   description: string;
+  educations: ProctorEducation[];
+  hourlyRate: string | number | null;
   id: number;
+  maximumHours: string | number | null;
+  minimumHours: string | number | null;
   name: string;
   credential: string;
-  specialty: string;
-  address: string;
-  slotsAvailable: number | null;
-  rateUsd: string | number | null;
+  profession: string;
+  gender: string;
   materials: ProctorMaterial[];
 };
 
 export type ProctorInfoPanelProps = {
   proctor: ProctorInfoPanelProctor;
-  bookingDetails?: ReactNode;
 };
 
-export default function ProctorInfoPanel({ proctor, bookingDetails }: ProctorInfoPanelProps) {
+function formatHourValue(value: string | number | null) {
+  const parsed = value == null ? NaN : Number(value);
+  if (!Number.isFinite(parsed)) return "Not set";
+  return Number.isInteger(parsed) ? String(parsed) : parsed.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function formatMonth(value: string | null) {
+  if (!value) return "Present";
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(date);
+}
+
+export default function ProctorInfoPanel({ proctor }: ProctorInfoPanelProps) {
   const priceUsdText = useMemo(() => {
-    const usd = proctor.rateUsd == null ? 0 : Number(proctor.rateUsd);
+    const usd = proctor.hourlyRate == null ? 0 : Number(proctor.hourlyRate);
     return formatUsd(usd);
-  }, [proctor.rateUsd]);
+  }, [proctor.hourlyRate]);
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{proctor.name}</h1>
-      <div className="mt-1 text-base font-semibold text-zinc-700">{proctor.credential}</div>
-      <div className="mt-3 text-lg font-semibold">{priceUsdText} per hour</div>
-      {bookingDetails ? <div className="mt-6">{bookingDetails}</div> : null}
+    <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="border-b border-zinc-100 pb-5">
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl">{proctor.name}</h1>
+        {proctor.credential ? (
+          <div className="mt-2 inline-flex rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-600">
+            {proctor.credential}
+          </div>
+        ) : null}
+      </div>
 
-      <div className="mt-6 space-y-3 text-sm">
-        <div>
-          <span className="text-zinc-500">Assignment type:</span> {proctor.specialty}
-        </div>
-        <div>
-          <span className="text-zinc-500">Location setup:</span> {proctor.address}
-        </div>
-        <div>
-          <span className="text-zinc-500">Hours:</span> {proctor.sessionWindow}
-        </div>
-        <div>
-          <span className="text-zinc-500">Coordination units:</span>{" "}
-          {proctor.coordinationUnits == null ? "Standard" : proctor.coordinationUnits.toFixed(2)}
-        </div>
-        <div>
-          <span className="text-zinc-500">Assignment code:</span> {proctor.assignmentCode}
-        </div>
-        <div>
-          <span className="text-zinc-500">Open slots:</span> {proctor.slotsAvailable ?? "Contact us"}
-        </div>
+      <div className="divide-y divide-zinc-100 text-sm">
+        <section className="py-5">
+          <h2 className="text-sm font-semibold text-zinc-950">Profession</h2>
+          <div className="mt-2 leading-6 text-zinc-700">{proctor.profession}</div>
+        </section>
+
+        {proctor.gender ? (
+          <section className="py-5">
+            <h2 className="text-sm font-semibold text-zinc-950">Gender</h2>
+            <div className="mt-2 leading-6 text-zinc-700">{proctor.gender}</div>
+          </section>
+        ) : null}
+
+        <section className="py-5">
+          <h2 className="text-sm font-semibold text-zinc-950">Education</h2>
+          {proctor.educations.length > 0 ? (
+            <div className="mt-3 space-y-4">
+              {proctor.educations.map((education, index) => (
+                <div
+                  key={`${education.school}-${education.major}-${index}`}
+                  className="grid gap-1 border-l-2 border-zinc-200 pl-3"
+                >
+                  <div className="font-medium leading-6 text-zinc-950">{education.degree}</div>
+                  <div className="leading-6 text-zinc-700">{education.school}</div>
+                  <div className="leading-6 text-zinc-700">{education.major}</div>
+                  <div className="text-xs font-medium text-zinc-500">
+                    {formatMonth(education.startMonth)} - {formatMonth(education.endMonth)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-2 leading-6 text-zinc-500">No education listed</div>
+          )}
+        </section>
+
+        <section className="py-5">
+          <h2 className="text-sm font-semibold text-zinc-950">Rate</h2>
+          <dl className="mt-3 grid gap-3">
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-zinc-500">Hourly rate</dt>
+              <dd className="font-medium text-zinc-950">{priceUsdText}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-zinc-500">Minimum hours per session</dt>
+              <dd className="font-medium text-zinc-950">{formatHourValue(proctor.minimumHours)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-zinc-500">Maximum hours per session</dt>
+              <dd className="font-medium text-zinc-950">{formatHourValue(proctor.maximumHours)}</dd>
+            </div>
+          </dl>
+        </section>
       </div>
 
       {Array.isArray(proctor.materials) && proctor.materials.length > 0 ? (
@@ -72,12 +128,10 @@ export default function ProctorInfoPanel({ proctor, bookingDetails }: ProctorInf
         </div>
       ) : null}
 
-      {/* Description */}
-      <div className="mt-8">
-        <h2 className="text-base font-medium">Description</h2>
+      <div className="border-t border-zinc-100 pt-5">
+        <h2 className="text-sm font-semibold text-zinc-950">Self-introduction</h2>
         <p className="mt-2 text-sm leading-6 text-zinc-700">{proctor.description}</p>
       </div>
-
     </div>
   );
 }

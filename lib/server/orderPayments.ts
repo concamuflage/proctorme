@@ -1,11 +1,16 @@
 import pool from "@/backend/database/pool";
 import { createInvoiceNumber } from "@/lib/invoice";
+import { calculateBookingTotal, calculateServiceFee } from "@/lib/serviceFee";
 import type Stripe from "stripe";
 
 export type CheckoutOrderItem = {
   cartItemId: string;
+  addressId?: number | null;
   quantity: number;
   unitPriceUsd: number;
+  sessionHours?: number | null;
+  startIso?: string | null;
+  endIso?: string | null;
   name?: string;
   color?: string | null;
   size?: string | null;
@@ -60,6 +65,10 @@ type StripePaymentRow = {
   failed_at: unknown;
 };
 
+type QueryClient = {
+  query: typeof pool.query;
+};
+
 export type StripePaymentDiscountDetails = {
   stripePromotionCodeId: string | null;
   stripeCouponId: string | null;
@@ -69,9 +78,15 @@ export type StripePaymentDiscountDetails = {
 };
 
 type CartCheckoutRow = {
+  cart_item_id: unknown;
+  address_id: unknown;
   quantity: unknown;
+  session_hours: unknown;
+  start_time_utc: unknown;
+  end_time_utc: unknown;
+  session_label: unknown;
   proctor_user_id: unknown;
-  booking_rate_usd: unknown;
+  hourly_rate: unknown;
   first_name: unknown;
   last_name: unknown;
   address_street: unknown;
@@ -112,6 +127,11 @@ export type StripeCheckoutOrderStatus =
 
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
+}
+
+function positiveNumber(value: unknown, fallback: number) {
+  const parsed = value == null ? NaN : toNumber(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function roundMoney(value: number) {
@@ -178,6 +198,11 @@ function proctorAddress(row: Pick<CartCheckoutRow, "address_street" | "address_c
     .join(", ");
 }
 
+function dateToIso(value: unknown) {
+  if (value instanceof Date) return value.toISOString();
+  return typeof value === "string" && value.trim() ? new Date(value).toISOString() : null;
+}
+
 export function isValidCheckoutOrderPayload(payload: unknown): payload is CheckoutOrderPayload {
   if (!payload || typeof payload !== "object") {
     return false;
@@ -207,16 +232,37 @@ export function isValidCheckoutOrderPayload(payload: unknown): payload is Checko
     return (
       typeof typedItem.cartItemId === "string" &&
       typedItem.cartItemId.trim().length > 0 &&
+      Number.isInteger(toNumber(typedItem.addressId)) &&
+      toNumber(typedItem.addressId) > 0 &&
       Number.isInteger(toNumber(typedItem.quantity)) &&
       toNumber(typedItem.quantity) > 0 &&
       Number.isFinite(toNumber(typedItem.unitPriceUsd)) &&
-      toNumber(typedItem.unitPriceUsd) >= 0
+      toNumber(typedItem.unitPriceUsd) >= 0 &&
+      (typedItem.startIso == null || typeof typedItem.startIso === "string") &&
+      (typedItem.endIso == null || typeof typedItem.endIso === "string")
     );
   });
 }
 
-async function ensureOrderTables() {
-  await pool.query(
+async function withSchemaBootstrapLock<T>(callback: (client: QueryClient) => Promise<T>) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", ["proctorme-schema-bootstrap"]);
+    const result = await callback(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function ensureOrderTables(client: QueryClient = pool) {
+  await client.query(
     `CREATE TABLE IF NOT EXISTS orders (
       id BIGSERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -239,76 +285,93 @@ async function ensureOrderTables() {
       UNIQUE (payment_provider, payment_reference)
     )`
   );
-  await pool.query("ALTER TABLE orders ALTER COLUMN shipping_id DROP NOT NULL").catch(() => undefined);
-  await pool.query("ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_shipping_id_fkey").catch(() => undefined);
-  await pool.query(
+  await client.query(
     `CREATE TABLE IF NOT EXISTS orders_proctors (
       id BIGSERIAL PRIMARY KEY,
       order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
       proctor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      booking_id BIGINT REFERENCES bookings(id) ON DELETE SET NULL,
+      address_id INTEGER REFERENCES addresses(id),
       quantity INTEGER NOT NULL CHECK (quantity > 0),
-      snapshot_price NUMERIC(10,2) NOT NULL
+      snapshot_price NUMERIC(10,2) NOT NULL,
+      session_hours NUMERIC(8,2),
+      start_time_utc TIMESTAMPTZ,
+      end_time_utc TIMESTAMPTZ,
+      session_label TEXT
     )`
   );
+  await client.query("ALTER TABLE orders_proctors ADD COLUMN IF NOT EXISTS booking_id BIGINT REFERENCES bookings(id) ON DELETE SET NULL");
+  await client.query("ALTER TABLE orders_proctors ADD COLUMN IF NOT EXISTS address_id INTEGER REFERENCES addresses(id)");
+  await client.query("ALTER TABLE orders_proctors ADD COLUMN IF NOT EXISTS session_hours NUMERIC(8,2)");
+  await client.query("ALTER TABLE orders_proctors ADD COLUMN IF NOT EXISTS start_time_utc TIMESTAMPTZ");
+  await client.query("ALTER TABLE orders_proctors ADD COLUMN IF NOT EXISTS end_time_utc TIMESTAMPTZ");
+  await client.query("ALTER TABLE orders_proctors ADD COLUMN IF NOT EXISTS session_label TEXT");
+  await client.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS address_id INTEGER REFERENCES addresses(id)");
 }
 
 export async function ensureStripeCheckoutSessionTable() {
-  await ensureOrderTables();
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS stripe_checkout_sessions (
-      stripe_session_id TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      payload JSONB NOT NULL,
-      order_id BIGINT REFERENCES orders(id) ON DELETE SET NULL,
-      completed_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )`
-  );
+  await withSchemaBootstrapLock(async (client) => {
+    await ensureOrderTables(client);
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS stripe_checkout_sessions (
+        stripe_session_id TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        payload JSONB NOT NULL,
+        order_id BIGINT REFERENCES orders(id) ON DELETE SET NULL,
+        completed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`
+    );
+  });
 }
 
 async function ensureStripeWebhookEventsTable() {
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS stripe_webhook_events (
-      id BIGSERIAL PRIMARY KEY,
-      stripe_event_id TEXT UNIQUE NOT NULL,
-      event_type TEXT NOT NULL,
-      stripe_payment_intent_id TEXT,
-      stripe_checkout_session_id TEXT,
-      order_id BIGINT,
-      raw_payload JSONB NOT NULL,
-      processed_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )`
-  );
+  await withSchemaBootstrapLock(async (client) => {
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+        id BIGSERIAL PRIMARY KEY,
+        stripe_event_id TEXT UNIQUE NOT NULL,
+        event_type TEXT NOT NULL,
+        stripe_payment_intent_id TEXT,
+        stripe_checkout_session_id TEXT,
+        order_id BIGINT,
+        raw_payload JSONB NOT NULL,
+        processed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`
+    );
+  });
 }
 
 async function ensurePaymentsTable() {
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS payments (
-      id BIGSERIAL PRIMARY KEY,
-      order_id BIGINT REFERENCES orders(id) ON DELETE SET NULL,
-      stripe_payment_intent_id TEXT UNIQUE NOT NULL,
-      stripe_checkout_session_id TEXT REFERENCES stripe_checkout_sessions(stripe_session_id),
-      stripe_customer_id TEXT,
-      stripe_charge_id TEXT,
-      status TEXT NOT NULL,
-      amount INTEGER NOT NULL,
-      currency TEXT NOT NULL,
-      customer_email TEXT,
-      failure_code TEXT,
-      failure_message TEXT,
-      paid_at TIMESTAMPTZ,
-      failed_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )`
-  );
-  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS stripe_promotion_code_id TEXT");
-  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS stripe_coupon_id TEXT");
-  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS promotion_code TEXT");
-  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS discount_amount INTEGER");
-  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS discount_currency TEXT");
+  await withSchemaBootstrapLock(async (client) => {
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS payments (
+        id BIGSERIAL PRIMARY KEY,
+        order_id BIGINT REFERENCES orders(id) ON DELETE SET NULL,
+        stripe_payment_intent_id TEXT UNIQUE NOT NULL,
+        stripe_checkout_session_id TEXT REFERENCES stripe_checkout_sessions(stripe_session_id),
+        stripe_customer_id TEXT,
+        stripe_charge_id TEXT,
+        status TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        currency TEXT NOT NULL,
+        customer_email TEXT,
+        failure_code TEXT,
+        failure_message TEXT,
+        paid_at TIMESTAMPTZ,
+        failed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`
+    );
+    await client.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS stripe_promotion_code_id TEXT");
+    await client.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS stripe_coupon_id TEXT");
+    await client.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS promotion_code TEXT");
+    await client.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS discount_amount INTEGER");
+    await client.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS discount_currency TEXT");
+  });
 }
 
 function normalizeExpandableId<T extends { id?: string }>(value: string | T | null | undefined) {
@@ -410,9 +473,15 @@ export async function buildAuthoritativeCheckoutOrderPayload({
   const cartResult = await pool.query<CartCheckoutRow>(
     `
       SELECT
+        cart_item.cart_item_id,
+        cart_item.address_id,
         cart_item.quantity,
+        cart_item.session_hours,
+        cart_item.start_time_utc,
+        cart_item.end_time_utc,
+        cart_item.session_label,
         u.id AS proctor_user_id,
-        COALESCE(u.hourly_rate, 0) * COALESCE(u.minimum_hours, 1) AS booking_rate_usd,
+        COALESCE(u.hourly_rate, 0) AS hourly_rate,
         u.first_name,
         u.last_name,
         a.street AS address_street,
@@ -430,7 +499,7 @@ export async function buildAuthoritativeCheckoutOrderPayload({
       LEFT JOIN users u
         ON u.id = cart_item.proctor_user_id
       LEFT JOIN addresses a
-        ON a.id = u.proctor_address_id
+        ON a.id = cart_item.address_id
       LEFT JOIN cities city
         ON city.id = a.city_id
       LEFT JOIN states s
@@ -441,19 +510,53 @@ export async function buildAuthoritativeCheckoutOrderPayload({
     [userId]
   );
 
-  const cartItems = cartResult.rows.filter((row: CartCheckoutRow) => row.proctor_user_id != null);
+  const cartItems: CartCheckoutRow[] = cartResult.rows.filter((row: CartCheckoutRow) => row.proctor_user_id != null);
   if (cartItems.length === 0) {
     throw new Error("Your cart is empty.");
   }
 
+  if (cartItems.some((row) => row.address_id == null)) {
+    throw new Error("Each booking must include an exact address before checkout.");
+  }
+
   const items = cartItems.map((row: CartCheckoutRow) => ({
-    cartItemId: `proctor-${toNumber(row.proctor_user_id)}`,
+    cartItemId: typeof row.cart_item_id === "string" && row.cart_item_id ? row.cart_item_id : `proctor-${toNumber(row.proctor_user_id)}`,
+    addressId: toNumber(row.address_id),
     quantity: toNumber(row.quantity),
-    unitPriceUsd: row.booking_rate_usd == null ? 0 : toNumber(row.booking_rate_usd),
+    unitPriceUsd: roundMoney(toNumber(row.hourly_rate) * positiveNumber(row.session_hours, 1)),
+    sessionHours: positiveNumber(row.session_hours, 1),
+    startIso: dateToIso(row.start_time_utc),
+    endIso: dateToIso(row.end_time_utc),
     name: proctorName(row),
     color: proctorAddress(row) || null,
-    size: row.session_window == null ? null : String(row.session_window),
+    size: typeof row.session_label === "string" && row.session_label ? row.session_label : row.session_window == null ? null : String(row.session_window),
   }));
+
+  for (const item of items) {
+    const proctorUserId = parseProctorUserId(item.cartItemId);
+    if (!proctorUserId || !item.startIso || !item.endIso) {
+      throw new Error("Each booking must include a selected session time.");
+    }
+
+    const overlapResult = await pool.query(
+      `
+        SELECT 1
+        FROM bookings b
+        JOIN statuses s
+          ON s.id = b.status_id
+        WHERE b.user_id = $1
+          AND s.name <> 'canceled'
+          AND b.start_time_utc < $3::timestamptz
+          AND b.end_time_utc > $2::timestamptz
+        LIMIT 1
+      `,
+      [proctorUserId, item.startIso, item.endIso]
+    );
+
+    if (overlapResult.rows.length > 0) {
+      throw new Error("This proctor already has a booking during the selected time.");
+    }
+  }
 
   const subtotalUsd = roundMoney(
     items.reduce((total: number, item: CheckoutOrderItem) => total + item.unitPriceUsd * item.quantity, 0)
@@ -464,12 +567,12 @@ export async function buildAuthoritativeCheckoutOrderPayload({
   );
   const boxWeightKg = 0;
   const shippingWeightKg = clothesWeightKg;
-  const shippingUsd = 0;
+  const shippingUsd = calculateServiceFee(subtotalUsd);
 
   return {
     subtotalUsd,
     shippingUsd,
-    totalUsd: roundMoney(subtotalUsd + shippingUsd),
+    totalUsd: calculateBookingTotal(subtotalUsd),
     clothesWeightKg,
     boxWeightKg,
     shippingWeightKg,
@@ -860,15 +963,35 @@ export async function finalizePaidOrder({
   paymentReference: string;
   paidAt: Date;
 }) {
-  await ensureOrderTables();
+  await withSchemaBootstrapLock((client) => ensureOrderTables(client));
   const proctorItems = payload.items.map((item) => ({
     proctorUserId: parseProctorUserId(item.cartItemId),
+    addressId: item.addressId == null ? null : Number(item.addressId),
     quantity: Number(item.quantity),
     unitPriceUsd: Number(item.unitPriceUsd),
+    sessionHours: item.sessionHours == null ? null : Number(item.sessionHours),
+    startIso: item.startIso ?? null,
+    endIso: item.endIso ?? null,
+    sessionLabel: item.size ?? null,
   }));
 
   if (proctorItems.some((item) => item.proctorUserId == null)) {
     throw new Error("Unable to determine one or more proctor ids.");
+  }
+
+  if (
+    proctorItems.some(
+      (item) =>
+        item.addressId == null ||
+        !Number.isFinite(item.addressId) ||
+        !item.startIso ||
+        !item.endIso ||
+        item.sessionHours == null ||
+        !Number.isFinite(item.sessionHours) ||
+        item.sessionHours <= 0
+    )
+  ) {
+    throw new Error("Every paid booking must include an address and session time.");
   }
 
   const client = await pool.connect();
@@ -923,8 +1046,10 @@ export async function finalizePaidOrder({
       `
         SELECT u.id
         FROM users u
+        JOIN user_roles ur
+          ON ur.user_id = u.id
         JOIN roles r
-          ON r.id = u.role_id
+          ON r.id = ur.role_id
         WHERE u.id = ANY($1::int[])
           AND r.name = 'proctor'
           AND u.deleted_at IS NULL
@@ -938,6 +1063,35 @@ export async function finalizePaidOrder({
 
     if (proctorUserIds.some((proctorUserId) => !proctorIdsInDatabase.has(proctorUserId))) {
       throw new Error("One or more proctors no longer exist.");
+    }
+
+    const addressIds = proctorItems.map((item) => item.addressId).filter((addressId): addressId is number => addressId != null);
+    const addressExistenceResult = await client.query<{ id: unknown }>(
+      `
+        SELECT id
+        FROM addresses
+        WHERE id = ANY($1::int[])
+      `,
+      [addressIds]
+    );
+    const addressIdsInDatabase = new Set(
+      addressExistenceResult.rows.map((row: { id: unknown }) => Number(row.id))
+    );
+    if (addressIds.some((addressId) => !addressIdsInDatabase.has(addressId))) {
+      throw new Error("One or more booking addresses no longer exist.");
+    }
+
+    const normalStatusResult = await client.query(
+      `
+        SELECT id
+        FROM statuses
+        WHERE name = 'normal'
+        LIMIT 1
+      `
+    );
+    const normalStatusId = normalStatusResult.rows[0]?.id == null ? null : Number(normalStatusResult.rows[0].id);
+    if (!normalStatusId) {
+      throw new Error("Booking status is not configured.");
     }
 
     const orderInsertResult = await client.query(
@@ -1025,12 +1179,70 @@ export async function finalizePaidOrder({
     );
 
     for (const item of proctorItems) {
+      const overlapResult = await client.query(
+        `
+          SELECT 1
+          FROM bookings b
+          JOIN statuses s
+            ON s.id = b.status_id
+          WHERE b.user_id = $1
+            AND s.name <> 'canceled'
+            AND b.start_time_utc < $3::timestamptz
+            AND b.end_time_utc > $2::timestamptz
+          LIMIT 1
+        `,
+        [item.proctorUserId, item.startIso, item.endIso]
+      );
+      if (overlapResult.rows.length > 0) {
+        throw new Error("This proctor already has a booking during the selected time.");
+      }
+
+      const bookingInsertResult = await client.query(
+        `
+          INSERT INTO bookings (
+            user_id,
+            address_id,
+            start_time_utc,
+            end_time_utc,
+            status_id,
+            created_at,
+            updated_at
+          )
+          VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5, NOW(), NOW())
+          RETURNING id
+        `,
+        [item.proctorUserId, item.addressId, item.startIso, item.endIso, normalStatusId]
+      );
+      const bookingId = Number(bookingInsertResult.rows[0].id);
+
       await client.query(
         `
-          INSERT INTO orders_proctors (order_id, proctor_user_id, quantity, snapshot_price)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO orders_proctors (
+            order_id,
+            proctor_user_id,
+            booking_id,
+            address_id,
+            quantity,
+            snapshot_price,
+            session_hours,
+            start_time_utc,
+            end_time_utc,
+            session_label
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9::timestamptz, $10)
         `,
-        [orderId, item.proctorUserId, item.quantity, item.unitPriceUsd]
+        [
+          orderId,
+          item.proctorUserId,
+          bookingId,
+          item.addressId,
+          item.quantity,
+          item.unitPriceUsd,
+          item.sessionHours,
+          item.startIso,
+          item.endIso,
+          item.sessionLabel,
+        ]
       );
     }
 

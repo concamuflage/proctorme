@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -10,12 +10,45 @@ import LoginModal from "@/components/auth/LoginModal";
 import SignupModal from "@/components/auth/SignupModal";
 import { SITE_NAME } from "@/lib/proctor";
 
+type AccountRole = {
+  id: number;
+  name: string;
+};
+
+const ACTIVE_ROLE_STORAGE_KEY = "proctorme.activeRole";
+
+function roleLabel(roleName: string) {
+  if (roleName === "admin") return "Admin";
+  if (roleName === "proctor") return "Proctor";
+  if (roleName === "corporate_user" || roleName === "cooporate_user" || roleName === "interviewee") {
+    return "Organization user";
+  }
+  return roleName
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function rolePriority(roleName: string) {
+  if (roleName === "admin") return 0;
+  if (roleName === "corporate_user" || roleName === "cooporate_user" || roleName === "interviewee") return 1;
+  if (roleName === "proctor") return 2;
+  return 3;
+}
+
+function isOrganizationRole(roleName: string) {
+  return roleName === "corporate_user" || roleName === "cooporate_user" || roleName === "interviewee";
+}
+
 /**
  * Site header with auth actions and cart entry point.
  * Shows login/signup buttons when logged out, and sign-out when logged in.
  */
 export default function Header() {
   const { data: session } = useSession();
+  const [roles, setRoles] = useState<AccountRole[]>([]);
+  const [activeRole, setActiveRole] = useState("");
   const {
     authMode,
     isAuthOpen,
@@ -31,12 +64,66 @@ export default function Header() {
   const trialBannerText =
     "Book verified proctors for interviews, assessments, and hiring events at the location you specify. Choose a proctor, select the session window, confirm the site address, and pay securely before the assignment is scheduled.";
 
+  useEffect(() => {
+    if (!session?.user) {
+      setRoles([]);
+      setActiveRole("");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadRoles() {
+      const response = await fetch("/api/account/roles", { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+      if (cancelled || !response.ok || !Array.isArray(payload?.roles)) return;
+
+      const loadedRoles = payload.roles
+        .filter((role: Partial<AccountRole>) => Number.isInteger(Number(role.id)) && typeof role.name === "string")
+        .map((role: AccountRole) => ({ id: Number(role.id), name: role.name }))
+        .sort((a: AccountRole, b: AccountRole) => rolePriority(a.name) - rolePriority(b.name) || roleLabel(a.name).localeCompare(roleLabel(b.name)));
+
+      const savedRole = window.localStorage.getItem(ACTIVE_ROLE_STORAGE_KEY) || "";
+      const nextActiveRole = loadedRoles.some((role: AccountRole) => role.name === savedRole)
+        ? savedRole
+        : loadedRoles[0]?.name ?? "";
+
+      setRoles(loadedRoles);
+      setActiveRole(nextActiveRole);
+      if (nextActiveRole) window.localStorage.setItem(ACTIVE_ROLE_STORAGE_KEY, nextActiveRole);
+    }
+
+    loadRoles().catch(() => {
+      if (!cancelled) {
+        setRoles([]);
+        setActiveRole("");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user]);
+
+  const activeRoleLabel = useMemo(() => activeRole ? roleLabel(activeRole) : "", [activeRole]);
+  const showFindProctors = session?.user ? isOrganizationRole(activeRole) : true;
+
+  const handleRoleChange = (roleName: string) => {
+    if (!roleName || roleName === activeRole) return;
+    setActiveRole(roleName);
+    window.localStorage.setItem(ACTIVE_ROLE_STORAGE_KEY, roleName);
+    if (pathname === "/profile") {
+      window.location.reload();
+      return;
+    }
+    router.refresh();
+  };
+
   const handleLoginModalSuccess = () => {
     closeAuthModal();
-    if (openedFromAuthPage) {
-      router.push("/proctors");
-      router.refresh();
-    }
+    const callbackUrl = openedFromAuthPage ? "/proctors" : pathname || "/proctors";
+    router.push(`/account/post-login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+    router.refresh();
   };
 
   const handleSignOut = async () => {
@@ -61,14 +148,42 @@ export default function Header() {
           <Link className="whitespace-nowrap hover:underline" href="/contact">
             Contact Us
           </Link>
-          <Link
-            className="whitespace-nowrap rounded-full bg-zinc-900 px-3 py-2 text-white hover:bg-zinc-800 sm:px-4"
-            href="/proctors"
-          >
-            Find Proctors
-          </Link>
+          {showFindProctors ? (
+            <Link
+              className="whitespace-nowrap rounded-full bg-zinc-900 px-3 py-2 text-white hover:bg-zinc-800 sm:px-4"
+              href="/proctors"
+            >
+              Find Proctors
+            </Link>
+          ) : null}
           {session?.user ? (
             <div className="flex items-center gap-3">
+              {roles.length > 1 ? (
+                <div className="flex rounded-full border border-zinc-200 bg-white p-1" aria-label="Current role">
+                  {roles.map((role) => {
+                    const selected = role.name === activeRole;
+                    return (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={() => handleRoleChange(role.name)}
+                        aria-pressed={selected}
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                          selected
+                            ? "bg-zinc-900 text-white"
+                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                        }`}
+                      >
+                        {roleLabel(role.name)}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : activeRoleLabel ? (
+                <div className="rounded-full border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700">
+                  {activeRoleLabel}
+                </div>
+              ) : null}
               <Link
                 href="/profile"
                 aria-label="Open profile"

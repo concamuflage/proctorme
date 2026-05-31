@@ -13,17 +13,12 @@ export default function CartDrawer() {
   // - subtotal: total price of items in cart
   // - closeCart: function to close the cart drawer
   // - removeItem: function to remove an item from the cart
-  // - updateQty: function to update quantity of an item
-  // - clearCart: function to remove all items from the cart
   const {
     items,
     isOpen,
     subtotal,
-    totalWeightKg,
     closeCart,
     removeItem,
-    updateQty,
-    clearCart,
   } = useCart();
 
   return (
@@ -76,21 +71,20 @@ export default function CartDrawer() {
             <ItemsPanel
               items={items}
               onRemove={removeItem}
-              onUpdateQty={updateQty}
               priceFractionDigits={0}
               title="Selected proctors"
               emptyMessage="No proctors selected."
               testIdPrefix="cart-drawer"
             />
-            <section className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
-              <OrderSummary
-                subtotal={subtotal}
-                totalWeightKg={totalWeightKg}
-                testIdPrefix="cart-drawer"
-                legacySubtotalTestId="cart-drawer-subtotal"
-                title="Booking summary"
-              />
-            </section>
+            {items.length > 0 ? (
+              <section className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+                <OrderSummary
+                  subtotal={subtotal}
+                  testIdPrefix="cart-drawer"
+                  legacySubtotalTestId="cart-drawer-subtotal"
+                />
+              </section>
+            ) : null}
           </div>
 
           <div className="border-t border-zinc-200 px-4 py-4 sm:px-6">
@@ -104,17 +98,6 @@ export default function CartDrawer() {
               >
                 Review booking
               </Link>
-              {/* If there are items, show a Clear cart button to remove all items */}
-              {items.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={clearCart} // Clears all items from the cart
-                  className="text-xs text-zinc-500 hover:text-zinc-900"
-                  data-testid="cart-drawer-clear-cart"
-                >
-                  Clear booking
-                </button>
-              ) : null}
             </div>
           </div>
         </div>

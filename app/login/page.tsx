@@ -17,7 +17,7 @@ function LoginPageContent() {
   useEffect(() => {
     if (status !== "authenticated") return;
     const callbackUrl = searchParams.get("callbackUrl") ?? "/proctors";
-    router.replace(callbackUrl);
+    router.replace(`/account/post-login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }, [router, searchParams, status]);
 
   return (

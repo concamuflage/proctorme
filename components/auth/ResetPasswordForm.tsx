@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import PasswordInput from "@/components/ui/PasswordInput";
 import { PASSWORD_REQUIREMENTS_MESSAGE } from "@/shared/passwordPolicy";
 
 type ResetPasswordFormProps = {
@@ -60,13 +61,12 @@ export default function ResetPasswordForm({ email, token }: ResetPasswordFormPro
           <label className="text-xs font-medium text-zinc-600" htmlFor="reset-password">
             New password
           </label>
-          <input
+          <PasswordInput
             id="reset-password"
             name="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             placeholder="••••••••••••"
             autoComplete="new-password"
             required
@@ -77,13 +77,12 @@ export default function ResetPasswordForm({ email, token }: ResetPasswordFormPro
           <label className="text-xs font-medium text-zinc-600" htmlFor="reset-password-confirm">
             Confirm new password
           </label>
-          <input
+          <PasswordInput
             id="reset-password-confirm"
             name="confirmPassword"
-            type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             placeholder="••••••••••••"
             autoComplete="new-password"
             required

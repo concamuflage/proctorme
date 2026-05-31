@@ -3,6 +3,10 @@ const crypto = require("crypto");
 const DEFAULT_PASSWORD_RESET_TTL_MINUTES = 30;
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
+function brandName() {
+  return process.env.NEXT_PUBLIC_BRAND_NAME || process.env.BRAND_NAME || "ProctorMe";
+}
+
 function getPasswordResetTtlMinutes() {
   const rawValue = Number(process.env.PASSWORD_RESET_TTL_MINUTES || DEFAULT_PASSWORD_RESET_TTL_MINUTES);
   if (!Number.isFinite(rawValue) || rawValue <= 0) {
@@ -70,6 +74,7 @@ async function sendPasswordResetEmail({ to, firstName, resetLink }) {
   }
 
   const greetingName = typeof firstName === "string" && firstName.trim() ? firstName.trim() : "there";
+  const appName = brandName();
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -80,11 +85,11 @@ async function sendPasswordResetEmail({ to, firstName, resetLink }) {
     body: JSON.stringify({
       from,
       to: [to],
-      subject: "Reset your OutlierFit password",
+      subject: `Reset your ${appName} password`,
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #18181b;">
           <p>Hi ${greetingName},</p>
-          <p>We received a request to reset the password for your OutlierFit account.</p>
+          <p>We received a request to reset the password for your ${appName} account.</p>
           <p>This link is valid for 30 minutes.</p>
           <p>
             <a
@@ -101,7 +106,7 @@ async function sendPasswordResetEmail({ to, firstName, resetLink }) {
       `,
       text:
         `Hi ${greetingName},\n\n` +
-        `We received a request to reset the password for your OutlierFit account.\n\n` +
+        `We received a request to reset the password for your ${appName} account.\n\n` +
         `This link is valid for 30 minutes.\n\n` +
         `Reset password\n\n` +
         `If the button does not work, please copy and paste the following link into your browser:\n\n` +

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getProfile, getUserIdByEmail } from "@/lib/server/profileStore";
+import { getProfile, getUserIdByEmail, updateProfile } from "@/lib/server/profileStore";
 
 async function resolveSessionUserId() {
   const session = await getServerSession(authOptions);
@@ -43,11 +43,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  await request.json().catch(() => null);
-  return NextResponse.json(
-    { error: "Saved customer profile details are no longer supported." },
-    { status: 410 }
-  );
+  const payload = await request.json().catch(() => null);
+  try {
+    const profile = await updateProfile(userId, payload);
+    return NextResponse.json(profile);
+  } catch (error) {
+    console.error("profile update error:", error);
+    const message = error instanceof Error ? error.message : "Unable to update profile.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+export async function PUT(request: Request) {
+  return POST(request);
 }
 
 export async function DELETE(request: Request) {

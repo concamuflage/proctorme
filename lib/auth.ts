@@ -5,7 +5,6 @@
 import type { NextAuthOptions } from "next-auth"; // Type definitions for NextAuth configuration options.
 import CredentialsProvider from "next-auth/providers/credentials"; // Provider for username/password authentication.
 import { getServerApiBaseUrl } from "@/lib/api-base";
-import { isUserEmailVerified } from "@/lib/server/authUserStore";
 
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
 
@@ -114,15 +113,6 @@ export const authOptions: NextAuthOptions = {
       if (user?.id) {
         token.userId = user.id;
         token.verifiedEmail = user.verifiedEmail === true;
-      }
-
-      if (typeof token.userId === "string") {
-        try {
-          token.verifiedEmail = await isUserEmailVerified(token.userId);
-        } catch (error) {
-          console.error("email verification session check error:", error);
-          token.verifiedEmail = false;
-        }
       }
 
       return token;

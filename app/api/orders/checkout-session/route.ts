@@ -57,14 +57,14 @@ function badRequest(message: string) {
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Please sign in before completing payment." }, { status: 401 });
   }
 
   const payload = (await request.json().catch(() => null)) as CheckoutSessionSelectionPayload | null;
 
   const userId = Number(session.user.id);
   if (!Number.isInteger(userId) || userId <= 0) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Please sign in before completing payment." }, { status: 401 });
   }
 
   try {
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
           currency: "usd",
           unit_amount: Math.round(Number(checkoutPayload.shippingUsd) * 100),
           product_data: {
-            name: "Site coordination",
+            name: "Service fee",
           },
         },
       });

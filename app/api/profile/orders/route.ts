@@ -96,11 +96,14 @@ export async function GET() {
                 'unitPriceUsd', op.snapshot_price,
                 'color', CONCAT_WS(', ', a.street, ci.name, s.code, a.zip_code),
                 'size',
-                  CASE
-                    WHEN COALESCE(u.minimum_hours, 1) = COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1))
-                      THEN CONCAT(COALESCE(u.minimum_hours, 1), ' hr')
-                    ELSE CONCAT(COALESCE(u.minimum_hours, 1), '-', COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1)), ' hr')
-                  END,
+                  COALESCE(
+                    op.session_label,
+                    CASE
+                      WHEN COALESCE(u.minimum_hours, 1) = COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1))
+                        THEN CONCAT(COALESCE(u.minimum_hours, 1), ' hr')
+                      ELSE CONCAT(COALESCE(u.minimum_hours, 1), '-', COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1)), ' hr')
+                    END
+                  ),
                 'weightKg', 1,
                 'imageUrl', NULL,
                 'proctorExists', u.id IS NOT NULL
@@ -115,14 +118,14 @@ export async function GET() {
         LEFT JOIN users u
           ON u.id = op.proctor_user_id
         LEFT JOIN addresses a
-          ON a.id = u.proctor_address_id
+          ON a.id = COALESCE(op.address_id, u.proctor_address_id)
         LEFT JOIN cities ci
           ON ci.id = a.city_id
         LEFT JOIN states s
           ON s.id = a.state_id
         WHERE o.user_id = $1
         GROUP BY o.id
-        ORDER BY COALESCE(paid_at, created_at) DESC, id DESC
+        ORDER BY COALESCE(o.paid_at, o.created_at) DESC, o.id DESC
       `,
       [userId]
     );

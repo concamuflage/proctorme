@@ -13,6 +13,7 @@
 
 import React, { useState } from "react";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import PasswordInput from "@/components/ui/PasswordInput";
 import { PASSWORD_REQUIREMENTS_MESSAGE, isStrongPassword } from "@/shared/passwordPolicy";
 
 type SignupFormProps = {
@@ -177,13 +178,12 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
           <label className="text-xs font-medium text-zinc-600" htmlFor="signup-password">
             Password
           </label>
-          <input
+          <PasswordInput
             id="signup-password"
             name="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             placeholder="••••••••"
             autoComplete="new-password"
             required
@@ -195,13 +195,12 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
           <label className="text-xs font-medium text-zinc-600" htmlFor="signup-confirm-password">
             Confirm password
           </label>
-          <input
+          <PasswordInput
             id="signup-confirm-password"
             name="confirm-password"
-            type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             placeholder="••••••••"
             autoComplete="new-password"
             required

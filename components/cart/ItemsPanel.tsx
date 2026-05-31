@@ -7,7 +7,7 @@ import { type CartItem } from "@/components/cart/CartContext";
 type ItemsPanelProps = {
   items: CartItem[];
   onRemove: (id: string) => void;
-  onUpdateQty: (id: string, qty: number) => void;
+  children?: React.ReactNode;
   title?: string;
   emptyMessage?: string;
   priceFractionDigits?: number;
@@ -18,7 +18,7 @@ type ItemsPanelProps = {
 export default function ItemsPanel({
   items,
   onRemove,
-  onUpdateQty,
+  children,
   title = "Selected proctors",
   emptyMessage = "No proctors selected.",
   priceFractionDigits = 2,
@@ -39,13 +39,13 @@ export default function ItemsPanel({
               key={item.id}
               item={item}
               onRemove={onRemove}
-              onUpdateQty={onUpdateQty}
               priceFractionDigits={priceFractionDigits}
               testIdPrefix={testIdPrefix}
             />
           ))
         )}
       </div>
+      {children}
     </section>
   );
 }

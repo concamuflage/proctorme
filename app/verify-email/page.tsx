@@ -68,8 +68,11 @@ function VerifyEmailPageContent() {
           </h1>
           <p className={`mt-4 text-sm ${state === "error" ? "text-red-600" : "text-zinc-600"}`}>{message}</p>
           <div className="mt-6">
-            <Link className="text-sm text-zinc-900 underline" href="/login">
-              Go to sign in
+            <Link
+              className="inline-flex rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+              href="/login"
+            >
+              {state === "success" ? "Sign in to continue" : "Go to sign in"}
             </Link>
           </div>
         </div>

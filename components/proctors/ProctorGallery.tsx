@@ -18,7 +18,13 @@ export type ProctorGalleryProps = {
 };
 
 function isImageUrl(value: string) {
-  return /^https?:\/\//.test(value) || value.startsWith("/") || value.startsWith("data:image/");
+  return /^https?:\/\//.test(value) || value.startsWith("/") || value.startsWith("data:image/") || value.startsWith("gcs://");
+}
+
+function profileImageSrc(url: string) {
+  return url.startsWith("gcs://")
+    ? `/api/proctor-files/profile-image?url=${encodeURIComponent(url)}`
+    : url;
 }
 
 export default function ProctorGallery({ photos, alt, initialIndex = 0 }: ProctorGalleryProps) {
@@ -95,7 +101,7 @@ export default function ProctorGallery({ photos, alt, initialIndex = 0 }: Procto
               aria-label={`View proctor credential ${idx + 1}`}
             >
               {isImageUrl(src) ? (
-                <img src={src} alt={`${alt} ${idx + 1}`} className="h-full w-full object-cover" />
+                <img src={profileImageSrc(src)} alt={`${alt} ${idx + 1}`} className="h-full w-full object-contain" />
               ) : (
                 `Ref ${idx + 1}`
               )}
@@ -113,7 +119,7 @@ export default function ProctorGallery({ photos, alt, initialIndex = 0 }: Procto
         <div className="relative overflow-hidden rounded-lg border border-zinc-200 bg-white">
           <div className="flex aspect-square w-full flex-col items-center justify-center bg-zinc-100 p-8 text-center">
             {isImageUrl(activePhoto) ? (
-              <img src={activePhoto} alt={alt} className="h-full w-full object-cover" />
+              <img src={profileImageSrc(activePhoto)} alt={alt} className="h-full w-full object-contain" />
             ) : (
               <>
                 <div className="flex h-36 w-36 items-center justify-center rounded-full border border-zinc-300 bg-white text-5xl font-semibold text-zinc-900 shadow-sm">

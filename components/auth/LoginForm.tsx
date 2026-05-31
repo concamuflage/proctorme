@@ -21,6 +21,7 @@ import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 type LoginFormProps = {
   onSuccess?: () => void;
@@ -28,6 +29,19 @@ type LoginFormProps = {
 };
 
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
+
+function safeCallbackUrl(value: string | null | undefined) {
+  if (!value) return "/proctors";
+  if (value.startsWith("/") && !value.startsWith("//")) return value;
+
+  try {
+    const parsed = new URL(value, window.location.origin);
+    if (parsed.origin !== window.location.origin) return "/proctors";
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return "/proctors";
+  }
+}
 
 /**
  * Login form UI and client-side submission handler.
@@ -59,10 +73,6 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
     // Clear any previous error message before attempting login
     setError(null);
     setNotice(null);
-
-    // TEMP DEV: Add small artificial delay so we can SEE the loading state.
-    // In production, you normally would NOT do this.
-    await new Promise((resolve) => setTimeout(resolve, 800));
 
     const callbackUrl = searchParams.get("callbackUrl") ?? "/proctors";
 
@@ -100,7 +110,8 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
       return;
     }
 
-    router.push(result?.url ?? callbackUrl);
+    const destination = safeCallbackUrl(result?.url ?? callbackUrl);
+    router.push(`/account/post-login?callbackUrl=${encodeURIComponent(destination)}`);
     router.refresh();
   };
 
@@ -159,13 +170,12 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
           <label className="text-xs font-medium text-zinc-600" htmlFor="login-password">
             Password
           </label>
-          <input
+          <PasswordInput
             id="login-password"
             name="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             placeholder="••••••••"
             autoComplete="current-password"
             required

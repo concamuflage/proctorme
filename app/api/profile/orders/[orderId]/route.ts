@@ -48,6 +48,7 @@ type SingleOrderItemRow = {
   address_city: unknown;
   address_state: unknown;
   address_zip_code: unknown;
+  session_label: unknown;
   session_window: unknown;
   proctor_exists: unknown;
 };
@@ -118,6 +119,7 @@ export async function GET(_request: Request, context: RouteContext) {
           ci.name AS address_city,
           s.code AS address_state,
           a.zip_code AS address_zip_code,
+          op.session_label,
           CASE
             WHEN COALESCE(u.minimum_hours, 1) = COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1))
               THEN CONCAT(COALESCE(u.minimum_hours, 1), ' hr')
@@ -128,7 +130,7 @@ export async function GET(_request: Request, context: RouteContext) {
         LEFT JOIN users u
           ON u.id = op.proctor_user_id
         LEFT JOIN addresses a
-          ON a.id = u.proctor_address_id
+          ON a.id = COALESCE(op.address_id, u.proctor_address_id)
         LEFT JOIN cities ci
           ON ci.id = a.city_id
         LEFT JOIN states s
@@ -182,7 +184,7 @@ export async function GET(_request: Request, context: RouteContext) {
           sku: itemRow.proctor_user_id ? `PM-${String(itemRow.proctor_user_id)}` : null,
           proctorName,
           color: proctorAddress || null,
-          size: itemRow.session_window ? String(itemRow.session_window) : null,
+          size: itemRow.session_label ? String(itemRow.session_label) : itemRow.session_window ? String(itemRow.session_window) : null,
           weightKg: 1,
           imageUrl: null,
           proctorExists: Boolean(itemRow.proctor_exists),

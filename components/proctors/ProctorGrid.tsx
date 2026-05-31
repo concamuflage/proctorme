@@ -8,7 +8,7 @@ export default function ProctorGrid({ proctors }: ProctorGridProps) {
   if (!proctors || proctors.length === 0) {
     return (
       <div className="rounded-lg border border-zinc-200 bg-white p-6 text-center text-sm text-zinc-600 sm:p-8">
-        No proctors match that address.
+        No proctors match those filters.
       </div>
     );
   }

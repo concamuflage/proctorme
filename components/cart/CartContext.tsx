@@ -14,7 +14,13 @@ type CartItem = {
   id: string;
   name: string;
   price: number;
-  weightKg?: number | null;
+  sessionHours?: number | null;
+  startIso?: string | null;
+  endIso?: string | null;
+  bookingAddressStreet?: string | null;
+  bookingAddressCity?: string | null;
+  bookingAddressState?: string | null;
+  bookingAddressZip?: string | null;
   imageUrl?: string | null;
   color?: string | null;
   size?: string | null;
@@ -36,7 +42,6 @@ type CartContextValue = {
   selectedShippingModeId: number | null;
   itemCount: number; // total quantity of all items
   subtotal: number;  // total price of all items
-  totalWeightKg: number;
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
@@ -87,18 +92,14 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         selectedShippingModeId: action.selectedShippingModeId,
       };
     case "ADD": {
-      // If item already exists, merge by increasing quantity instead of duplicating
+      // A proctor can only have one active booking in the cart. A new time/address replaces the old one.
       // i is just one item in the array items. If the condition is true, that item will be returned.
       // existing will be CartItem or undefined.
-      const existing = state.items.find((i) => i.id === action.item.id); 
+      const [, nextProctorId] = action.item.id.split("-");
+      const existing = state.items.find((i) => i.id.split("-")[1] === nextProctorId);
 
       if (existing) {
-        // loop through all item in current state
-        // if the item.id = existing
-        // we increase the quantity of the found item.
-        const nextItems = state.items.map((i) =>
-          i.id === action.item.id ? { ...i, qty: i.qty + action.item.qty } : i
-        );
+        const nextItems = state.items.map((i) => (i.id === existing.id ? action.item : i));
         return { ...state, items: nextItems };
       }
 
@@ -195,13 +196,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const payload = await response.json().catch(() => null);
         if (cancelled) return;
 
-        const items = Array.isArray(payload?.items) ? payload.items : [];
+        const items = Array.isArray(payload?.items)
+          ? payload.items.map((item: CartItem & { weightKg?: number | null }) => ({
+              ...item,
+              sessionHours: item.sessionHours ?? item.weightKg ?? null,
+            }))
+          : [];
         const selectedShippingModeId =
           payload?.shippingId == null ? null : Number(payload.shippingId);
         dispatch({ type: "INIT", items, selectedShippingModeId });
         lastSyncedSignature.current = JSON.stringify(
           {
-            items: items.map((item: CartItem) => ({ id: item.id, qty: item.qty })),
+            items: items.map((item: CartItem) => ({
+              id: item.id,
+              qty: item.qty,
+              sessionHours: item.sessionHours ?? null,
+              startIso: item.startIso ?? null,
+              endIso: item.endIso ?? null,
+              bookingAddressStreet: item.bookingAddressStreet ?? null,
+              bookingAddressCity: item.bookingAddressCity ?? null,
+              bookingAddressState: item.bookingAddressState ?? null,
+              bookingAddressZip: item.bookingAddressZip ?? null,
+              size: item.size ?? null,
+            })),
             shippingId: selectedShippingModeId,
           }
         );
@@ -228,7 +245,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const payloadItems = state.items.map((item) => ({ id: item.id, qty: item.qty }));
+    const payloadItems = state.items.map((item) => ({
+      id: item.id,
+      qty: item.qty,
+      sessionHours: item.sessionHours ?? null,
+      startIso: item.startIso ?? null,
+      endIso: item.endIso ?? null,
+      bookingAddressStreet: item.bookingAddressStreet ?? null,
+      bookingAddressCity: item.bookingAddressCity ?? null,
+      bookingAddressState: item.bookingAddressState ?? null,
+      bookingAddressZip: item.bookingAddressZip ?? null,
+      size: item.size ?? null,
+    }));
     const signature = JSON.stringify({
       items: payloadItems,
       shippingId: state.selectedShippingModeId,
@@ -320,19 +348,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const proctor = proctorById.get(proctorId);
             if (!proctor) return null;
 
-            const nextWeightKg = 1;
-            const nextPrice = proctor.rateUsd == null ? item.price : proctor.rateUsd;
+            const selectedHours =
+              typeof item.sessionHours === "number" && Number.isFinite(item.sessionHours) && item.sessionHours > 0
+                ? item.sessionHours
+                : 1;
+            const nextSessionHours = selectedHours;
+            const nextPrice = proctor.rateUsd == null ? item.price : proctor.rateUsd * selectedHours;
 
-            if (item.weightKg === nextWeightKg && item.price === nextPrice) return null;
+            if (item.sessionHours === nextSessionHours && item.price === nextPrice) return null;
 
             return {
               id: item.id,
-              weightKg: nextWeightKg,
+              sessionHours: nextSessionHours,
               price: nextPrice,
             };
           })
           .filter(
-            (item): item is { id: string; weightKg: number; price: number } => item !== null
+            (item): item is { id: string; sessionHours: number; price: number } => item !== null
           );
 
         if (mergedItems.length > 0) {
@@ -368,10 +400,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // just concise why of looping through the items in the array and accumlate a sum.
     const itemCount = state.items.reduce((sum, item) => sum + item.qty, 0); // 0 the initial value of sum, the running total.
     const subtotal = state.items.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const totalWeightKg = state.items.reduce(
-      (sum, item) => sum + (item.weightKg == null ? 0 : item.weightKg * item.qty),
-      0
-    );
     // the following is CartContextValue type
     return {
       items: state.items,
@@ -379,7 +407,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       selectedShippingModeId: state.selectedShippingModeId,
       itemCount,
       subtotal,
-      totalWeightKg,
       // the reducer will receive all the actions.
       // dispatch({ type: "ADD", item }) the object parameter is the action
 

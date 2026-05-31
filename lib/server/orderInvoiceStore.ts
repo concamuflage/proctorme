@@ -1,5 +1,5 @@
 import pool from "@/backend/database/pool";
-import type { InvoicePayload } from "@/lib/invoice";
+import type { InvoiceAddress, InvoiceItem, InvoicePayload } from "@/lib/invoice";
 
 // This module builds an invoice payload for a given order.
 // It queries order, payment, and item data from the database,
@@ -45,12 +45,14 @@ type OrderInvoiceRow = {
 type OrderInvoiceItemRow = {
   quantity: unknown;
   snapshot_price: unknown;
+  session_hours: unknown;
   first_name: unknown;
   last_name: unknown;
   address_street: unknown;
   address_city: unknown;
   address_state: unknown;
   address_zip_code: unknown;
+  session_label: unknown;
   session_window: unknown;
 };
 
@@ -114,12 +116,14 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
       SELECT
         op.quantity,
         op.snapshot_price,
+        op.session_hours,
         u.first_name,
         u.last_name,
         a.street AS address_street,
         ci.name AS address_city,
         s.code AS address_state,
         a.zip_code AS address_zip_code,
+        op.session_label,
         CASE
           WHEN COALESCE(u.minimum_hours, 1) = COALESCE(u.maximum_hours, COALESCE(u.minimum_hours, 1))
             THEN CONCAT(COALESCE(u.minimum_hours, 1), ' hr')
@@ -129,7 +133,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
       JOIN users u
         ON u.id = op.proctor_user_id
       LEFT JOIN addresses a
-        ON a.id = u.proctor_address_id
+        ON a.id = COALESCE(op.address_id, u.proctor_address_id)
       LEFT JOIN cities ci
         ON ci.id = a.city_id
       LEFT JOIN states s
@@ -139,6 +143,49 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
     `,
     [orderId]
   );
+
+  const invoiceItems: Array<{ item: InvoiceItem; interviewAddress: InvoiceAddress }> = itemsResult.rows.map((itemRow: OrderInvoiceItemRow) => {
+    const sessionHours = itemRow.session_hours == null ? null : toNumber(itemRow.session_hours);
+    const lineTotalUsd = toNumber(itemRow.snapshot_price);
+    const hourlyRateUsd =
+      sessionHours && Number.isFinite(sessionHours) && sessionHours > 0
+        ? lineTotalUsd / sessionHours
+        : lineTotalUsd;
+    const interviewAddress = {
+      name: "",
+      street: String(itemRow.address_street ?? "").trim(),
+      city: String(itemRow.address_city ?? "").trim(),
+      state: String(itemRow.address_state ?? "").trim(),
+      zipCode: String(itemRow.address_zip_code ?? "").trim(),
+      country: "",
+      phone: "",
+    };
+
+    return {
+      item: {
+        name: [itemRow.first_name, itemRow.last_name].map((part) => String(part ?? "").trim()).filter(Boolean).join(" "),
+        quantity: toNumber(itemRow.quantity),
+        unitPriceUsd: lineTotalUsd,
+        hourlyRateUsd,
+        sessionHours,
+        color: [itemRow.address_street, itemRow.address_city, itemRow.address_state, itemRow.address_zip_code]
+          .map((part) => String(part ?? "").trim())
+          .filter(Boolean)
+          .join(", ") || null,
+        size: itemRow.session_label ? String(itemRow.session_label) : itemRow.session_window ? String(itemRow.session_window) : null,
+      },
+      interviewAddress,
+    };
+  });
+  const primaryInterviewAddress = invoiceItems.find(({ interviewAddress }) => interviewAddress.street)?.interviewAddress ?? {
+    name: "",
+    street: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
+    phone: "",
+  };
 
   // Build final invoice payload object
   return {
@@ -153,25 +200,8 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
     discountAmountUsd,
     discountCurrency,
     // Map DB item rows into invoice line items
-    items: itemsResult.rows.map((itemRow: OrderInvoiceItemRow) => ({
-      name: [itemRow.first_name, itemRow.last_name].map((part) => String(part ?? "").trim()).filter(Boolean).join(" "),
-      quantity: toNumber(itemRow.quantity),
-      unitPriceUsd: toNumber(itemRow.snapshot_price),
-      color: [itemRow.address_street, itemRow.address_city, itemRow.address_state, itemRow.address_zip_code]
-        .map((part) => String(part ?? "").trim())
-        .filter(Boolean)
-        .join(", ") || null,
-      size: itemRow.session_window ? String(itemRow.session_window) : null,
-    })),
-    shippingAddress: {
-      name: "",
-      street: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      country: "",
-      phone: "",
-    },
+    items: invoiceItems.map(({ item }) => item),
+    shippingAddress: primaryInterviewAddress,
     billingAddress: {
       name: "",
       street: "",
