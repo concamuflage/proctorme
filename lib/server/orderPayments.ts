@@ -1,4 +1,4 @@
-import pool from "@/backend/database/pool";
+import pool from "@/lib/server/database/pool";
 import { createInvoiceNumber } from "@/lib/invoice";
 import { calculateBookingTotal, calculateServiceFee } from "@/lib/serviceFee";
 import type Stripe from "stripe";

@@ -1,4 +1,4 @@
-import pool from "@/backend/database/pool";
+import pool from "@/lib/server/database/pool";
 import type { InvoiceAddress, InvoiceItem, InvoicePayload } from "@/lib/invoice";
 
 // This module builds an invoice payload for a given order.

@@ -1,4 +1,4 @@
-import pool from "@/backend/database/pool";
+import pool from "@/lib/server/database/pool";
 import { getCachedOrResolvedCityTimeZone } from "@/lib/server/proctorStore";
 
 export type ProfileChangeRequestStatus = "pending" | "approved" | "rejected";

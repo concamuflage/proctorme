@@ -13,7 +13,7 @@
 //   -> signIn("credentials")
 //   -> NextAuth API route (/api/auth/*)
 //   -> authorize() runs on the NextAuth server
-//   -> backend server validates credentials
+//   -> NextAuth validates credentials through the Next.js server
 
 "use client";
 
@@ -78,7 +78,7 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
 
     // Ask NextAuth to validate credentials without doing a full redirect.
     // Call NextAuth's credentials provider.
-    // This does NOT talk directly to your backend.
+      // This does NOT validate credentials in the browser.
     // Instead, it sends a request to:
     //    /api/auth/callback/credentials
     // which runs the `authorize()` function on the server.
@@ -86,8 +86,7 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
     // redirect: false → prevents automatic page navigation.
     // We want to manually control success/error handling here.
     const result = await signIn("credentials", {
-      // These values are sent to the NextAuth server,
-      // which then forwards them to your backend for validation.
+      // These values are sent to the NextAuth server for validation.
       email,
       password,
       callbackUrl,

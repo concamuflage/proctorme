@@ -1,4 +1,4 @@
-import pool from "@/backend/database/pool";
+import pool from "@/lib/server/database/pool";
 import { getUserRoles } from "@/lib/server/roleStore";
 import { getCachedOrResolvedCityTimeZone } from "@/lib/server/proctorStore";
 import { submitProfileChangeRequest } from "@/lib/server/profileChangeRequestStore";

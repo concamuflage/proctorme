@@ -1,10 +1,6 @@
-// This file configures NextAuth, a library for handling authentication in Next.js applications.
-// NextAuth simplifies adding sign-in, sign-out, and session management features.
-// This configuration sets up credential-based login by verifying user credentials against a backend API.
-
 import type { NextAuthOptions } from "next-auth"; // Type definitions for NextAuth configuration options.
 import CredentialsProvider from "next-auth/providers/credentials"; // Provider for username/password authentication.
-import { getServerApiBaseUrl } from "@/lib/api-base";
+import { loginUser } from "@/lib/server/localAuthStore";
 
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
 
@@ -38,16 +34,6 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      // IMPORTANT RUNTIME NOTE:
-      // This `authorize()` function runs on the Next.js server where NextAuth lives,
-      // NOT in the browser and NOT in your backend `server.js`.
-      //
-      // Execution flow:
-      // Browser -> NextAuth API route (/api/auth/*) -> authorize()
-      //                          |
-      //                          +-> fetch() -> backend server (server.js)
-      //
-      // So this function acts as a secure bridge between the browser and your backend API.
       // The `authorize` function is called when a user submits the sign-in form.
       // It receives the credentials entered by the user and must verify them.
       // If verification succeeds, it returns a user object; otherwise, it returns null to indicate failure.
@@ -55,33 +41,20 @@ export const authOptions: NextAuthOptions = {
         // Validate input early: check if email and password are provided.
         if (!credentials?.email || !credentials?.password) return null;
 
-        // Look up the backend API base URL from environment variables.
-        // This URL is where we will send the credentials for verification.
-        const apiBase = getServerApiBaseUrl();
-        if (!apiBase) return null;
-
-        // Send a POST request to the backend login endpoint with the provided email and password.
-        // The backend is responsible for checking if these credentials are valid.
-        const res = await fetch(`${apiBase}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password,
-          }),
+        const result = await loginUser({
+          email: credentials.email,
+          password: credentials.password,
         });
 
-        if (!res.ok) {
-          const payload = await res.json().catch(() => null);
+        if (result.status < 200 || result.status >= 300) {
           const message =
-            typeof payload?.error === "string" && payload.error.trim()
-              ? payload.error.trim()
+            typeof result.body?.error === "string" && result.body.error.trim()
+              ? result.body.error.trim()
               : "Invalid email or password.";
           throw new Error(message);
         }
 
-        // Parse the response JSON to get the user data returned by the backend.
-        const user = (await res.json()) as BackendLoginUser;
+        const user = result.body as BackendLoginUser;
         // Ensure the user object contains required fields; otherwise, treat it as invalid.
         if (!user?.id || !user?.email) return null;
 

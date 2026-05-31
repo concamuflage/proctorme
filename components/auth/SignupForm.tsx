@@ -6,7 +6,7 @@
 // IMPORTANT ARCHITECTURE NOTE:
 // - This component runs in the BROWSER.
 // - It does NOT authenticate users directly.
-// - It creates users via the backend and then delegates
+// - It creates users via the Next.js API and then delegates
 //   authentication to NextAuth via `signIn("credentials")`.
 
 "use client";
@@ -22,7 +22,7 @@ type SignupFormProps = {
 
 /**
  * Signup form UI and client-side submission handler.
- * Creates a user in the backend and prompts for email verification.
+ * Creates a user through the Next.js API and prompts for email verification.
  */
 export default function SignupForm({ compact = false }: SignupFormProps) {
   const [email, setEmail] = useState("");
@@ -58,7 +58,7 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
       return;
     }
 
-    // Create the user in the backend first.
+    // Create the user through the Next.js API first.
     try {
       const res = await fetch(`${CLIENT_API_BASE_PATH}/auth/signup`, {
         method: "POST",
@@ -66,7 +66,7 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
         body: JSON.stringify({ email, password, firstName, lastName }),
       });
 
-      // If signup fails, show backend error (if any) and stop.
+      // If signup fails, show server error (if any) and stop.
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         setError(data?.error ?? "Signup failed.");

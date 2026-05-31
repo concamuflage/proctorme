@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getServerApiBaseUrl } from "@/lib/api-base";
 import { deleteCurrentUserAccount } from "@/lib/server/accountStore";
+import { loginUser } from "@/lib/server/localAuthStore";
 import { getUserIdByEmail } from "@/lib/server/profileStore";
 
 function badRequest(message: string) {
@@ -10,13 +10,8 @@ function badRequest(message: string) {
 }
 
 async function confirmPassword(email: string, password: string) {
-  const response = await fetch(`${getServerApiBaseUrl()}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-
-  return response.ok;
+  const response = await loginUser({ email, password });
+  return response.status >= 200 && response.status < 300;
 }
 
 export async function DELETE(request: Request) {

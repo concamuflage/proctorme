@@ -1,4 +1,4 @@
-import pool from "@/backend/database/pool";
+import pool from "@/lib/server/database/pool";
 
 type DeleteAccountMode = "hard" | "soft";
 type QueryableClient = {

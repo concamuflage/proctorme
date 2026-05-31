@@ -1,4 +1,4 @@
-import pool from "@/backend/database/pool";
+import pool from "@/lib/server/database/pool";
 
 export async function isUserEmailVerified(userId: string) {
   const numericUserId = Number(userId);

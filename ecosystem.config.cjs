@@ -14,15 +14,5 @@ module.exports = {
         NEXTAUTH_URL: process.env.NEXTAUTH_URL || "https://outlierfit.shop",
       },
     },
-    {
-      name: "project888-api",
-      cwd: `${workspace}/backend`,
-      script: "npm",
-      args: "start",
-      env: {
-        NODE_ENV: "production",
-        PORT: "4000",
-      },
-    },
   ],
 };

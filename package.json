@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "env -u NODE_OPTIONS next dev",
-    "dev:full": "concurrently \"npm run dev --prefix backend\" \"npm run dev\"",
+    "dev:full": "npm run dev",
     "build": "next build",
     "start": "next start",
     "gmail:verify-email": "node scripts/gmail-verify-email.js",
@@ -17,9 +17,12 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
     "next": "16.1.2",
     "next-auth": "^4.24.7",
     "next-sitemap": "^4.2.3",
+    "pg": "^8.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "stripe": "^18.5.0"

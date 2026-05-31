@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import pool from "@/backend/database/pool";
+import pool from "@/lib/server/database/pool";
 import { SITE_NAME } from "@/lib/proctor";
 
 const DEFAULT_VERIFICATION_TTL_HOURS = 72;

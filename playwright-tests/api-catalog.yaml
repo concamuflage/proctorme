@@ -1,0 +1,378 @@
+version: 1
+generated_for: ProctorMe API testing
+base_urls:
+  next_app: http://localhost:3000
+notes:
+  - Dynamic route parameters use braces, for example /api/proctors/{proctorId}.
+  - Routes marked requires_auth need a signed-in browser context or valid session cookie.
+  - Routes marked requires_admin need an admin session.
+  - File endpoints commonly require a url query parameter containing a gcs:// object URL. eg GET /api/file/download?url=gcs://my-bucket/uploads/report.pdf
+
+next_api:
+  auth:
+    - name: nextauth
+      path: /api/auth/{nextauth}
+      methods: [GET, POST]
+      description: NextAuth session, callback, csrf, sign-in, and sign-out catch-all route.
+
+    - name: signup
+      path: /api/auth/signup
+      methods: [POST]
+      description: Create account and send verification email.
+      post_body_example:
+        firstName: Jane
+        lastName: Doe
+        email: jane@example.com
+        password: ExamplePass123
+
+    - name: login
+      path: /api/auth/login
+      methods: [POST]
+      description: Validate credentials.
+      post_body_example:
+        email: jane@example.com
+        password: ExamplePass123
+
+    - name: verify_email
+      path: /api/auth/verify-email
+      methods: [GET]
+      description: Verify account email from token link.
+      query_params: [email, token]
+
+    - name: resend_verification
+      path: /api/auth/resend-verification
+      methods: [POST]
+      description: Resend account verification email.
+      post_body_example:
+        email: jane@example.com
+
+    - name: request_password_reset
+      path: /api/auth/request-password-reset
+      methods: [POST]
+      description: Send password reset email.
+      post_body_example:
+        email: jane@example.com
+
+    - name: reset_password
+      path: /api/auth/reset-password
+      methods: [POST]
+      description: Reset password using token from email.
+      post_body_example:
+        email: jane@example.com
+        token: reset-token
+        password: NewExamplePass123
+
+  account:
+    - name: account_delete
+      path: /api/account
+      methods: [DELETE]
+      requires_auth: true
+      description: Delete/deactivate the signed-in account.
+
+    - name: account_roles
+      path: /api/account/roles
+      methods: [GET, POST]
+      requires_auth: true
+      description: Read user roles or add a role intent such as proctor or corporate/organization.
+      post_body_example:
+        role: proctor
+
+    - name: organization_applications
+      path: /api/account/organization-application
+      methods: [GET, POST]
+      requires_auth: true
+      description: List or submit organization verification requests.
+      post_body_example:
+        organizationName: Boston University
+        organizationEmail: user@bu.edu
+
+    - name: organization_email_verification
+      path: /api/account/organization-application/send-email-verification
+      methods: [GET, POST]
+      requires_auth: true
+      description: Read organization email verification status or send a verification email.
+      query_params:
+        GET: [organizationEmail]
+      post_body_example:
+        organizationName: Boston University
+        organizationEmail: user@bu.edu
+
+    - name: organization_email_verify_link
+      path: /api/account/organization-application/verify-email
+      methods: [GET]
+      description: Verify organization email from emailed token link.
+      query_params: [email, token]
+
+    - name: organization_document_upload_legacy
+      path: /api/account/organization-application/document-upload
+      methods: [POST]
+      requires_auth: true
+      content_type: multipart/form-data
+      description: Legacy organization document upload endpoint.
+      form_fields:
+        documentType: business_card | badge
+        file: PDF/JPG/PNG
+
+    - name: proctor_application
+      path: /api/account/proctor-application
+      methods: [GET, POST, PATCH]
+      requires_auth: true
+      description: Read, submit, or save draft proctor application.
+
+    - name: proctor_application_options
+      path: /api/account/proctor-application/options
+      methods: [GET]
+      requires_auth: true
+      description: Lookup options for proctor application forms.
+      query_params: [state]
+
+    - name: proctor_application_diploma_upload
+      path: /api/account/proctor-application/diploma-upload
+      methods: [POST]
+      requires_auth: true
+      content_type: multipart/form-data
+      description: Upload diploma file for proctor application.
+      form_fields:
+        file: PDF/JPG/PNG
+
+    - name: proctor_application_diploma_file
+      path: /api/account/proctor-application/diploma-file
+      methods: [GET]
+      requires_auth: true
+      description: Read a private diploma file.
+      query_params: [url]
+
+    - name: proctor_application_government_id_upload
+      path: /api/account/proctor-application/government-id-upload
+      methods: [POST]
+      requires_auth: true
+      content_type: multipart/form-data
+      description: Upload government-issued ID file for proctor application.
+      form_fields:
+        file: PDF/JPG/PNG
+
+    - name: proctor_application_government_id_file
+      path: /api/account/proctor-application/government-id-file
+      methods: [GET]
+      requires_auth: true
+      description: Read a private government-issued ID file.
+      query_params: [url]
+
+    - name: proctor_application_profile_image_upload
+      path: /api/account/proctor-application/profile-image-upload
+      methods: [POST]
+      requires_auth: true
+      content_type: multipart/form-data
+      description: Upload profile image for proctor application.
+      form_fields:
+        file: JPG/PNG/WebP
+
+    - name: proctor_application_profile_image_file
+      path: /api/account/proctor-application/profile-image-file
+      methods: [GET]
+      requires_auth: true
+      description: Read a private profile image file.
+      query_params: [url]
+
+    - name: proctor_application_school_email_verify
+      path: /api/account/proctor-application/verify-school-email
+      methods: [GET]
+      description: Verify school email from emailed token link.
+      query_params: [email, token]
+
+    - name: proctor_availability
+      path: /api/account/proctor-availability
+      methods: [GET, PUT]
+      requires_auth: true
+      description: Read or update signed-in proctor availability slots.
+
+    - name: proctor_session
+      path: /api/account/proctor-session
+      methods: [GET, PUT]
+      requires_auth: true
+      description: Read or update proctor session settings, including rate, hours, and address.
+
+    - name: profile_change_requests
+      path: /api/account/profile-change-requests
+      methods: [GET, POST]
+      requires_auth: true
+      description: List or submit profile change requests requiring admin review.
+
+  admin:
+    - name: admin_organization_applications
+      path: /api/admin/organization-applications
+      methods: [GET]
+      requires_admin: true
+      description: List organization verification requests for admin review.
+
+    - name: admin_organization_application_review
+      path: /api/admin/organization-applications/{applicationId}
+      methods: [POST]
+      requires_admin: true
+      description: Approve or reject an organization verification request.
+      post_body_example:
+        action: approve
+        note: Verified domain association.
+
+    - name: admin_organization_document_file_legacy
+      path: /api/admin/organization-applications/document-file
+      methods: [GET]
+      requires_admin: true
+      description: Legacy read endpoint for organization application documents.
+      query_params: [url]
+
+    - name: admin_proctor_applications
+      path: /api/admin/proctor-applications
+      methods: [GET]
+      requires_admin: true
+      description: List proctor applications for admin review.
+
+    - name: admin_proctor_application_review
+      path: /api/admin/proctor-applications/{applicationId}
+      methods: [POST]
+      requires_admin: true
+      description: Approve or reject a proctor application.
+      post_body_example:
+        action: approve
+        note: Approved.
+
+    - name: admin_proctor_application_options
+      path: /api/admin/proctor-applications/options
+      methods: [GET]
+      requires_admin: true
+      description: Lookup options used by admin proctor review forms.
+
+    - name: admin_proctor_diploma_file
+      path: /api/admin/proctor-applications/diploma-file
+      methods: [GET]
+      requires_admin: true
+      description: Read diploma file during admin review.
+      query_params: [url]
+
+    - name: admin_proctor_government_id_file
+      path: /api/admin/proctor-applications/government-id-file
+      methods: [GET]
+      requires_admin: true
+      description: Read government-issued ID file during admin review.
+      query_params: [url]
+
+    - name: admin_proctor_profile_image_file
+      path: /api/admin/proctor-applications/profile-image-file
+      methods: [GET]
+      requires_admin: true
+      description: Read proctor profile image during admin review.
+      query_params: [url]
+
+    - name: admin_profile_change_requests
+      path: /api/admin/profile-change-requests
+      methods: [GET]
+      requires_admin: true
+      description: List profile change requests for admin review.
+
+    - name: admin_profile_change_request_review
+      path: /api/admin/profile-change-requests/{requestId}
+      methods: [POST]
+      requires_admin: true
+      description: Approve or reject a profile change request.
+      post_body_example:
+        action: approve
+        note: Approved.
+
+  profile:
+    - name: profile
+      path: /api/profile
+      methods: [GET, POST, PUT, DELETE]
+      requires_auth: true
+      description: Read, create/update, or delete signed-in user profile data.
+
+    - name: profile_orders
+      path: /api/profile/orders
+      methods: [GET]
+      requires_auth: true
+      description: List signed-in user's orders/bookings.
+
+    - name: profile_order
+      path: /api/profile/orders/{orderId}
+      methods: [GET]
+      requires_auth: true
+      description: Read one order/booking.
+
+    - name: profile_order_invoice
+      path: /api/profile/orders/{orderId}/invoice
+      methods: [GET]
+      requires_auth: true
+      description: Read invoice data for one order.
+
+    - name: profile_order_invoice_pdf
+      path: /api/profile/orders/{orderId}/invoice/pdf
+      methods: [GET]
+      requires_auth: true
+      description: Download invoice PDF for one order.
+
+  proctors:
+    - name: proctors
+      path: /api/proctors
+      methods: [GET]
+      description: Search/list public proctors.
+
+    - name: proctor_detail
+      path: /api/proctors/{proctorId}
+      methods: [GET]
+      description: Read public proctor details.
+
+    - name: proctor_availability_public
+      path: /api/proctors/{proctorId}/availability
+      methods: [GET]
+      description: Read public proctor availability for booking.
+      query_params: [start, end]
+
+    - name: proctor_filters
+      path: /api/proctors/filters
+      methods: [GET]
+      description: Read filter metadata for proctor search.
+
+    - name: proctor_profile_image_public
+      path: /api/proctor-files/profile-image
+      methods: [GET]
+      description: Read public/profile image from storage.
+      query_params: [url]
+
+  cart_orders_payments:
+    - name: cart
+      path: /api/cart
+      methods: [GET, PUT]
+      description: Read or replace shopping cart.
+
+    - name: checkout_session
+      path: /api/orders/checkout-session
+      methods: [POST]
+      description: Create checkout session for current cart/order.
+
+    - name: checkout_complete
+      path: /api/orders/checkout-complete
+      methods: [POST]
+      description: Finalize checkout after payment provider confirmation.
+
+    - name: mock_payment
+      path: /api/orders/mock-payment
+      methods: [POST]
+      description: Complete a mock payment in local/test flows.
+
+    - name: booking_rating
+      path: /api/bookings/{bookingId}/rating
+      methods: [POST]
+      requires_auth: true
+      description: Submit rating for a booking.
+      post_body_example:
+        rating: 5
+        review: Excellent session.
+
+    - name: invoice
+      path: /api/invoice
+      methods: [POST]
+      description: Generate invoice content.
+
+    - name: stripe_webhook
+      path: /api/stripe/webhook
+      methods: [POST]
+      description: Stripe webhook endpoint. Requires Stripe signature header.

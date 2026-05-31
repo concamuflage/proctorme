@@ -1,5 +1,5 @@
 const { Client } = require("pg");
-const bcrypt = require("../../../backend/node_modules/bcryptjs");
+const bcrypt = require("bcryptjs");
 const { envValue, requiredEnvValue } = require("./testEnv");
 
 function databaseConfig() {

@@ -2,9 +2,9 @@
 // This pipeline:
 // 1. Checks out code from GitHub
 // 2. Copies environment (.env) files from the VM
-// 3. Installs dependencies for frontend and backend
-// 4. Builds the frontend (Next.js)
-// 5. Deploys both frontend and backend using PM2 
+// 3. Installs dependencies
+// 4. Builds the Next.js app
+// 5. Deploys the Next.js app using PM2
 pipeline {
     agent any
 
@@ -18,18 +18,6 @@ pipeline {
         // PM2 process manager home directory
         PM2_HOME = '/var/lib/jenkins/.pm2'
     }
-
-    // stage('Migrate Database') {
-    //         steps {
-    //             /*
-    //             * Runs database migrations against the production database.
-    //             * DATABASE_URL is automatically available from the environment block.
-    //             */
-    //             dir("${WORKSPACE}/backend") {
-    //                 sh 'npm run migrate -- up'
-    //             }
-    //         }
-    //     }
 
     stages {
         // Pull latest code from the configured Git repository
@@ -52,24 +40,15 @@ pipeline {
             }
         }
 
-        // Install frontend dependencies from package.json
-        stage('Install Frontend Dependencies') {
+        // Install dependencies from package.json
+        stage('Install Dependencies') {
             steps {
                 sh 'npm ci'
             }
         }
 
-        // Install backend dependencies inside the backend folder
-        stage('Install Backend Dependencies') {
-            steps {
-                dir("${WORKSPACE}/backend") {
-                    sh 'npm ci'
-                }
-            }
-        }
-
-        // Build the Next.js frontend for production
-        stage('Build Frontend') {
+        // Build the Next.js app for production
+        stage('Build Next.js App') {
             steps {
                 sh 'npm run build'
             }
@@ -79,18 +58,7 @@ pipeline {
         stage('Deploy Next.js App') {
             steps {
                 sh '''
-                    pm2 startOrReload ecosystem.config.cjs --only project888-web --update-env
-                    pm2 save
-                '''
-            }
-        }
-
-
-        // Deploy or restart the backend API from the Jenkins workspace.
-        stage('Deploy Express.js') {
-            steps {
-                sh '''
-                    pm2 startOrReload ecosystem.config.cjs --only project888-api --update-env
+                    pm2 startOrReload ecosystem.config.cjs --update-env
                     pm2 save
                 '''
             }

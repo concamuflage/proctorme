@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import pool from "@/backend/database/pool";
+import pool from "@/lib/server/database/pool";
 import { requireAdminUserId } from "@/lib/server/sessionUser";
 
 type NamedOptionRow = {
