@@ -1,6 +1,9 @@
 # Playwright Tests
 
-This folder is self-contained so you can learn Playwright without changing the existing Selenium/Cucumber UI tests.
+This folder is self-contained and separates API and UI tests. Both API and UI
+workflow tests use Cucumber/Gherkin, with Playwright used inside the step
+definitions for HTTP requests and browser control. Step definitions and support
+files are written in TypeScript and loaded through `tsx`.
 
 ## First-time setup
 
@@ -25,6 +28,8 @@ cd playwright-tests
 npm test
 ```
 
+`npm test` runs the API Cucumber suite by default.
+
 The default base URL is:
 
 ```text
@@ -40,12 +45,23 @@ PLAYWRIGHT_BASE_URL=https://outlierfit.shop npm test
 ## Useful commands
 
 ```bash
-npm run test:headed
+# API tests
+npm run test:api
+
+# UI browser tests
 npm run test:ui
-npm run report
+npm run test:ui:headed
+
+# TypeScript check
+npm run typecheck
+
 ```
 
 ## Files
 
-- `playwright.config.ts`: Playwright configuration.
-- `tests/smoke.spec.ts`: starter tests for home, signup, and login pages.
+- `cucumber.js`: Cucumber profiles for API and UI suites.
+- `tests/api`: API tests, API Cucumber features, and the API catalog.
+- `tests/ui/features`: UI Cucumber feature files.
+- `tests/ui/pages`: UI Page Object classes.
+- `tests/ui/support`: UI helper modules.
+- `tests/ui/step-definitions`: UI Cucumber step definitions.

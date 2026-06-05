@@ -1,7 +1,7 @@
-import { Client } from "pg";
+import { Client, type ClientConfig } from "pg";
 import { envValue, requiredEnvValue } from "./testEnv";
 
-function databaseConfig() {
+function databaseConfig(): ClientConfig {
   const connectionString = envValue("TEST_DATABASE_URL") || envValue("DATABASE_URL");
   if (connectionString) {
     return { connectionString };

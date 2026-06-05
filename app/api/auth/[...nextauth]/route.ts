@@ -15,6 +15,8 @@
 import NextAuth from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+
 const handler = NextAuth(authOptions);
 
+//the same handler will handle both GET and POST HTTP requests.
 export { handler as GET, handler as POST };

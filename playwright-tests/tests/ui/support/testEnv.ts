@@ -5,6 +5,12 @@ import { randomUUID } from "node:crypto";
 // Stores values loaded from local .env files without overwriting process.env.
 const loadedValues = new Map<string, string>();
 
+function stripWrappingQuotes(value: string) {
+  if (value.length < 2) return value;
+  const wrappedInDoubleQuotes = value.startsWith("\"") && value.endsWith("\"");
+  const wrappedInSingleQuotes = value.startsWith("'") && value.endsWith("'");
+  return wrappedInDoubleQuotes || wrappedInSingleQuotes ? value.slice(1, -1) : value;
+}
 
 // Reads key=value pairs from a .env file if it exists.
 function loadEnvFile(filePath: string) {
@@ -21,7 +27,7 @@ function loadEnvFile(filePath: string) {
     if (separatorIndex <= 0) continue;
 
     const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim();
+    const value = stripWrappingQuotes(line.slice(separatorIndex + 1).trim());
     loadedValues.set(key, value);
   }
 }

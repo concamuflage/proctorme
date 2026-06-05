@@ -23,6 +23,11 @@ type GmailMessage = {
   };
 };
 
+export type VerificationEmail = {
+  verificationLink: string;
+  from: string;
+};
+
 const verificationLinkPattern = /https?:\/\/[^\s"'<>]+\/verify-email\?[^\s"'<>]+/g;
 
 function encodeQuery(value: string) {
@@ -118,9 +123,9 @@ function extractVerificationLink(message: GmailMessage) {
   return null;
 }
 
-export async function findLatestVerificationEmail(recipientEmail: string) {
+export async function findLatestVerificationEmail(recipientEmail: string): Promise<VerificationEmail> {
   const token = await accessToken();
-  const query = `to:${recipientEmail} subject:"Verify your OutlierFit account" newer_than:14d`;
+  const query = `to:${recipientEmail} subject:"Verify your ProctorMe account" newer_than:14d`;
   const listUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
     + "?maxResults=10"
     + "&includeSpamTrash=true"

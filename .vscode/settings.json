@@ -3,18 +3,22 @@
     "java.import.maven.enabled": true,
     "cucumber.features": [
         "test/ui/src/test/resources/features/**/*.feature",
-        "playwright-tests/features/**/*.feature"
+        "playwright-tests/tests/api/features/**/*.feature",
+        "playwright-tests/tests/ui/features/**/*.feature"
     ],
     "cucumber.glue": [
         "test/ui/src/test/java/**/*.java",
-        "playwright-tests/features/step-definitions/**/*.js"
+        "playwright-tests/tests/api/features/step-definitions/**/*.ts",
+        "playwright-tests/tests/ui/step-definitions/**/*.ts"
     ],
     "cucumberautocomplete.steps": [
         "test/ui/src/test/java/**/*.java",
-        "playwright-tests/features/step-definitions/**/*.js"
+        "playwright-tests/tests/api/features/step-definitions/**/*.ts",
+        "playwright-tests/tests/ui/step-definitions/**/*.ts"
     ],
     "cucumberautocomplete.syncfeatures": [
         "test/ui/src/test/resources/features/**/*.feature",
-        "playwright-tests/features/**/*.feature"
+        "playwright-tests/tests/api/features/**/*.feature",
+        "playwright-tests/tests/ui/features/**/*.feature"
     ]
 }

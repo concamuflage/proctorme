@@ -4,15 +4,19 @@
   "private": true,
   "scripts": {
     "install:browsers": "playwright install",
-    "test": "cucumber-js",
-    "test:playwright": "playwright test",
+    "test": "npm run test:api",
+    "test:api": "cucumber-js --profile api",
     "test:cucumber": "cucumber-js",
-    "test:headed": "playwright test --headed",
-    "test:ui": "playwright test --ui",
-    "report": "playwright show-report"
+    "test:ui": "cucumber-js --profile ui",
+    "test:ui:headed": "cucumber-js --profile ui",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@cucumber/cucumber": "^12.9.0"

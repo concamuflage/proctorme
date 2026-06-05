@@ -1,8 +1,8 @@
-const { Client } = require("pg");
-const bcrypt = require("bcryptjs");
-const { envValue, requiredEnvValue } = require("./testEnv");
+import { Client, type ClientConfig } from "pg";
+import bcrypt from "bcryptjs";
+import { envValue, requiredEnvValue } from "./testEnv";
 
-function databaseConfig() {
+function databaseConfig(): ClientConfig {
   const connectionString = envValue("TEST_DATABASE_URL") || envValue("DATABASE_URL");
   if (connectionString) return { connectionString };
 
@@ -15,7 +15,7 @@ function databaseConfig() {
   };
 }
 
-async function withDb(callback) {
+async function withDb<T>(callback: (client: Client) => Promise<T>) {
   const client = new Client(databaseConfig());
   await client.connect();
 
@@ -26,10 +26,10 @@ async function withDb(callback) {
   }
 }
 
-async function seedInstitutionUser(email, password) {
+export async function seedInstitutionUser(email: string, password: string) {
   return withDb(async (client) => {
     const passwordHash = await bcrypt.hash(password, 10);
-    const roleResult = await client.query(
+    const roleResult = await client.query<{ id: unknown }>(
       `INSERT INTO roles (name)
        VALUES ('cooporate_user')
        ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
@@ -38,7 +38,7 @@ async function seedInstitutionUser(email, password) {
 
     await client.query("DELETE FROM users WHERE lower(email) = lower($1)", [email]);
 
-    const userResult = await client.query(
+    const userResult = await client.query<{ id: unknown }>(
       `INSERT INTO users (email, password_hash, first_name, last_name, email_verified, role_id)
        VALUES ($1, $2, 'Institution', 'Reviewer', TRUE, $3)
        RETURNING id`,
@@ -49,9 +49,9 @@ async function seedInstitutionUser(email, password) {
   });
 }
 
-async function seedBooking(proctorUserId, statusName) {
+export async function seedBooking(proctorUserId: number, statusName: string) {
   return withDb(async (client) => {
-    const statusResult = await client.query("SELECT id FROM statuses WHERE name = $1 LIMIT 1", [statusName]);
+    const statusResult = await client.query<{ id: unknown }>("SELECT id FROM statuses WHERE name = $1 LIMIT 1", [statusName]);
     const statusId = statusResult.rows[0]?.id;
     if (!statusId) throw new Error(`Missing booking status: ${statusName}`);
 
@@ -61,7 +61,7 @@ async function seedBooking(proctorUserId, statusName) {
     const end = new Date(start);
     end.setHours(11, 0, 0, 0);
 
-    const bookingResult = await client.query(
+    const bookingResult = await client.query<{ id: unknown }>(
       `INSERT INTO bookings (user_id, start_time_utc, end_time_utc, status_id)
        VALUES ($1, $2, $3, $4)
        RETURNING id`,
@@ -72,9 +72,9 @@ async function seedBooking(proctorUserId, statusName) {
   });
 }
 
-async function ratingCountForBooking(bookingId) {
+export async function ratingCountForBooking(bookingId: number) {
   return withDb(async (client) => {
-    const result = await client.query(
+    const result = await client.query<{ count: unknown }>(
       `SELECT count(*)::int AS count
        FROM proctor_ratings
        WHERE booking_id = $1`,
@@ -84,7 +84,7 @@ async function ratingCountForBooking(bookingId) {
   });
 }
 
-async function cleanupRatingScenario(email, bookingIds) {
+export async function cleanupRatingScenario(email: string, bookingIds: number[]) {
   await withDb(async (client) => {
     if (bookingIds.length > 0) {
       await client.query("DELETE FROM proctor_ratings WHERE booking_id = ANY($1::bigint[])", [bookingIds]);
@@ -93,10 +93,3 @@ async function cleanupRatingScenario(email, bookingIds) {
     await client.query("DELETE FROM users WHERE lower(email) = lower($1)", [email]);
   });
 }
-
-module.exports = {
-  cleanupRatingScenario,
-  ratingCountForBooking,
-  seedBooking,
-  seedInstitutionUser,
-};

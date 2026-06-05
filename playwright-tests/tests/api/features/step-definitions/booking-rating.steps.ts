@@ -1,17 +1,18 @@
-const assert = require("node:assert/strict");
-const { Given, Then, When } = require("@cucumber/cucumber");
-const {
+import assert from "node:assert/strict";
+import { Given, Then, When } from "@cucumber/cucumber";
+import {
   ratingCountForBooking,
   seedBooking,
   seedInstitutionUser,
-} = require("../support/db");
+} from "../support/db";
+import type { RatingWorld } from "../support/world";
 
-Given("an institution user exists", async function () {
+Given<RatingWorld>("an institution user exists", async function () {
   this.institutionUserId = await seedInstitutionUser(this.email, this.password);
   assert.ok(this.institutionUserId > 0);
 });
 
-Given("the institution user has a completed booking and a normal booking for Avery Chen", async function () {
+Given<RatingWorld>("the institution user has a completed booking and a normal booking for Avery Chen", async function () {
   this.bookingIds.completed = await seedBooking(this.proctorUserId, "completed");
   this.bookingIds.normal = await seedBooking(this.proctorUserId, "normal");
   this.rawBookingIds.push(this.bookingIds.completed, this.bookingIds.normal);
@@ -20,7 +21,8 @@ Given("the institution user has a completed booking and a normal booking for Ave
   assert.ok(this.bookingIds.normal > 0);
 });
 
-Given("the institution user is signed in", async function () {
+Given<RatingWorld>("the institution user is signed in", async function () {
+  assert.ok(this.api, "API request context was not created.");
   const csrfResponse = await this.api.get("/api/auth/csrf");
   assert.equal(csrfResponse.ok(), true);
   const csrfPayload = await csrfResponse.json();
@@ -38,7 +40,8 @@ Given("the institution user is signed in", async function () {
   assert.equal(loginResponse.ok(), true);
 });
 
-When("the institution user rates the completed booking", async function () {
+When<RatingWorld>("the institution user rates the completed booking", async function () {
+  assert.ok(this.api, "API request context was not created.");
   this.responses.completed = await this.api.post(`/api/bookings/${this.bookingIds.completed}/rating`, {
     data: {
       rating: 5,
@@ -47,12 +50,13 @@ When("the institution user rates the completed booking", async function () {
   });
 });
 
-Then("the completed booking rating is saved", async function () {
+Then<RatingWorld>("the completed booking rating is saved", async function () {
   assert.equal(this.responses.completed.status(), 201);
   assert.equal(await ratingCountForBooking(this.bookingIds.completed), 1);
 });
 
-When("the institution user rates the normal booking", async function () {
+When<RatingWorld>("the institution user rates the normal booking", async function () {
+  assert.ok(this.api, "API request context was not created.");
   this.responses.normal = await this.api.post(`/api/bookings/${this.bookingIds.normal}/rating`, {
     data: {
       rating: 4,
@@ -61,12 +65,12 @@ When("the institution user rates the normal booking", async function () {
   });
 });
 
-Then("the normal booking rating is rejected", async function () {
+Then<RatingWorld>("the normal booking rating is rejected", async function () {
   assert.equal(this.responses.normal.status(), 409);
   const payload = await this.responses.normal.json();
   assert.equal(payload.error, "Only completed bookings can be rated.");
 });
 
-Then("no rating is saved for the normal booking", async function () {
+Then<RatingWorld>("no rating is saved for the normal booking", async function () {
   assert.equal(await ratingCountForBooking(this.bookingIds.normal), 0);
 });
