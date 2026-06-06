@@ -1,28 +1,14 @@
-import { Client, type ClientConfig } from "pg";
+import type { PoolClient } from "pg";
 import bcrypt from "bcryptjs";
-import { envValue, requiredEnvValue } from "./testEnv";
+import { testDbPool } from "../../../support/databasePool";
 
-function databaseConfig(): ClientConfig {
-  const connectionString = envValue("TEST_DATABASE_URL") || envValue("DATABASE_URL");
-  if (connectionString) return { connectionString };
-
-  return {
-    host: requiredEnvValue("PGHOST"),
-    port: Number(envValue("PGPORT", "5432")),
-    database: requiredEnvValue("PGDATABASE"),
-    user: requiredEnvValue("PGUSER"),
-    password: requiredEnvValue("PGPASSWORD"),
-  };
-}
-
-async function withDb<T>(callback: (client: Client) => Promise<T>) {
-  const client = new Client(databaseConfig());
-  await client.connect();
+async function withDb<T>(callback: (client: PoolClient) => Promise<T>) {
+  const client = await testDbPool.connect();
 
   try {
     return await callback(client);
   } finally {
-    await client.end();
+    client.release();
   }
 }
 

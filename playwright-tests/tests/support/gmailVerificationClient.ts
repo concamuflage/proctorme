@@ -1,4 +1,4 @@
-import { envValue, requiredEnvValue } from "./testEnv";
+import "../../../lib/server/config/env.js";
 
 type GmailHeader = {
   name: string;
@@ -29,6 +29,16 @@ export type VerificationEmail = {
 };
 
 const verificationLinkPattern = /https?:\/\/[^\s"'<>]+\/verify-email\?[^\s"'<>]+/g;
+
+function requiredEnvValue(name: string) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment value: ${name}`);
+  return value;
+}
+
+export function expectedResendFromEmail() {
+  return requiredEnvValue("RESEND_FROM_EMAIL");
+}
 
 function encodeQuery(value: string) {
   return encodeURIComponent(value);
@@ -71,7 +81,7 @@ function headerValue(message: GmailMessage, headerName: string) {
 }
 
 async function accessToken() {
-  const configuredAccessToken = envValue("GMAIL_ACCESS_TOKEN");
+  const configuredAccessToken = process.env.GMAIL_ACCESS_TOKEN;
   if (configuredAccessToken) return configuredAccessToken;
 
   const refreshToken = requiredEnvValue("GMAIL_REFRESH_TOKEN");

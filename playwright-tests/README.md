@@ -65,3 +65,4 @@ npm run typecheck
 - `tests/ui/pages`: UI Page Object classes.
 - `tests/ui/support`: UI helper modules.
 - `tests/ui/step-definitions`: UI Cucumber step definitions.
+- `tests/support`: shared helpers used by both API and UI tests, including the test database pool.

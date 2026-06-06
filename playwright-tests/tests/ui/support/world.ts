@@ -1,7 +1,10 @@
-import { After, Before, setDefaultTimeout, setWorldConstructor } from "@cucumber/cucumber";
-import { chromium, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { deleteUserByEmail } from "./databaseCleanup";
-import type { VerificationEmail } from "./gmailVerificationClient";
+import { After, AfterAll, Before, setDefaultTimeout, setWorldConstructor, Status } from "@cucumber/cucumber";
+import { type Page } from "@playwright/test";
+import { deleteUserByEmail } from "../../support/databaseCleanup";
+import type { VerificationEmail } from "../../support/gmailVerificationClient";
+import { endTestDbPool } from "../../support/databasePool";
+import "../../../../lib/server/config/env.js";
+import { closeUiDriver, createUiDriver, saveUiFailureArtifacts, type UiDriver } from "./uiDriverFactory";
 
 // Cucumber creates one World object per scenario.
 // This class stores scenario-specific Playwright state and test data so steps
@@ -11,9 +14,10 @@ export class UiWorld {
   // when running against staging or another local port.
   baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 
-  // Playwright browser process, isolated browser session, and active tab.
-  browser: Browser | null = null;
-  context: BrowserContext | null = null;
+  // Shared Playwright browser/session/tab bundle for the current scenario.
+  uiDriver: UiDriver | null = null;
+
+  // Active tab exposed directly because Page Objects and steps use it.
   page: Page | null = null;
 
   // Data created during signup/email-verification scenarios.
@@ -30,20 +34,31 @@ setWorldConstructor(UiWorld);
 
 // Runs before each scenario. It starts a clean browser context so each scenario
 // gets an isolated session with no reused cookies or localStorage.
-Before<UiWorld>(async function () {
-  // Headless is the default for automated tests. Set PLAYWRIGHT_HEADLESS=false
-  // when you want to watch the browser for debugging.
-  const headless = process.env.PLAYWRIGHT_HEADLESS !== "false";
-  this.browser = await chromium.launch({ headless });
-  this.context = await this.browser.newContext({ baseURL: this.baseURL });
-  this.page = await this.context.newPage();
+Before<UiWorld>(async function (scenario) {
+  this.uiDriver = await createUiDriver({
+    baseURL: this.baseURL,
+    scenarioName: scenario.pickle.name,
+  });
+  this.page = this.uiDriver.page;
 });
 
 // Runs after each scenario. It closes browser resources and deletes the user
 // account created by the scenario, if one was generated.
-After<UiWorld>(async function () {
-  await this.page?.close();
-  await this.context?.close();
-  await this.browser?.close();
+After<UiWorld>(async function (scenario) {
+  if (scenario.result?.status === Status.FAILED && this.uiDriver) {
+    await saveUiFailureArtifacts(this.uiDriver, scenario);
+  }
+
+  if (this.uiDriver) {
+    await closeUiDriver(this.uiDriver);
+  }
+
+  this.page = null;
+  this.uiDriver = null;
   await deleteUserByEmail(this.generatedEmail);
+});
+
+// Close the shared database pool once all UI scenarios have finished.
+AfterAll(async function () {
+  await endTestDbPool();
 });

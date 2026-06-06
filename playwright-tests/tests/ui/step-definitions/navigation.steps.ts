@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { Given, Then } from "@cucumber/cucumber";
+import { expect } from "@playwright/test";
 import type { UiWorld } from "../support/world";
 
 function escapedRegExp(value: string) {
@@ -18,5 +19,5 @@ Then<UiWorld>("the page URL should contain {string}", async function (expectedPa
 
 Then<UiWorld>("the page should show {string}", async function (text: string) {
   assert.ok(this.page, "Page was not created.");
-  await this.page.getByText(text, { exact: false }).first().waitFor();
+  await expect(this.page.getByText(text, { exact: false }).first()).toBeVisible();
 });

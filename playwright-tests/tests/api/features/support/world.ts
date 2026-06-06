@@ -1,6 +1,7 @@
-import { After, Before, setDefaultTimeout, setWorldConstructor } from "@cucumber/cucumber";
+import { After, AfterAll, Before, setDefaultTimeout, setWorldConstructor } from "@cucumber/cucumber";
 import { request, type APIRequestContext, type APIResponse } from "@playwright/test";
 import { cleanupRatingScenario } from "./db";
+import { endTestDbPool } from "../../../support/databasePool";
 
 export class RatingWorld {
   baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
@@ -24,4 +25,8 @@ Before<RatingWorld>(async function () {
 After<RatingWorld>(async function () {
   await cleanupRatingScenario(this.email, this.rawBookingIds);
   await this.api?.dispose();
+});
+
+AfterAll(async function () {
+  await endTestDbPool();
 });
