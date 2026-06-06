@@ -25,9 +25,9 @@ export class UiWorld {
   verificationEmail: VerificationEmail | null = null;
 }
 
-// Some UI steps wait for email delivery or navigation, so use a timeout longer
-// than Cucumber's 5 second default.
-setDefaultTimeout(30_000);
+// Some UI steps wait for email delivery and Gmail API polling, so use a timeout
+// longer than Cucumber's 5 second default.
+setDefaultTimeout(75_000);
 
 // Tell Cucumber to use UiWorld as the `this` object for UI steps.
 setWorldConstructor(UiWorld);

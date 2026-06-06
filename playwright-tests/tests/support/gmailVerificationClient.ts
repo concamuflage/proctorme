@@ -14,6 +14,7 @@ type GmailPart = {
 
 type GmailMessage = {
   id: string;
+  internalDate?: string;
   payload?: {
     headers?: GmailHeader[];
     body?: {
@@ -26,6 +27,11 @@ type GmailMessage = {
 export type VerificationEmail = {
   verificationLink: string;
   from: string;
+};
+
+type FindVerificationEmailOptions = {
+  timeoutMs?: number;
+  pollIntervalMs?: number;
 };
 
 const verificationLinkPattern = /https?:\/\/[^\s"'<>]+\/verify-email\?[^\s"'<>]+/g;
@@ -42,6 +48,10 @@ export function expectedResendFromEmail() {
 
 function encodeQuery(value: string) {
   return encodeURIComponent(value);
+}
+
+function quoteGmailTerm(value: string) {
+  return `"${value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}"`;
 }
 
 function decodeHtmlEntities(value: string) {
@@ -133,9 +143,16 @@ function extractVerificationLink(message: GmailMessage) {
   return null;
 }
 
-export async function findLatestVerificationEmail(recipientEmail: string): Promise<VerificationEmail> {
-  const token = await accessToken();
-  const query = `to:${recipientEmail} subject:"Verify your ProctorMe account" newer_than:14d`;
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function findVerificationEmailOnce(
+  token: string,
+  recipientEmail: string
+) {
+  const quotedRecipient = quoteGmailTerm(recipientEmail);
+  const query = `to:${quotedRecipient} subject:"Verify your ProctorMe account" newer_than:14d`;
   const listUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
     + "?maxResults=10"
     + "&includeSpamTrash=true"
@@ -143,8 +160,10 @@ export async function findLatestVerificationEmail(recipientEmail: string): Promi
 
   const listPayload = await getJson<{ messages?: Array<{ id: string }> }>(listUrl, token);
   if (!listPayload.messages?.length) {
-    throw new Error(`No Gmail verification emails found for ${recipientEmail}`);
+    return null;
   }
+
+  const candidates: Array<VerificationEmail & { sentAt: number }> = [];
 
   for (const messageSummary of listPayload.messages) {
     const message = await getJson<GmailMessage>(
@@ -153,12 +172,41 @@ export async function findLatestVerificationEmail(recipientEmail: string): Promi
     );
     const verificationLink = extractVerificationLink(message);
     if (verificationLink) {
-      return {
+      const sentAt = Number(message.internalDate || 0);
+      candidates.push({
         verificationLink,
         from: headerValue(message, "From"),
-      };
+        sentAt,
+      });
     }
   }
+
+  candidates.sort((left, right) => right.sentAt - left.sentAt);
+
+  if (candidates[0]) {
+    return {
+      verificationLink: candidates[0].verificationLink,
+      from: candidates[0].from,
+    };
+  }
+
+  return null;
+}
+
+export async function findLatestVerificationEmail(
+  recipientEmail: string,
+  options: FindVerificationEmailOptions = {}
+): Promise<VerificationEmail> {
+  const token = await accessToken();
+  const timeoutMs = options.timeoutMs ?? 45_000;
+  const pollIntervalMs = options.pollIntervalMs ?? 3_000;
+  const deadline = Date.now() + timeoutMs;
+
+  do {
+    const email = await findVerificationEmailOnce(token, recipientEmail);
+    if (email) return email;
+    await sleep(pollIntervalMs);
+  } while (Date.now() < deadline);
 
   throw new Error("Gmail messages were found, but none contained a verification link.");
 }
