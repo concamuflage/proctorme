@@ -9,6 +9,13 @@ const DEFAULT_API_BASE_URL = "http://127.0.0.1:4000";
 const DEFAULT_TARGET_EMAIL = "unodostreszlm@gmail.com";
 const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 
+/**
+ * Loads env file needed by this flow.
+ *
+ * @param filePath - Input used by load env file.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
 
@@ -34,6 +41,13 @@ function loadEnvFile(filePath) {
 
 loadEnvFile(path.join(process.cwd(), ".env"));
 
+/**
+ * Requires d env before allowing this flow to continue.
+ *
+ * @param name - Input used by required env.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function requiredEnv(name) {
   const value = process.env[name];
   if (!value || value === "change-me") {
@@ -42,11 +56,26 @@ function requiredEnv(name) {
   return value;
 }
 
+/**
+ * Runs the base64 url decode logic for this module.
+ *
+ * @param value - Input used by base64 url decode.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function base64UrlDecode(value) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   return Buffer.from(normalized, "base64").toString("utf8");
 }
 
+/**
+ * Runs the collect body parts logic for this module.
+ *
+ * @param part - Input used by collect body parts.
+ * @param chunks - Input used by collect body parts.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function collectBodyParts(part, chunks = []) {
   if (!part) return chunks;
   if (part.body?.data) chunks.push(base64UrlDecode(part.body.data));
@@ -56,6 +85,13 @@ function collectBodyParts(part, chunks = []) {
   return chunks;
 }
 
+/**
+ * Runs the decode html entities logic for this module.
+ *
+ * @param value - Input used by decode html entities.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function decodeHtmlEntities(value) {
   return value
     .replace(/&amp;/g, "&")
@@ -65,12 +101,28 @@ function decodeHtmlEntities(value) {
     .replace(/&#39;/g, "'");
 }
 
+/**
+ * Runs the find verification link logic for this module.
+ *
+ * @param message - Input used by find verification link.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function findVerificationLink(message) {
   const body = decodeHtmlEntities(collectBodyParts(message.payload).join("\n"));
   const matches = body.match(/https?:\/\/[^\s"'<>]+\/verify-email\?[^\s"'<>]+/g) || [];
   return matches.find((link) => link.includes("token=") && link.includes("email=")) || null;
 }
 
+/**
+ * Runs the api fetch logic for this module.
+ *
+ * @param url - Input used by api fetch.
+ * @param accessToken - Input used by api fetch.
+ * @param options - Input used by api fetch.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function apiFetch(url, accessToken, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -88,6 +140,13 @@ async function apiFetch(url, accessToken, options = {}) {
   return payload;
 }
 
+/**
+ * Runs the wait for oauth code logic for this module.
+ *
+ * @param redirectUri - Input used by wait for oauth code.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function waitForOAuthCode(redirectUri) {
   const redirect = new URL(redirectUri);
 
@@ -117,6 +176,13 @@ function waitForOAuthCode(redirectUri) {
   });
 }
 
+/**
+ * Runs the exchange code for token logic for this module.
+ *
+ * @param code, clientId, clientSecret, redirectUri - Input used by exchange code for token.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function exchangeCodeForToken({ code, clientId, clientSecret, redirectUri }) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -138,6 +204,13 @@ async function exchangeCodeForToken({ code, clientId, clientSecret, redirectUri 
   return payload.access_token;
 }
 
+/**
+ * Runs the verify latest email logic for this module.
+ *
+ * @param accessToken, targetEmail, apiBaseUrl - Input used by verify latest email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function verifyLatestEmail({ accessToken, targetEmail, apiBaseUrl }) {
   const profile = await apiFetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", accessToken);
   if (profile.emailAddress?.toLowerCase() !== targetEmail.toLowerCase()) {
@@ -186,6 +259,11 @@ async function verifyLatestEmail({ accessToken, targetEmail, apiBaseUrl }) {
   throw new Error("Found matching Gmail messages, but none contained a verification link.");
 }
 
+/**
+ * Runs the main logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function main() {
   const clientId = requiredEnv("GOOGLE_CLIENT_ID");
   const clientSecret = requiredEnv("GOOGLE_CLIENT_SECRET");

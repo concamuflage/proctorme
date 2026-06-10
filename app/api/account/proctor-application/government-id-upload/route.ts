@@ -13,6 +13,13 @@ const ALLOWED_TYPES = new Set([
 
 export const runtime = "nodejs";
 
+/**
+ * Runs the extension for logic for this module.
+ *
+ * @param file - Input used by extension for.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function extensionFor(file: File) {
   const nameExtension = path.extname(file.name || "").toLowerCase();
   if ([".pdf", ".jpg", ".jpeg", ".png"].includes(nameExtension)) {
@@ -25,6 +32,13 @@ function extensionFor(file: File) {
   return "";
 }
 
+/**
+ * Handles POST requests for the /api/account/proctor-application/government-id-upload route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {

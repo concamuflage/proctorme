@@ -4,6 +4,13 @@ type ProctorGridProps = {
   proctors: Proctor[];
 };
 
+/**
+ * Renders the proctor grid component.
+ *
+ * @param proctors - Input used by proctor grid.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProctorGrid({ proctors }: ProctorGridProps) {
   if (!proctors || proctors.length === 0) {
     return (

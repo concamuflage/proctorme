@@ -5,6 +5,11 @@ import { useSearchParams } from "next/navigation";
 
 type VerificationState = "loading" | "success" | "error";
 
+/**
+ * Renders the verify organization email page content component.
+ *
+ * @returns The rendered UI for this component.
+ */
 function VerifyOrganizationEmailPageContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
@@ -19,6 +24,11 @@ function VerifyOrganizationEmailPageContent() {
     const params = new URLSearchParams({ email, token });
     const controller = new AbortController();
 
+    /**
+     * Runs the verify organization email logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function verifyOrganizationEmail() {
       const response = await fetch(`/api/account/organization-application/verify-email?${params.toString()}`, {
         method: "GET",
@@ -59,6 +69,11 @@ function VerifyOrganizationEmailPageContent() {
   );
 }
 
+/**
+ * Renders the /verify-organization-email page.
+ *
+ * @returns The page UI.
+ */
 export default function VerifyOrganizationEmailPage() {
   return (
     <Suspense fallback={null}>

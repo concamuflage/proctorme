@@ -54,9 +54,23 @@ type ProctorEducation = {
   endMonth: string | null;
 };
 
+/**
+ * Runs the proctor page title logic for this module.
+ *
+ * @param proctorName - Input used by proctor page title.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function proctorPageTitle(proctorName: string) {
   return `${proctorName} | ${SITE_NAME}`;
 }
+/**
+ * Formats address for display.
+ *
+ * @param proctor - Input used by format address.
+ *
+ * @returns The formatted display value.
+ */
 function formatAddress(proctor: ProctorDetail) {
   return [proctor.address, proctor.city, proctor.state, proctor.zipCode]
     .map((part) => (typeof part === "string" ? part.trim() : ""))
@@ -64,6 +78,13 @@ function formatAddress(proctor: ProctorDetail) {
     .join(", ");
 }
 
+/**
+ * Renders the star rating component.
+ *
+ * @param value, label - Input used by star rating.
+ *
+ * @returns The rendered UI for this component.
+ */
 function StarRating({ value, label }: { value: number; label: string }) {
   const rounded = Math.round(value);
 
@@ -78,12 +99,26 @@ function StarRating({ value, label }: { value: number; label: string }) {
   );
 }
 
+/**
+ * Formats rating date for display.
+ *
+ * @param value - Input used by format rating date.
+ *
+ * @returns The formatted display value.
+ */
 function formatRatingDate(value: string) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "";
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
+/**
+ * Renders the proctor detail client component.
+ *
+ * @param proctorIdParam - Input used by proctor detail client.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProctorDetailClient({ proctorIdParam }: { proctorIdParam: string }) {
   const { addItem, openCart } = useCart();
   const { status } = useSession();
@@ -112,6 +147,11 @@ export default function ProctorDetailClient({ proctorIdParam }: { proctorIdParam
       return;
     }
 
+    /**
+     * Fetches proctor from the relevant API.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     const fetchProctor = async () => {
       setLoading(true);
       setError(null);

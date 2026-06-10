@@ -17,16 +17,37 @@ export type ProctorGalleryProps = {
   initialIndex?: number;
 };
 
+/**
+ * Checks whether image url is true for this flow.
+ *
+ * @param value - Input used by is image url.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isImageUrl(value: string) {
   return /^https?:\/\//.test(value) || value.startsWith("/") || value.startsWith("data:image/") || value.startsWith("gcs://");
 }
 
+/**
+ * Runs the profile image src logic for this module.
+ *
+ * @param url - Input used by profile image src.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function profileImageSrc(url: string) {
   return url.startsWith("gcs://")
     ? `/api/proctor-files/profile-image?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Renders the proctor gallery component.
+ *
+ * @param photos, alt, initialIndex = 0 - Input used by proctor gallery.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProctorGallery({ photos, alt, initialIndex = 0 }: ProctorGalleryProps) {
   // Defensive: filter out empty/non-string values.
   const safePhotos = useMemo(() => {
@@ -47,11 +68,21 @@ export default function ProctorGallery({ photos, alt, initialIndex = 0 }: Procto
   const shouldUseTwoThumbnailColumns = safePhotos.length > 6;
   const activePhoto = safePhotos[activeIndex] ?? "";
 
+  /**
+   * Runs the go prev logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const goPrev = () => {
     if (!canNavigate) return;
     setSelectedIndex((prev) => (prev - 1 + safePhotos.length) % safePhotos.length);
   };
 
+  /**
+   * Runs the go next logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const goNext = () => {
     if (!canNavigate) return;
     setSelectedIndex((prev) => (prev + 1) % safePhotos.length);

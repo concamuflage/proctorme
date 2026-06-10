@@ -6,11 +6,25 @@ import type { InvoiceAddress, InvoiceItem, InvoicePayload } from "@/lib/invoice"
 // normalizes types, and formats the result into a structure used for invoices/emails.
 
 // Safely converts a value to a number (handles unknown DB types)
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
 // Converts various date formats into ISO string for consistent output
+/**
+ * Converts a value to iso string.
+ *
+ * @param value - Input used by to iso string.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toIsoString(value: unknown) {
   if (value == null) {
     return "";
@@ -58,6 +72,14 @@ type OrderInvoiceItemRow = {
 
 // Fetches and constructs the full invoice payload for a specific order and user
 // Combines order details, payment info, shipping data, and line items
+/**
+ * Gets invoice payload for order for this flow.
+ *
+ * @param userId - Input used by get invoice payload for order.
+ * @param orderId - Input used by get invoice payload for order.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getInvoicePayloadForOrder(userId: number, orderId: number): Promise<InvoicePayload | null> {
   // Query main order + payment data
   const orderResult = await pool.query<OrderInvoiceRow>(

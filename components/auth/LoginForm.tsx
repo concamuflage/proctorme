@@ -30,6 +30,13 @@ type LoginFormProps = {
 
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
 
+/**
+ * Runs the safe callback url logic for this module.
+ *
+ * @param value - Input used by safe callback url.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function safeCallbackUrl(value: string | null | undefined) {
   if (!value) return "/proctors";
   if (value.startsWith("/") && !value.startsWith("//")) return value;
@@ -47,7 +54,14 @@ function safeCallbackUrl(value: string | null | undefined) {
  * Login form UI and client-side submission handler.
  * Delegates auth to NextAuth credentials provider.
  */
+
+
+
 export default function LoginForm({ onSuccess, compact = false }: LoginFormProps) {
+  // destrucure the props and set default value for compact to false. compact is used to determine the styling of the form, 
+  // whether it should have rounded corners and padding or not. 
+  // onSuccess is a callback function that will be called after a successful login,
+  // allowing parent components to handle post-login behavior without relying on navigation.
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -104,16 +118,27 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
     }
 
     setLoading(false);
+    // if on success callback is provided, call it instead of navigating
     if (onSuccess) {
       onSuccess();
       return;
     }
+    //The expression result?.url ?? callbackUrl uses optional chaining and the nullish coalescing operator:
+    // it evaluates to result.url when result exists and result.url is not null or undefined; 
+    // otherwise it falls back to callbackUrl. Unlike ||, ?? treats empty strings and other falsy-but-not-nullish values as valid, 
+    // so "" would be accepted instead of falling back.
+
 
     const destination = safeCallbackUrl(result?.url ?? callbackUrl);
     router.push(`/account/post-login?callbackUrl=${encodeURIComponent(destination)}`);
     router.refresh();
   };
 
+  /**
+   * Handles resend verification for this component.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const handleResendVerification = async () => {
     setResending(true);
     setNotice(null);

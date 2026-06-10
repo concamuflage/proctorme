@@ -8,6 +8,13 @@ import { authOptions } from "@/lib/auth";
 import { getStripeCheckoutOrderStatus } from "@/lib/server/orderPayments";
 
 // POST handler invoked after client returns from Stripe Checkout
+/**
+ * Handles POST requests for the /api/orders/checkout-complete route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   // Require authenticated user
   const session = await getServerSession(authOptions);

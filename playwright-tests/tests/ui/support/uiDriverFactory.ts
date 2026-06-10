@@ -24,6 +24,13 @@ type CreateUiDriverOptions = {
 
 // Scenario names can contain spaces and punctuation. Convert them into stable
 // folder names for screenshots, traces, and videos.
+/**
+ * Runs the scenario slug logic for this module.
+ *
+ * @param name - Input used by scenario slug.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function scenarioSlug(name: string) {
   return name
     .toLowerCase()
@@ -34,6 +41,13 @@ function scenarioSlug(name: string) {
 
 // Optional viewport override for responsive checks, for example:
 // PLAYWRIGHT_VIEWPORT=390x844 npm run test:ui
+/**
+ * Parses viewport from an external value.
+ *
+ * @param value - Input used by parse viewport.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseViewport(value: string | undefined) {
   if (!value) return undefined;
   const match = value.match(/^(\d+)x(\d+)$/);
@@ -49,6 +63,14 @@ function parseViewport(value: string | undefined) {
 // Build all BrowserContext options in one place. A context is the isolated
 // browser session for a scenario: cookies, localStorage, viewport, device, video,
 // and optional pre-authenticated storage state all belong here.
+/**
+ * Runs the context options logic for this module.
+ *
+ * @param baseURL - Input used by context options.
+ * @param artifactsDir - Input used by context options.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function contextOptions(baseURL: string, artifactsDir: string): BrowserContextOptions {
   const deviceName = process.env.PLAYWRIGHT_DEVICE;
   const viewport = parseViewport(process.env.PLAYWRIGHT_VIEWPORT);
@@ -67,6 +89,13 @@ function contextOptions(baseURL: string, artifactsDir: string): BrowserContextOp
 // Create a fresh browser, isolated context, and page for one UI scenario.
 // Tracing starts immediately so a failed scenario has a full timeline from the
 // first navigation through the failure.
+/**
+ * Creates ui driver for this flow.
+ *
+ * @param options - Input used by create ui driver.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function createUiDriver(options: CreateUiDriverOptions): Promise<UiDriver> {
   const headless = (process.env.PLAYWRIGHT_HEADLESS || "true") !== "false";
   const tracingEnabled = (process.env.PLAYWRIGHT_TRACE || "true") !== "false";
@@ -88,6 +117,14 @@ export async function createUiDriver(options: CreateUiDriverOptions): Promise<Ui
 // Save visual debugging artifacts only when the scenario fails. Screenshots give
 // a quick view of the final state; traces are better for root cause because they
 // include actions, DOM snapshots, network activity, and console output.
+/**
+ * Runs the save ui failure artifacts logic for this module.
+ *
+ * @param driver - Input used by save ui failure artifacts.
+ * @param scenario - Input used by save ui failure artifacts.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function saveUiFailureArtifacts(driver: UiDriver, scenario: ITestCaseHookParameter) {
   if ((process.env.PLAYWRIGHT_SCREENSHOT_ON_FAILURE || "true") !== "false") {
     await driver.page.screenshot({
@@ -110,6 +147,13 @@ export async function saveUiFailureArtifacts(driver: UiDriver, scenario: ITestCa
 
 // Close the Playwright resources created for a scenario. If the scenario passed,
 // stop tracing without saving a trace file so normal runs stay lightweight.
+/**
+ * Runs the close ui driver logic for this module.
+ *
+ * @param driver - Input used by close ui driver.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function closeUiDriver(driver: UiDriver) {
   if (driver.traceActive) {
     await driver.context.tracing.stop();

@@ -34,12 +34,26 @@ export type ProctorInfoPanelProps = {
   proctor: ProctorInfoPanelProctor;
 };
 
+/**
+ * Formats hour value for display.
+ *
+ * @param value - Input used by format hour value.
+ *
+ * @returns The formatted display value.
+ */
 function formatHourValue(value: string | number | null) {
   const parsed = value == null ? NaN : Number(value);
   if (!Number.isFinite(parsed)) return "Not set";
   return Number.isInteger(parsed) ? String(parsed) : parsed.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
+/**
+ * Formats month for display.
+ *
+ * @param value - Input used by format month.
+ *
+ * @returns The formatted display value.
+ */
 function formatMonth(value: string | null) {
   if (!value) return "Present";
   const date = new Date(`${value.slice(0, 10)}T00:00:00`);
@@ -47,6 +61,13 @@ function formatMonth(value: string | null) {
   return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(date);
 }
 
+/**
+ * Renders the proctor info panel component.
+ *
+ * @param proctor - Input used by proctor info panel.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProctorInfoPanel({ proctor }: ProctorInfoPanelProps) {
   const priceUsdText = useMemo(() => {
     const usd = proctor.hourlyRate == null ? 0 : Number(proctor.hourlyRate);

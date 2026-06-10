@@ -3,10 +3,24 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { buildInvoicePdf, type InvoicePayload } from "@/lib/invoice";
 
+/**
+ * Runs the bad request logic for this module.
+ *
+ * @param message - Input used by bad request.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+/**
+ * Checks whether valid address is true for this flow.
+ *
+ * @param address - Input used by is valid address.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isValidAddress(address: unknown) {
   if (!address || typeof address !== "object") return false;
 
@@ -16,6 +30,13 @@ function isValidAddress(address: unknown) {
   );
 }
 
+/**
+ * Checks whether valid item is true for this flow.
+ *
+ * @param item - Input used by is valid item.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isValidItem(item: unknown) {
   if (!item || typeof item !== "object") return false;
 
@@ -30,6 +51,13 @@ function isValidItem(item: unknown) {
   );
 }
 
+/**
+ * Handles POST requests for the /api/invoice route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {

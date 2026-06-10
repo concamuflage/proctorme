@@ -20,6 +20,13 @@ type OrganizationApplication = {
   domainVerified: boolean;
 };
 
+/**
+ * Formats status for display.
+ *
+ * @param value - Input used by format status.
+ *
+ * @returns The formatted display value.
+ */
 function formatStatus(value: string) {
   return value
     .split("_")
@@ -28,11 +35,23 @@ function formatStatus(value: string) {
     .join(" ") || "Unknown";
 }
 
+/**
+ * Formats date for display.
+ *
+ * @param value - Input used by format date.
+ *
+ * @returns The formatted display value.
+ */
 function formatDate(value: string | null) {
   if (!value) return "Pending";
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
+/**
+ * Renders the /admin/organization-applications page.
+ *
+ * @returns The page UI.
+ */
 export default function AdminOrganizationApplicationsPage() {
   const [applications, setApplications] = useState<OrganizationApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +61,11 @@ export default function AdminOrganizationApplicationsPage() {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [statusFilter, setStatusFilter] = useState("all");
 
+  /**
+   * Loads applications needed by this flow.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function loadApplications() {
     setLoading(true);
     setError(null);
@@ -61,6 +85,14 @@ export default function AdminOrganizationApplicationsPage() {
     void loadApplications();
   }, []);
 
+  /**
+   * Runs the review logic for this module.
+   *
+   * @param applicationId - Input used by review.
+   * @param action - Input used by review.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function review(applicationId: number, action: "approve" | "reject") {
     setBusyId(applicationId);
     setError(null);

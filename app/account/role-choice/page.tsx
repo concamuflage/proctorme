@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+/**
+ * Renders the /account/role-choice page.
+ *
+ * @returns The page UI.
+ */
 export default function RoleChoicePage() {
   const router = useRouter();
   const { status } = useSession();
@@ -19,6 +24,11 @@ export default function RoleChoicePage() {
 
     let cancelled = false;
 
+    /**
+     * Runs the check roles logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function checkRoles() {
       setCheckingRoles(true);
       const response = await fetch("/api/account/roles", { cache: "no-store" });

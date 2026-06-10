@@ -5,6 +5,11 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ResetPasswordForm from "@/components/auth/ResetPasswordForm";
 
+/**
+ * Renders the reset password page content component.
+ *
+ * @returns The rendered UI for this component.
+ */
 function ResetPasswordPageContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
@@ -37,6 +42,11 @@ function ResetPasswordPageContent() {
   );
 }
 
+/**
+ * Renders the /reset-password page.
+ *
+ * @returns The page UI.
+ */
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={null}>

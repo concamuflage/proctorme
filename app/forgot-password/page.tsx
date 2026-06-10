@@ -3,6 +3,11 @@
 import Link from "next/link";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 
+/**
+ * Renders the /forgot-password page.
+ *
+ * @returns The page UI.
+ */
 export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">

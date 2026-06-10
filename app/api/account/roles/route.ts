@@ -5,10 +5,22 @@ import { getUserIdByEmail } from "@/lib/server/profileStore";
 import { addUserRole, getUserRoles, type AccountRoleIntent } from "@/lib/server/roleStore";
 import { userHasProctorApplication } from "@/lib/server/proctorApplicationStore";
 
+/**
+ * Checks whether role intent is true for this flow.
+ *
+ * @param value - Input used by is role intent.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isRoleIntent(value: unknown): value is AccountRoleIntent {
   return value === "proctor" || value === "corporate";
 }
 
+/**
+ * Resolves session user id from the available session or request context.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function resolveSessionUserId() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
@@ -17,6 +29,13 @@ async function resolveSessionUserId() {
   return null;
 }
 
+/**
+ * Handles POST requests for the /api/account/roles route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {
@@ -38,6 +57,11 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * Handles GET requests for the /api/account/roles route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const userId = await resolveSessionUserId();
   if (!userId) {

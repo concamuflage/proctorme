@@ -17,6 +17,13 @@ type AccountRole = {
 
 const ACTIVE_ROLE_STORAGE_KEY = "proctorme.activeRole";
 
+/**
+ * Runs the role label logic for this module.
+ *
+ * @param roleName - Input used by role label.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function roleLabel(roleName: string) {
   if (roleName === "admin") return "Admin";
   if (roleName === "proctor") return "Proctor";
@@ -30,6 +37,13 @@ function roleLabel(roleName: string) {
     .join(" ");
 }
 
+/**
+ * Runs the role priority logic for this module.
+ *
+ * @param roleName - Input used by role priority.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function rolePriority(roleName: string) {
   if (roleName === "admin") return 0;
   if (roleName === "corporate_user" || roleName === "cooporate_user" || roleName === "interviewee") return 1;
@@ -37,6 +51,13 @@ function rolePriority(roleName: string) {
   return 3;
 }
 
+/**
+ * Checks whether organization role is true for this flow.
+ *
+ * @param roleName - Input used by is organization role.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isOrganizationRole(roleName: string) {
   return roleName === "corporate_user" || roleName === "cooporate_user" || roleName === "interviewee";
 }
@@ -73,6 +94,11 @@ export default function Header() {
 
     let cancelled = false;
 
+    /**
+     * Loads roles needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadRoles() {
       const response = await fetch("/api/account/roles", { cache: "no-store" });
       const payload = await response.json().catch(() => null);
@@ -108,6 +134,13 @@ export default function Header() {
   const activeRoleLabel = useMemo(() => activeRole ? roleLabel(activeRole) : "", [activeRole]);
   const showFindProctors = session?.user ? isOrganizationRole(activeRole) : true;
 
+  /**
+   * Handles role change for this component.
+   *
+   * @param roleName - Input used by handle role change.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const handleRoleChange = (roleName: string) => {
     if (!roleName || roleName === activeRole) return;
     setActiveRole(roleName);
@@ -119,6 +152,11 @@ export default function Header() {
     router.refresh();
   };
 
+  /**
+   * Handles login modal success for this component.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const handleLoginModalSuccess = () => {
     closeAuthModal();
     const callbackUrl = openedFromAuthPage ? "/proctors" : pathname || "/proctors";
@@ -126,6 +164,11 @@ export default function Header() {
     router.refresh();
   };
 
+  /**
+   * Handles sign out for this component.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/proctors" });
   };

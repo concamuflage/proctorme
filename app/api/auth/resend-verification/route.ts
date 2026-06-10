@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { resendVerificationEmail } from "@/lib/server/localAuthStore";
 
+/**
+ * Handles POST requests for the /api/auth/resend-verification route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   try {
     const result = await resendVerificationEmail(await request.json().catch(() => null));

@@ -1,3 +1,8 @@
+/**
+ * Renders the /policies/shipping page.
+ *
+ * @returns The page UI.
+ */
 export default function ShippingPolicyPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">

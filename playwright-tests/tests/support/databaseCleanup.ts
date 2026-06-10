@@ -1,5 +1,12 @@
 import { endTestDbPool, testDbPool } from "./databasePool";
 
+/**
+ * Runs the delete user by email logic for this module.
+ *
+ * @param email - Input used by delete user by email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function deleteUserByEmail(email: string | null | undefined) {
   if (!email?.trim()) return;
 

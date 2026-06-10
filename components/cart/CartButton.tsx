@@ -7,6 +7,11 @@ import { useCart } from "@/components/cart/CartContext";
 
 // this is the component shown in the upper right corner.
 
+/**
+ * Renders the cart button component.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function CartButton() {
   // useCart() returns a CartContextValue, and we want the following two fields from the object.
   const { itemCount, openCart } = useCart();

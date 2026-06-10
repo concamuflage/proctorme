@@ -4,6 +4,13 @@ import React, { useState } from "react";
 
 type PasswordInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">;
 
+/**
+ * Renders the password input component.
+ *
+ * @param className = "", ...props - Input used by password input.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function PasswordInput({ className = "", ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
   const buttonLabel = visible ? "Hide password" : "Show password";
@@ -18,9 +25,10 @@ export default function PasswordInput({ className = "", ...props }: PasswordInpu
       <button
         type="button"
         aria-label={buttonLabel}
+        aria-pressed={visible}
         title={buttonLabel}
         onClick={() => setVisible((current) => !current)}
-        className="absolute right-3 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-300"
+        className="absolute right-3 top-1/2 z-10 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-300"
       >
         {visible ? (
           <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

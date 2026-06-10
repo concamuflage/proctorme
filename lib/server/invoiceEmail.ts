@@ -6,15 +6,36 @@ const PRODUCTION_APP_BASE_URL = "https://proctorme.shop";
 const STORE_EMAIL = "unodostreszlm@gmail.com";
 
 // Normalizes a base URL by trimming whitespace and removing trailing slashes
+/**
+ * Normalizes app base url into the shape this flow expects.
+ *
+ * @param value - Input used by normalize app base url.
+ *
+ * @returns The normalized value.
+ */
 function normalizeAppBaseUrl(value: string | undefined) {
   return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
 }
 
+/**
+ * Runs the invoice email env logic for this module.
+ *
+ * @param key - Input used by invoice email env.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function invoiceEmailEnv(key: "RESEND_API_KEY" | "RESEND_FROM_EMAIL") {
   return process.env[key] || "";
 }
 
 // Checks whether a given URL points to a localhost environment
+/**
+ * Checks whether localhost url is true for this flow.
+ *
+ * @param value - Input used by is localhost url.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isLocalhostUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -27,6 +48,11 @@ function isLocalhostUrl(value: string) {
 // Determines the base URL for invoice links based on environment variables
 // In production: prefers non-localhost URLs, falls back to a constant
 // In development: uses the first available URL or localhost
+/**
+ * Gets invoice app base url for this flow.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function getInvoiceAppBaseUrl() {
   const fallbackUrls = [
     normalizeAppBaseUrl(process.env.APP_URL),
@@ -42,10 +68,29 @@ function getInvoiceAppBaseUrl() {
 }
 
 // Builds the full URL for downloading an invoice PDF for a given order
+/**
+ * Builds invoice pdf link for this flow.
+ *
+ * @param orderId - Input used by build invoice pdf link.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function buildInvoicePdfLink(orderId: number) {
   return `${getInvoiceAppBaseUrl()}/api/profile/orders/${encodeURIComponent(String(orderId))}/invoice/pdf`;
 }
 
+/**
+ * Sends resend email for this flow.
+ *
+ * @param apiKey,
+  from,
+  to,
+  subject,
+  html,
+  text, - Input used by send resend email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function sendResendEmail({
   apiKey,
   from,
@@ -84,6 +129,16 @@ async function sendResendEmail({
 }
 
 // Sends separate customer and store invoice-link emails with tailored copy
+/**
+ * Sends invoice link email for this flow.
+ *
+ * @param to,
+  orderId,
+  invoiceNumber,
+  paidAt, - Input used by send invoice link email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function sendInvoiceLinkEmail({
   to,
   orderId,

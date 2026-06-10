@@ -2,6 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdminUserId } from "@/lib/server/sessionUser";
 
+/**
+ * Renders the /admin page.
+ *
+ * @returns The page UI.
+ */
 export default async function AdminDashboardPage() {
   const adminUserId = await requireAdminUserId();
   if (!adminUserId) {

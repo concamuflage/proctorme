@@ -6,6 +6,11 @@ type NamedOptionRow = {
   name: string;
 };
 
+/**
+ * Handles GET requests for the /api/admin/proctor-applications/options route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const adminUserId = await requireAdminUserId();
   if (!adminUserId) {

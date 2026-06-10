@@ -73,19 +73,48 @@ type ApplicationRow = {
   review_note: unknown;
 };
 
+/**
+ * Runs the text logic for this module.
+ *
+ * @param value - Input used by text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Runs the positive number logic for this module.
+ *
+ * @param value - Input used by positive number.
+ * @param fallback - Input used by positive number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function positiveNumber(value: unknown, fallback: number) {
   const number = toNumber(value);
   return Number.isFinite(number) && number > 0 ? number : fallback;
 }
 
+/**
+ * Parses json array from an external value.
+ *
+ * @param value - Input used by parse json array.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseJsonArray(value: unknown) {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string") return [];
@@ -97,24 +126,60 @@ function parseJsonArray(value: unknown) {
   }
 }
 
+/**
+ * Runs the text array logic for this module.
+ *
+ * @param value - Input used by text array.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function textArray(value: unknown) {
   return parseJsonArray(value).map(text).filter(Boolean);
 }
 
+/**
+ * Normalizes email into the shape this flow expects.
+ *
+ * @param value - Input used by normalize email.
+ *
+ * @returns The normalized value.
+ */
 function normalizeEmail(value: unknown) {
   return text(value).toLowerCase();
 }
 
+/**
+ * Normalizes month into the shape this flow expects.
+ *
+ * @param value - Input used by normalize month.
+ *
+ * @returns The normalized value.
+ */
 function normalizeMonth(value: string) {
   const trimmed = value.trim();
   return /^\d{4}-\d{2}$/.test(trimmed) ? `${trimmed}-01` : null;
 }
 
+/**
+ * Normalizes date into the shape this flow expects.
+ *
+ * @param value - Input used by normalize date.
+ *
+ * @returns The normalized value.
+ */
 function normalizeDate(value: unknown) {
   const trimmed = text(value);
   return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : "";
 }
 
+/**
+ * Checks whether at least age is true for this flow.
+ *
+ * @param dateOfBirth - Input used by is at least age.
+ * @param age - Input used by is at least age.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isAtLeastAge(dateOfBirth: string, age: number) {
   const [year, month, day] = dateOfBirth.split("-").map(Number);
   const birthDate = new Date(Date.UTC(year, month - 1, day));
@@ -125,6 +190,14 @@ function isAtLeastAge(dateOfBirth: string, age: number) {
   return birthDate.getTime() <= threshold.getTime();
 }
 
+/**
+ * Runs the upsert submitted location ids logic for this module.
+ *
+ * @param client - Input used by upsert submitted location ids.
+ * @param input - Input used by upsert submitted location ids.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function upsertSubmittedLocationIds(client: typeof pool, input: Pick<ProctorApplicationInput, "city" | "state">) {
   const countryResult = await client.query<{ id: unknown }>(
     `
@@ -163,6 +236,15 @@ async function upsertSubmittedLocationIds(client: typeof pool, input: Pick<Proct
   return { countryId, stateId, cityId };
 }
 
+/**
+ * Runs the cache submitted location time zone logic for this module.
+ *
+ * @param client - Input used by cache submitted location time zone.
+ * @param location - Input used by cache submitted location time zone.
+ * @param timezoneName - Input used by cache submitted location time zone.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function cacheSubmittedLocationTimeZone(client: typeof pool, location: { countryId: number; stateId: number; cityId: number }, timezoneName: string) {
   if (!timezoneName) return;
   const timezoneResult = await client.query<{ id: unknown }>(
@@ -185,6 +267,14 @@ async function cacheSubmittedLocationTimeZone(client: typeof pool, location: { c
   );
 }
 
+/**
+ * Gets existing degree id for this flow.
+ *
+ * @param client - Input used by get existing degree id.
+ * @param name - Input used by get existing degree id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getExistingDegreeId(client: typeof pool, name: string) {
   const result = await client.query<{ id: unknown }>(
     "SELECT id FROM degrees WHERE name = $1 LIMIT 1",
@@ -193,6 +283,15 @@ async function getExistingDegreeId(client: typeof pool, name: string) {
   return result.rows[0]?.id == null ? null : toNumber(result.rows[0].id);
 }
 
+/**
+ * Runs the upsert named logic for this module.
+ *
+ * @param client - Input used by upsert named.
+ * @param table - Input used by upsert named.
+ * @param name - Input used by upsert named.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function upsertNamed(client: typeof pool, table: "professions" | "genders" | "schools" | "majors", name: string) {
   const result = await client.query<{ id: unknown }>(
     `INSERT INTO ${table} (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
@@ -201,6 +300,15 @@ async function upsertNamed(client: typeof pool, table: "professions" | "genders"
   return toNumber(result.rows[0].id);
 }
 
+/**
+ * Gets existing named id for this flow.
+ *
+ * @param client - Input used by get existing named id.
+ * @param table - Input used by get existing named id.
+ * @param name - Input used by get existing named id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getExistingNamedId(client: typeof pool, table: "professions" | "genders" | "ethnicities", name: string) {
   const result = await client.query<{ id: unknown }>(
     `SELECT id FROM ${table} WHERE name = $1 LIMIT 1`,
@@ -209,6 +317,13 @@ async function getExistingNamedId(client: typeof pool, table: "professions" | "g
   return result.rows[0]?.id == null ? null : toNumber(result.rows[0].id);
 }
 
+/**
+ * Runs the map application logic for this module.
+ *
+ * @param row - Input used by map application.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function mapApplication(row: ApplicationRow) {
   const firstName = text(row.first_name);
   const lastName = text(row.last_name);
@@ -261,6 +376,13 @@ function mapApplication(row: ApplicationRow) {
   };
 }
 
+/**
+ * Sends school email verifications for this flow.
+ *
+ * @param application - Input used by send school email verifications.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function sendSchoolEmailVerifications(application: ReturnType<typeof mapApplication>) {
   const educationWithTokens: ProctorApplicationEducation[] = application.education.map((education) => ({ ...education }));
   const applicantName = application.applicantName || application.applicantEmail;
@@ -321,6 +443,13 @@ async function sendSchoolEmailVerifications(application: ReturnType<typeof mapAp
   };
 }
 
+/**
+ * Normalizes proctor application input into the shape this flow expects.
+ *
+ * @param payload - Input used by normalize proctor application input.
+ *
+ * @returns The normalized value.
+ */
 export function normalizeProctorApplicationInput(payload: unknown): ProctorApplicationInput {
   const data = typeof payload === "object" && payload !== null ? payload as Record<string, unknown> : {};
   const education = parseJsonArray(data.education)
@@ -368,6 +497,13 @@ export function normalizeProctorApplicationInput(payload: unknown): ProctorAppli
   };
 }
 
+/**
+ * Runs the validate proctor application input logic for this module.
+ *
+ * @param input - Input used by validate proctor application input.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function validateProctorApplicationInput(input: ProctorApplicationInput) {
   if (!input.profession) return "Profession is required.";
   if (input.profession === "Other") return "Choose a listed profession.";
@@ -389,6 +525,13 @@ export function validateProctorApplicationInput(input: ProctorApplicationInput) 
   return null;
 }
 
+/**
+ * Gets proctor application for user for this flow.
+ *
+ * @param userId - Input used by get proctor application for user.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getProctorApplicationForUser(userId: number) {
   const result = await pool.query<ApplicationRow>(
     `
@@ -410,6 +553,13 @@ export async function getProctorApplicationForUser(userId: number) {
   return application;
 }
 
+/**
+ * Gets user date of birth for this flow.
+ *
+ * @param userId - Input used by get user date of birth.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getUserDateOfBirth(userId: number) {
   const result = await pool.query<{ date_of_birth: unknown }>(
     "SELECT date_of_birth FROM users WHERE id = $1 LIMIT 1",
@@ -419,6 +569,13 @@ export async function getUserDateOfBirth(userId: number) {
   return value instanceof Date ? value.toISOString().slice(0, 10) : normalizeDate(value);
 }
 
+/**
+ * Runs the user has proctor application logic for this module.
+ *
+ * @param userId - Input used by user has proctor application.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function userHasProctorApplication(userId: number) {
   const result = await pool.query<{ exists: boolean }>(
     "SELECT EXISTS (SELECT 1 FROM proctor_applications WHERE user_id = $1) AS exists",
@@ -427,6 +584,14 @@ export async function userHasProctorApplication(userId: number) {
   return result.rows[0]?.exists === true;
 }
 
+/**
+ * Runs the save proctor application logic for this module.
+ *
+ * @param userId - Input used by save proctor application.
+ * @param input - Input used by save proctor application.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function saveProctorApplication(userId: number, input: ProctorApplicationInput) {
   const result = await pool.query<ApplicationRow>(
     `
@@ -502,6 +667,14 @@ export async function saveProctorApplication(userId: number, input: ProctorAppli
   return sendSchoolEmailVerifications(mapApplication(result.rows[0]));
 }
 
+/**
+ * Runs the save proctor application draft logic for this module.
+ *
+ * @param userId - Input used by save proctor application draft.
+ * @param input - Input used by save proctor application draft.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function saveProctorApplicationDraft(userId: number, input: ProctorApplicationInput) {
   const result = await pool.query<ApplicationRow>(
     `
@@ -597,6 +770,11 @@ export async function saveProctorApplicationDraft(userId: number, input: Proctor
   return mapApplication(result.rows[0]);
 }
 
+/**
+ * Runs the list proctor applications logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function listProctorApplications() {
   const result = await pool.query<ApplicationRow>(
     `
@@ -615,6 +793,17 @@ export async function listProctorApplications() {
   return result.rows.map(mapApplication);
 }
 
+/**
+ * Runs the review proctor application logic for this module.
+ *
+ * @param applicationId - Input used by review proctor application.
+ * @param adminUserId - Input used by review proctor application.
+ * @param action - Input used by review proctor application.
+ * @param note - Input used by review proctor application.
+ * @param editedInput - Input used by review proctor application.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function reviewProctorApplication(
   applicationId: number,
   adminUserId: number,

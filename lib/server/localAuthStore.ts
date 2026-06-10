@@ -4,13 +4,18 @@ import pool from "@/lib/server/database/pool";
 import { PASSWORD_REQUIREMENTS_MESSAGE, isStrongPassword } from "@/shared/passwordPolicy";
 import { SITE_NAME } from "@/lib/proctor";
 
+// User-facing messages reused by the local authentication flows.
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
 const SIGNUP_SUCCESS_MESSAGE = "Check your email to verify your account before signing in.";
 const PASSWORD_RESET_REQUEST_MESSAGE = "If that account exists, a password reset email has been sent.";
+// Default expiration windows for email verification and password reset tokens.
 const DEFAULT_VERIFICATION_TTL_HOURS = 24;
 const DEFAULT_PASSWORD_RESET_TTL_MINUTES = 30;
+// Safe production fallback used when no public app URL is configured.
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
+// Shape of user rows returned from PostgreSQL queries.
+// Values are typed as unknown because database results need runtime normalization.
 type UserRow = {
   id: unknown;
   email: unknown;
@@ -24,27 +29,77 @@ type UserRow = {
   password_reset_expires?: unknown;
 };
 
+// Converts unknown input into a trimmed string, or an empty string when invalid.
+/**
+ * Runs the text logic for this module.
+ *
+ * @param value - Input used by text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+// Normalizes emails for consistent lookup and storage.
+/**
+ * Normalizes email into the shape this flow expects.
+ *
+ * @param value - Input used by normalize email.
+ *
+ * @returns The normalized value.
+ */
 function normalizeEmail(value: unknown) {
   return text(value).toLowerCase();
 }
 
+// Normalizes first and last names from request payloads.
+/**
+ * Normalizes name into the shape this flow expects.
+ *
+ * @param value - Input used by normalize name.
+ *
+ * @returns The normalized value.
+ */
 function normalizeName(value: unknown) {
   return text(value);
 }
 
+// Reads a positive numeric environment variable, otherwise falls back to a default.
+/**
+ * Runs the numeric env logic for this module.
+ *
+ * @param name - Input used by numeric env.
+ * @param fallback - Input used by numeric env.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function numericEnv(name: string, fallback: number) {
   const value = Number(process.env[name] || fallback);
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
+// Hashes verification/reset tokens before storing them in the database.
+// The raw token is only sent to the user's email link.
+/**
+ * Runs the hash token logic for this module.
+ *
+ * @param token - Input used by hash token.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
 
+// Creates a secure random token, its database-safe hash, and its expiration time.
+/**
+ * Creates token for this flow.
+ *
+ * @param ttlMs - Input used by create token.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function createToken(ttlMs: number) {
   const rawToken = crypto.randomBytes(32).toString("hex");
   return {
@@ -54,10 +109,26 @@ function createToken(ttlMs: number) {
   };
 }
 
+// Normalizes an app base URL and removes trailing slashes.
+/**
+ * Normalizes app base url into the shape this flow expects.
+ *
+ * @param value - Input used by normalize app base url.
+ *
+ * @returns The normalized value.
+ */
 function normalizeAppBaseUrl(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
 }
 
+// Checks whether a URL points to a local development host.
+/**
+ * Checks whether localhost url is true for this flow.
+ *
+ * @param value - Input used by is localhost url.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isLocalhostUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -67,6 +138,15 @@ function isLocalhostUrl(value: string) {
   }
 }
 
+// Chooses the public app URL used in email links.
+// In production, localhost URLs are avoided so users receive a usable public link.
+/**
+ * Runs the app base url logic for this module.
+ *
+ * @param explicitEnvName - Input used by app base url.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function appBaseUrl(explicitEnvName: string) {
   const explicitUrl = normalizeAppBaseUrl(process.env[explicitEnvName]);
   if (explicitUrl) return explicitUrl;
@@ -83,17 +163,44 @@ function appBaseUrl(explicitEnvName: string) {
   return fallbackUrls[0] || "http://localhost:3000";
 }
 
+// Builds the verification URL sent to users after signup or resend requests.
+/**
+ * Builds email verification link for this flow.
+ *
+ * @param email - Input used by build email verification link.
+ * @param token - Input used by build email verification link.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function buildEmailVerificationLink(email: string, token: string) {
   const params = new URLSearchParams({ email, token });
   return `${appBaseUrl("EMAIL_VERIFICATION_APP_URL")}/verify-email?${params.toString()}`;
 }
 
+// Builds the password reset URL sent to users who request a reset.
+/**
+ * Builds password reset link for this flow.
+ *
+ * @param email - Input used by build password reset link.
+ * @param token - Input used by build password reset link.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function buildPasswordResetLink(email: string, token: string) {
   const params = new URLSearchParams({ email, token });
   return `${appBaseUrl("PASSWORD_RESET_APP_URL")}/reset-password?${params.toString()}`;
 }
 
+// Sends an email through Resend using both HTML and plain-text bodies.
+/**
+ * Sends resend email for this flow.
+ *
+ * @param to, subject, html, plainText - Input used by send resend email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function sendResendEmail({ to, subject, html, plainText }: { to: string; subject: string; html: string; plainText: string }) {
+  // Resend requires an API key and a verified sender address.
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   if (!apiKey || !from) throw new Error("Missing Resend configuration. Set RESEND_API_KEY and RESEND_FROM_EMAIL.");
@@ -120,6 +227,13 @@ async function sendResendEmail({ to, subject, html, plainText }: { to: string; s
   }
 }
 
+// Creates or updates the users table so local auth has the columns it needs.
+// This is useful for development, but production apps usually prefer migrations.
+/**
+ * Runs the ensure users table logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function ensureUsersTable() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS users (
@@ -147,6 +261,14 @@ async function ensureUsersTable() {
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_email TEXT");
 }
 
+// Generates a new email verification token, stores its hash, and emails the raw token link.
+/**
+ * Checks whether sue email verification is true for this flow.
+ *
+ * @param user - Input used by issue email verification.
+ *
+ * @returns True when the value satisfies the check.
+ */
 async function issueEmailVerification(user: UserRow) {
   const ttlHours = numericEnv("EMAIL_VERIFICATION_TTL_HOURS", DEFAULT_VERIFICATION_TTL_HOURS);
   const { rawToken, hashedToken, expiresAt } = createToken(ttlHours * 60 * 60 * 1000);
@@ -155,6 +277,7 @@ async function issueEmailVerification(user: UserRow) {
   const firstName = text(user.first_name) || "there";
   const verificationLink = buildEmailVerificationLink(email, rawToken);
 
+  // Store only the hashed token so the database never contains the raw email token.
   await pool.query(
     `
       UPDATE users
@@ -166,6 +289,7 @@ async function issueEmailVerification(user: UserRow) {
     [userId, hashedToken, expiresAt]
   );
 
+  // Send the raw token to the user inside the verification link.
   try {
     await sendResendEmail({
       to: email,
@@ -188,6 +312,14 @@ async function issueEmailVerification(user: UserRow) {
   }
 }
 
+// Generates a password reset token, stores its hash, and emails the raw reset link.
+/**
+ * Checks whether sue password reset is true for this flow.
+ *
+ * @param user - Input used by issue password reset.
+ *
+ * @returns True when the value satisfies the check.
+ */
 async function issuePasswordReset(user: UserRow) {
   const ttlMinutes = numericEnv("PASSWORD_RESET_TTL_MINUTES", DEFAULT_PASSWORD_RESET_TTL_MINUTES);
   const { rawToken, hashedToken, expiresAt } = createToken(ttlMinutes * 60 * 1000);
@@ -196,6 +328,7 @@ async function issuePasswordReset(user: UserRow) {
   const firstName = text(user.first_name) || "there";
   const resetLink = buildPasswordResetLink(email, rawToken);
 
+  // Store only the hashed reset token in the database.
   await pool.query(
     `
       UPDATE users
@@ -206,6 +339,7 @@ async function issuePasswordReset(user: UserRow) {
     [userId, hashedToken, expiresAt]
   );
 
+  // Send the raw reset token to the user inside the reset link.
   try {
     await sendResendEmail({
       to: email,
@@ -228,19 +362,30 @@ async function issuePasswordReset(user: UserRow) {
   }
 }
 
+// Handles local user signup: validates input, creates the user, and sends verification email.
+/**
+ * Runs the signup user logic for this module.
+ *
+ * @param payload - Input used by signup user.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function signupUser(payload: unknown) {
+  // Safely treat the incoming payload as an object before reading fields.
   const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
   const email = normalizeEmail(data.email);
   const password = typeof data.password === "string" ? data.password : "";
   const firstName = normalizeName(data.firstName);
   const lastName = normalizeName(data.lastName);
 
+  // Require all signup fields before creating an account.
   if (!email || !password || !firstName || !lastName) {
     return { status: 400, body: { error: "Email, password, first name, and last name are required" } };
   }
   if (!isStrongPassword(password)) return { status: 400, body: { error: PASSWORD_REQUIREMENTS_MESSAGE } };
 
   await ensureUsersTable();
+  // Check for an existing active account with the same email.
   const existing = await pool.query<UserRow>(
     "SELECT id, email, first_name, email_verified FROM users WHERE email = $1 AND deleted_at IS NULL",
     [email]
@@ -253,6 +398,7 @@ export async function signupUser(payload: unknown) {
     return { status: 409, body: { error: "An account with this email already exists. Please sign in." } };
   }
 
+  // Hash the password before storing it.
   const passwordHash = await bcrypt.hash(password, 10);
   const result = await pool.query<UserRow>(
     `
@@ -275,6 +421,21 @@ export async function signupUser(payload: unknown) {
   };
 }
 
+/**
+ * Query the database to to check if the user exists and the password is correct.
+ *
+ * The payload is expected to contain `email` and `password` fields. The email is
+ * normalized before lookup, the password is compared against the stored bcrypt
+ * hash, and unverified accounts are blocked from signing in.
+ *
+ * @param payload - Unknown request body or credentials object containing email and password.
+ * @returns A response-like object with a numeric status and body:
+ * - `200` with user id, email, name fields, and email verification state on success.
+ * - `400` when email or password is missing.
+ * - `401` when credentials do not match an active user.
+ * - `403` when the account exists but email verification is still required.
+ */
+
 export async function loginUser(payload: unknown) {
   const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
   const email = normalizeEmail(data.email);
@@ -282,6 +443,7 @@ export async function loginUser(payload: unknown) {
   if (!email || !password) return { status: 400, body: { error: "Email and password are required" } };
 
   await ensureUsersTable();
+  // Load the active user by normalized email.
   const result = await pool.query<UserRow>(
     `
       SELECT id, email, first_name, last_name, password_hash, email_verified
@@ -292,9 +454,12 @@ export async function loginUser(payload: unknown) {
     [email]
   );
   const user = result.rows[0];
+  // Compare the submitted password with the stored bcrypt hash.
   if (!user || !await bcrypt.compare(password, text(user.password_hash))) {
     return { status: 401, body: { error: "Invalid credentials" } };
   }
+  
+  // Block login until the user verifies their email address.
   if (!user.email_verified) {
     return { status: 403, body: { error: EMAIL_NOT_VERIFIED_MESSAGE, code: "EMAIL_NOT_VERIFIED" } };
   }
@@ -310,6 +475,15 @@ export async function loginUser(payload: unknown) {
   };
 }
 
+// Verifies an email confirmation link by comparing the submitted token with the stored hash.
+/**
+ * Runs the verify email token logic for this module.
+ *
+ * @param emailValue - Input used by verify email token.
+ * @param tokenValue - Input used by verify email token.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function verifyEmailToken(emailValue: unknown, tokenValue: unknown) {
   const email = normalizeEmail(emailValue);
   const token = text(tokenValue);
@@ -329,6 +503,7 @@ export async function verifyEmailToken(emailValue: unknown, tokenValue: unknown)
   if (!user) return { status: 400, body: { error: "Invalid or expired verification link." } };
   if (user.email_verified) return { status: 200, body: { message: "Your email is already verified. You can sign in." } };
 
+  // Validate that the stored verification token exists and has not expired.
   const expiresAt = user.email_verification_expires ? new Date(String(user.email_verification_expires)) : null;
   const isExpired = !expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now();
   if (text(user.email_verification_token) !== hashToken(token) || isExpired) {
@@ -338,6 +513,7 @@ export async function verifyEmailToken(emailValue: unknown, tokenValue: unknown)
     return { status: 400, body: { error: "Invalid or expired verification link." } };
   }
 
+  // Mark the email as verified and clear the one-time verification token.
   await pool.query(
     "UPDATE users SET email_verified = TRUE, email_verification_token = NULL, email_verification_expires = NULL WHERE id = $1",
     [Number(user.id)]
@@ -345,6 +521,14 @@ export async function verifyEmailToken(emailValue: unknown, tokenValue: unknown)
   return { status: 200, body: { message: "Email verified successfully. You can now sign in." } };
 }
 
+// Sends a new verification email for an existing unverified account.
+/**
+ * Runs the resend verification email logic for this module.
+ *
+ * @param payload - Input used by resend verification email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function resendVerificationEmail(payload: unknown) {
   const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
   const email = normalizeEmail(data.email);
@@ -356,6 +540,7 @@ export async function resendVerificationEmail(payload: unknown) {
     [email]
   );
   const user = result.rows[0];
+  // Do not reveal whether the email exists.
   if (!user) return { status: 200, body: { message: "If that account exists, a verification email has been sent." } };
   if (user.email_verified) return { status: 400, body: { error: "This email is already verified. Please sign in." } };
 
@@ -363,6 +548,14 @@ export async function resendVerificationEmail(payload: unknown) {
   return { status: 200, body: { message: "Verification email sent." } };
 }
 
+// Starts the password reset flow without revealing whether the email exists.
+/**
+ * Runs the request password reset logic for this module.
+ *
+ * @param payload - Input used by request password reset.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function requestPasswordReset(payload: unknown) {
   const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
   const email = normalizeEmail(data.email);
@@ -373,10 +566,19 @@ export async function requestPasswordReset(payload: unknown) {
     "SELECT id, email, first_name FROM users WHERE email = $1 AND deleted_at IS NULL LIMIT 1",
     [email]
   );
+  // Only send a reset email when the account exists, but always return the same public message.
   if (result.rows[0]) await issuePasswordReset(result.rows[0]);
   return { status: 200, body: { message: PASSWORD_RESET_REQUEST_MESSAGE } };
 }
 
+// Completes the password reset flow by validating the token and saving a new password hash.
+/**
+ * Runs the reset password logic for this module.
+ *
+ * @param payload - Input used by reset password.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function resetPassword(payload: unknown) {
   const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
   const email = normalizeEmail(data.email);
@@ -393,6 +595,7 @@ export async function resetPassword(payload: unknown) {
   const user = result.rows[0];
   if (!user) return { status: 400, body: { error: "Invalid or expired reset link." } };
 
+  // Validate that the reset token matches and is still within its expiration window.
   const expiresAt = user.password_reset_expires ? new Date(String(user.password_reset_expires)) : null;
   const isExpired = !expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now();
   if (text(user.password_reset_token) !== hashToken(token) || isExpired) {
@@ -402,6 +605,7 @@ export async function resetPassword(payload: unknown) {
     return { status: 400, body: { error: "Invalid or expired reset link." } };
   }
 
+  // Hash the new password and clear all reset/verification tokens.
   const passwordHash = await bcrypt.hash(password, 10);
   await pool.query(
     `

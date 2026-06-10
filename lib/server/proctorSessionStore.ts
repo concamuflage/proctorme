@@ -30,19 +30,47 @@ type SessionRow = {
   country_name: unknown;
 };
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Normalizes positive integer into the shape this flow expects.
+ *
+ * @param value - Input used by normalize positive integer.
+ *
+ * @returns The normalized value.
+ */
 function normalizePositiveInteger(value: unknown) {
   const number = toNumber(value);
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
+/**
+ * Runs the text logic for this module.
+ *
+ * @param value - Input used by text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Requires proctor before allowing this flow to continue.
+ *
+ * @param userId - Input used by require proctor.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function requireProctor(userId: number) {
   const roles = await getUserRoles(userId);
   if (!roles.some((role) => role.name === "proctor")) {
@@ -50,6 +78,13 @@ async function requireProctor(userId: number) {
   }
 }
 
+/**
+ * Runs the map session row logic for this module.
+ *
+ * @param row - Input used by map session row.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function mapSessionRow(row: SessionRow): ProctorSessionSettings {
   const hourlyRate = normalizePositiveInteger(row.hourly_rate) ?? 0;
   const minimumHours = normalizePositiveInteger(row.minimum_hours) ?? 1;
@@ -69,6 +104,13 @@ function mapSessionRow(row: SessionRow): ProctorSessionSettings {
   };
 }
 
+/**
+ * Normalizes address into the shape this flow expects.
+ *
+ * @param value - Input used by normalize address.
+ *
+ * @returns The normalized value.
+ */
 function normalizeAddress(value: unknown) {
   const data = typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
   return {
@@ -80,6 +122,14 @@ function normalizeAddress(value: unknown) {
   };
 }
 
+/**
+ * Runs the upsert address logic for this module.
+ *
+ * @param client - Input used by upsert address.
+ * @param address - Input used by upsert address.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function upsertAddress(client: typeof pool, address: ProctorAddressSettings) {
   if (!address.street || !address.city || !address.state || !address.zipCode) {
     throw new Error("Full current address is required.");
@@ -128,6 +178,13 @@ async function upsertAddress(client: typeof pool, address: ProctorAddressSetting
   return addressId;
 }
 
+/**
+ * Checks whether configured city is true for this flow.
+ *
+ * @param address - Input used by is configured city.
+ *
+ * @returns True when the value satisfies the check.
+ */
 async function isConfiguredCity(address: ProctorAddressSettings) {
   const result = await pool.query<{ exists: boolean }>(
     `
@@ -149,6 +206,13 @@ async function isConfiguredCity(address: ProctorAddressSettings) {
   return result.rows[0]?.exists === true;
 }
 
+/**
+ * Runs the timezone id for address logic for this module.
+ *
+ * @param address - Input used by timezone id for address.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function timezoneIdForAddress(address: ProctorAddressSettings) {
   const timezoneName = await getCachedOrResolvedCityTimeZone(address.city, address.state, address.country);
   if (!timezoneName) return null;
@@ -167,6 +231,13 @@ async function timezoneIdForAddress(address: ProctorAddressSettings) {
   return Number.isInteger(timezoneId) ? timezoneId : null;
 }
 
+/**
+ * Gets proctor session settings for this flow.
+ *
+ * @param userId - Input used by get proctor session settings.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getProctorSessionSettings(userId: number) {
   await requireProctor(userId);
 
@@ -198,6 +269,14 @@ export async function getProctorSessionSettings(userId: number) {
   return mapSessionRow(result.rows[0]);
 }
 
+/**
+ * Updates proctor session settings while preserving the surrounding form state.
+ *
+ * @param userId - Input used by update proctor session settings.
+ * @param payload - Input used by update proctor session settings.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function updateProctorSessionSettings(userId: number, payload: unknown) {
   await requireProctor(userId);
 

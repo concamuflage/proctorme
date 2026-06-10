@@ -5,19 +5,43 @@ import { SITE_NAME } from "@/lib/proctor";
 const DEFAULT_VERIFICATION_TTL_HOURS = 72;
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
+/**
+ * Normalizes verification email into the shape this flow expects.
+ *
+ * @param value - Input used by normalize verification email.
+ *
+ * @returns The normalized value.
+ */
 export function normalizeVerificationEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
+/**
+ * Runs the verification ttl hours logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function verificationTtlHours() {
   const rawValue = Number(process.env.SCHOOL_EMAIL_VERIFICATION_TTL_HOURS || DEFAULT_VERIFICATION_TTL_HOURS);
   return Number.isFinite(rawValue) && rawValue > 0 ? rawValue : DEFAULT_VERIFICATION_TTL_HOURS;
 }
 
+/**
+ * Runs the hash school email verification token logic for this module.
+ *
+ * @param token - Input used by hash school email verification token.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function hashSchoolEmailVerificationToken(token: string) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
 
+/**
+ * Creates school email verification token for this flow.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function createSchoolEmailVerificationToken() {
   const rawToken = crypto.randomBytes(32).toString("hex");
   return {
@@ -27,10 +51,24 @@ export function createSchoolEmailVerificationToken() {
   };
 }
 
+/**
+ * Normalizes app base url into the shape this flow expects.
+ *
+ * @param value - Input used by normalize app base url.
+ *
+ * @returns The normalized value.
+ */
 function normalizeAppBaseUrl(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
 }
 
+/**
+ * Checks whether localhost url is true for this flow.
+ *
+ * @param value - Input used by is localhost url.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isLocalhostUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -40,6 +78,11 @@ function isLocalhostUrl(value: string) {
   }
 }
 
+/**
+ * Runs the app base url logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function appBaseUrl() {
   const explicitEmailUrl = normalizeAppBaseUrl(process.env.SCHOOL_EMAIL_VERIFICATION_APP_URL);
   if (explicitEmailUrl) return explicitEmailUrl;
@@ -56,6 +99,16 @@ function appBaseUrl() {
   return fallbackUrls[0] || "http://localhost:3000";
 }
 
+/**
+ * Builds school email verification link for this flow.
+ *
+ * @param applicationId,
+  educationIndex,
+  email,
+  rawToken, - Input used by build school email verification link.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function buildSchoolEmailVerificationLink({
   applicationId,
   educationIndex,
@@ -77,6 +130,16 @@ export function buildSchoolEmailVerificationLink({
   return `${appBaseUrl()}/verify-school-email?${params.toString()}`;
 }
 
+/**
+ * Sends school email verification email for this flow.
+ *
+ * @param to,
+  applicantName,
+  school,
+  verificationLink, - Input used by send school email verification email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function sendSchoolEmailVerificationEmail({
   to,
   applicantName,
@@ -134,6 +197,13 @@ export async function sendSchoolEmailVerificationEmail({
   }
 }
 
+/**
+ * Parses education from an external value.
+ *
+ * @param value - Input used by parse education.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseEducation(value: unknown) {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string") return [];
@@ -145,6 +215,16 @@ function parseEducation(value: unknown) {
   }
 }
 
+/**
+ * Runs the verify school email token logic for this module.
+ *
+ * @param applicationId,
+  educationIndex,
+  email,
+  token, - Input used by verify school email token.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function verifySchoolEmailToken({
   applicationId,
   educationIndex,

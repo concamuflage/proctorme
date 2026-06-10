@@ -45,18 +45,38 @@ type ProctorBookingCalendarProps = {
 
 const DAY_COUNT = 7;
 
+/**
+ * Runs the start of today logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function startOfToday() {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
   return date;
 }
 
+/**
+ * Runs the add days logic for this module.
+ *
+ * @param date - Input used by add days.
+ * @param days - Input used by add days.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function addDays(date: Date, days: number) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
 }
 
+/**
+ * Formats date id for display.
+ *
+ * @param date - Input used by format date id.
+ *
+ * @returns The formatted display value.
+ */
 function formatDateId(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -64,6 +84,13 @@ function formatDateId(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Converts a value to selection.
+ *
+ * @param slots - Input used by to selection.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toSelection(slots: Slot[]): BookingSelection | null {
   if (slots.length === 0) return null;
   const first = slots[0];
@@ -81,15 +108,39 @@ function toSelection(slots: Slot[]): BookingSelection | null {
   };
 }
 
+/**
+ * Runs the selected slot ids logic for this module.
+ *
+ * @param selection - Input used by selected slot ids.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function selectedSlotIds(selection: BookingSelection | null) {
   return new Set(selection?.slotIds ?? []);
 }
 
+/**
+ * Runs the selection can extend from logic for this module.
+ *
+ * @param selection - Input used by selection can extend from.
+ * @param slot - Input used by selection can extend from.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function selectionCanExtendFrom(selection: BookingSelection | null, slot: Slot) {
   if (!selection || selection.slotIds.length === 0) return false;
   return slot.dateLabel === selection.dateLabel && slot.dayLabel === selection.dayLabel;
 }
 
+/**
+ * Runs the select consecutive range logic for this module.
+ *
+ * @param day - Input used by select consecutive range.
+ * @param slot - Input used by select consecutive range.
+ * @param selection - Input used by select consecutive range.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function selectConsecutiveRange(day: CalendarDay, slot: Slot, selection: BookingSelection | null) {
   if (!slot.available) return selection;
 
@@ -115,6 +166,16 @@ function selectConsecutiveRange(day: CalendarDay, slot: Slot, selection: Booking
   return toSelection(range);
 }
 
+/**
+ * Renders the proctor booking calendar component.
+ *
+ * @param proctorId,
+  timezone = "Local time",
+  selection,
+  onSelectionChange, - Input used by proctor booking calendar.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProctorBookingCalendar({
   proctorId,
   timezone = "Local time",
@@ -139,6 +200,11 @@ export default function ProctorBookingCalendar({
   useEffect(() => {
     let cancelled = false;
 
+    /**
+     * Loads availability needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadAvailability() {
       setLoading(true);
       setError(null);

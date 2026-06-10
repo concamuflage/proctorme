@@ -31,15 +31,38 @@ type ProfileChangeRequestListProps = {
   withTopBorder?: boolean;
 };
 
+/**
+ * Runs the value text logic for this module.
+ *
+ * @param values - Input used by value text.
+ * @param key - Input used by value text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function valueText(values: Record<string, unknown>, key: string) {
   const value = values[key];
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
 
+/**
+ * Normalizes d value into the shape this flow expects.
+ *
+ * @param values - Input used by normalized value.
+ * @param key - Input used by normalized value.
+ *
+ * @returns The normalized value.
+ */
 function normalizedValue(values: Record<string, unknown>, key: string) {
   return valueText(values, key).trim().toLowerCase();
 }
 
+/**
+ * Formats status for display.
+ *
+ * @param value - Input used by format status.
+ *
+ * @returns The formatted display value.
+ */
 function formatStatus(value: string) {
   return value
     .split("_")
@@ -48,6 +71,13 @@ function formatStatus(value: string) {
     .join(" ") || "Unknown";
 }
 
+/**
+ * Formats date time for display.
+ *
+ * @param value - Input used by format date time.
+ *
+ * @returns The formatted display value.
+ */
 function formatDateTime(value: string | null | undefined) {
   if (!value) return "Pending";
   return new Intl.DateTimeFormat("en-US", {
@@ -59,17 +89,41 @@ function formatDateTime(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+/**
+ * Runs the status class name logic for this module.
+ *
+ * @param status - Input used by status class name.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function statusClassName(status: string) {
   if (status === "approved") return "bg-emerald-50 text-emerald-700";
   if (status === "rejected") return "bg-red-50 text-red-700";
   return "bg-amber-50 text-amber-800";
 }
 
+/**
+ * Runs the education rows logic for this module.
+ *
+ * @param values - Input used by education rows.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function educationRows(values: Record<string, unknown>) {
   const value = values.education;
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object" && !Array.isArray(item)) : [];
 }
 
+/**
+ * Renders the request panel component.
+ *
+ * @param compareValues,
+  requestType,
+  title,
+  values, - Input used by request panel.
+ *
+ * @returns The rendered UI for this component.
+ */
 function RequestPanel({
   compareValues,
   requestType,
@@ -112,6 +166,15 @@ function RequestPanel({
   );
 }
 
+/**
+ * Renders the education panel component.
+ *
+ * @param compareValues,
+  title,
+  values, - Input used by education panel.
+ *
+ * @returns The rendered UI for this component.
+ */
 function EducationPanel({
   compareValues,
   title,
@@ -160,6 +223,25 @@ function EducationPanel({
   );
 }
 
+/**
+ * Renders the profile change request list component.
+ *
+ * @param busyId = null,
+  emptyMessage = "No profile change requests yet.",
+  error,
+  loading,
+  notes = ,
+  onEditRequest,
+  onNoteChange,
+  onReview,
+  requests,
+  showApplicant = false,
+  showReviewControls = false,
+  title = "Request history",
+  withTopBorder = true, - Input used by profile change request list.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProfileChangeRequestList({
   busyId = null,
   emptyMessage = "No profile change requests yet.",

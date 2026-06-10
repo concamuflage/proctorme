@@ -39,6 +39,11 @@ function LoginPageContent() {
   );
 }
 
+/**
+ * Renders the /login page.
+ *
+ * @returns The page UI.
+ */
 export default function LoginPage() {
   return (
     <Suspense fallback={null}>

@@ -52,24 +52,59 @@ export type ProfileUpdateInput = {
   imageUrls: string[];
 };
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Runs the trim text logic for this module.
+ *
+ * @param value - Input used by trim text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function trimText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Normalizes date into the shape this flow expects.
+ *
+ * @param value - Input used by normalize date.
+ *
+ * @returns The normalized value.
+ */
 function normalizeDate(value: unknown) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   const text = trimText(value);
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : "";
 }
 
+/**
+ * Runs the text array logic for this module.
+ *
+ * @param value - Input used by text array.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function textArray(value: unknown) {
   return Array.isArray(value) ? value.map(trimText).filter(Boolean) : [];
 }
 
+/**
+ * Normalizes profile update input into the shape this flow expects.
+ *
+ * @param payload - Input used by normalize profile update input.
+ *
+ * @returns The normalized value.
+ */
 function normalizeProfileUpdateInput(payload: unknown): ProfileUpdateInput {
   const data = typeof payload === "object" && payload !== null ? payload as Record<string, unknown> : {};
   return {
@@ -83,6 +118,13 @@ function normalizeProfileUpdateInput(payload: unknown): ProfileUpdateInput {
   };
 }
 
+/**
+ * Gets profession id for this flow.
+ *
+ * @param name - Input used by get profession id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getProfessionId(name: string) {
   if (!name) return null;
   const result = await pool.query<{ id: unknown }>(
@@ -93,6 +135,13 @@ async function getProfessionId(name: string) {
   return Number.isInteger(id) ? id : null;
 }
 
+/**
+ * Gets gender id for this flow.
+ *
+ * @param name - Input used by get gender id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getGenderId(name: string) {
   if (!name) return null;
   const result = await pool.query<{ id: unknown }>(
@@ -103,6 +152,13 @@ async function getGenderId(name: string) {
   return Number.isInteger(id) ? id : null;
 }
 
+/**
+ * Gets ethnicity id for this flow.
+ *
+ * @param name - Input used by get ethnicity id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getEthnicityId(name: string) {
   if (!name) return null;
   const result = await pool.query<{ id: unknown }>(
@@ -113,6 +169,13 @@ async function getEthnicityId(name: string) {
   return Number.isInteger(id) ? id : null;
 }
 
+/**
+ * Gets timezone id for this flow.
+ *
+ * @param name - Input used by get timezone id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getTimezoneId(name: string) {
   if (!name) return null;
   const result = await pool.query<{ id: unknown }>(
@@ -123,6 +186,13 @@ async function getTimezoneId(name: string) {
   return Number.isInteger(id) ? id : null;
 }
 
+/**
+ * Gets profile for this flow.
+ *
+ * @param userId - Input used by get profile.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getProfile(userId: number): Promise<ProfileData> {
   const [userResult, educationResult] = await Promise.all([
     pool.query<EducationRow>(
@@ -232,6 +302,13 @@ export async function getProfile(userId: number): Promise<ProfileData> {
   };
 }
 
+/**
+ * Runs the validate profile update input logic for this module.
+ *
+ * @param input - Input used by validate profile update input.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function validateProfileUpdateInput(input: ProfileUpdateInput) {
   if (!input.profession || input.profession === "Other") return "Choose a listed profession.";
   if (!input.gender) return "Gender is required.";
@@ -242,6 +319,14 @@ export function validateProfileUpdateInput(input: ProfileUpdateInput) {
   return null;
 }
 
+/**
+ * Updates profile while preserving the surrounding form state.
+ *
+ * @param userId - Input used by update profile.
+ * @param payload - Input used by update profile.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function updateProfile(userId: number, payload: unknown): Promise<ProfileData> {
   const input = normalizeProfileUpdateInput(payload);
   const validationError = validateProfileUpdateInput(input);
@@ -321,6 +406,13 @@ export async function updateProfile(userId: number, payload: unknown): Promise<P
   return getProfile(userId);
 }
 
+/**
+ * Gets user id by email for this flow.
+ *
+ * @param email - Input used by get user id by email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getUserIdByEmail(email: string) {
   const userResult = await pool.query(
     `

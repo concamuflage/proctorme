@@ -5,6 +5,14 @@ type ProctorRouteContext = {
   params: Promise<{ proctorId: string }>;
 };
 
+/**
+ * Handles GET requests for the /api/proctors/:proctorId route.
+ *
+ * @param _request - Input used by get.
+ * @param context - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(_request: Request, context: ProctorRouteContext) {
   const { proctorId: proctorIdText } = await context.params;
   const proctorId = Number(proctorIdText);

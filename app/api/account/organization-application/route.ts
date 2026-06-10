@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { resolveSessionUserId } from "@/lib/server/sessionUser";
 import { listOrganizationApplicationsForUser, submitOrganizationApplication } from "@/lib/server/organizationApplicationStore";
 
+/**
+ * Handles GET requests for the /api/account/organization-application route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const userId = await resolveSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,6 +20,13 @@ export async function GET() {
   }
 }
 
+/**
+ * Handles POST requests for the /api/account/organization-application route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifySchoolEmailToken } from "@/lib/server/schoolEmailVerification";
 
+/**
+ * Handles GET requests for the /api/account/proctor-application/verify-school-email route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const applicationId = Number(searchParams.get("applicationId"));

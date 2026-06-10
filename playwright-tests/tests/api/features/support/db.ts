@@ -2,6 +2,13 @@ import type { PoolClient } from "pg";
 import bcrypt from "bcryptjs";
 import { testDbPool } from "../../../support/databasePool";
 
+/**
+ * Runs the with db logic for this module.
+ *
+ * @param callback - Input used by with db.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function withDb<T>(callback: (client: PoolClient) => Promise<T>) {
   const client = await testDbPool.connect();
 
@@ -12,6 +19,14 @@ async function withDb<T>(callback: (client: PoolClient) => Promise<T>) {
   }
 }
 
+/**
+ * Runs the seed institution user logic for this module.
+ *
+ * @param email - Input used by seed institution user.
+ * @param password - Input used by seed institution user.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function seedInstitutionUser(email: string, password: string) {
   return withDb(async (client) => {
     const passwordHash = await bcrypt.hash(password, 10);
@@ -25,16 +40,32 @@ export async function seedInstitutionUser(email: string, password: string) {
     await client.query("DELETE FROM users WHERE lower(email) = lower($1)", [email]);
 
     const userResult = await client.query<{ id: unknown }>(
-      `INSERT INTO users (email, password_hash, first_name, last_name, email_verified, role_id)
-       VALUES ($1, $2, 'Institution', 'Reviewer', TRUE, $3)
+      `INSERT INTO users (email, password_hash, first_name, last_name, email_verified)
+       VALUES ($1, $2, 'Institution', 'Reviewer', TRUE)
        RETURNING id`,
-      [email, passwordHash, roleResult.rows[0].id]
+      [email, passwordHash]
     );
 
-    return Number(userResult.rows[0].id);
+    const userId = Number(userResult.rows[0].id);
+    await client.query(
+      `INSERT INTO user_roles (user_id, role_id)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [userId, roleResult.rows[0].id]
+    );
+
+    return userId;
   });
 }
 
+/**
+ * Runs the seed booking logic for this module.
+ *
+ * @param proctorUserId - Input used by seed booking.
+ * @param statusName - Input used by seed booking.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function seedBooking(proctorUserId: number, statusName: string) {
   return withDb(async (client) => {
     const statusResult = await client.query<{ id: unknown }>("SELECT id FROM statuses WHERE name = $1 LIMIT 1", [statusName]);
@@ -58,6 +89,13 @@ export async function seedBooking(proctorUserId: number, statusName: string) {
   });
 }
 
+/**
+ * Runs the rating count for booking logic for this module.
+ *
+ * @param bookingId - Input used by rating count for booking.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function ratingCountForBooking(bookingId: number) {
   return withDb(async (client) => {
     const result = await client.query<{ count: unknown }>(
@@ -70,6 +108,14 @@ export async function ratingCountForBooking(bookingId: number) {
   });
 }
 
+/**
+ * Runs the cleanup rating scenario logic for this module.
+ *
+ * @param email - Input used by cleanup rating scenario.
+ * @param bookingIds - Input used by cleanup rating scenario.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function cleanupRatingScenario(email: string, bookingIds: number[]) {
   await withDb(async (client) => {
     if (bookingIds.length > 0) {

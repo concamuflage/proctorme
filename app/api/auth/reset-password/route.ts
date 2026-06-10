@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { resetPassword } from "@/lib/server/localAuthStore";
 
+/**
+ * Handles POST requests for the /api/auth/reset-password route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   try {
     const result = await resetPassword(await request.json().catch(() => null));

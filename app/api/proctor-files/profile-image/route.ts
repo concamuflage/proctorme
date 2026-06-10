@@ -3,6 +3,13 @@ import { downloadPrivateObject } from "@/lib/server/gcsUploads";
 
 export const runtime = "nodejs";
 
+/**
+ * Handles GET requests for the /api/proctor-files/profile-image route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get("url") || "";

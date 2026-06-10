@@ -5,14 +5,14 @@ import {
   seedBooking,
   seedInstitutionUser,
 } from "../support/db";
-import type { RatingWorld } from "../support/world";
+import type { ApiWorld } from "../support/world";
 
-Given<RatingWorld>("an institution user exists", async function () {
+Given<ApiWorld>("an institution user exists", async function () {
   this.institutionUserId = await seedInstitutionUser(this.email, this.password);
   assert.ok(this.institutionUserId > 0);
 });
 
-Given<RatingWorld>("the institution user has a completed booking and a normal booking for Avery Chen", async function () {
+Given<ApiWorld>("the institution user has a completed booking and a normal booking for Avery Chen", async function () {
   this.bookingIds.completed = await seedBooking(this.proctorUserId, "completed");
   this.bookingIds.normal = await seedBooking(this.proctorUserId, "normal");
   this.rawBookingIds.push(this.bookingIds.completed, this.bookingIds.normal);
@@ -21,7 +21,7 @@ Given<RatingWorld>("the institution user has a completed booking and a normal bo
   assert.ok(this.bookingIds.normal > 0);
 });
 
-Given<RatingWorld>("the institution user is signed in", async function () {
+Given<ApiWorld>("the institution user is signed in", async function () {
   assert.ok(this.api, "API request context was not created.");
   const csrfResponse = await this.api.get("/api/auth/csrf");
   assert.equal(csrfResponse.ok(), true);
@@ -40,7 +40,7 @@ Given<RatingWorld>("the institution user is signed in", async function () {
   assert.equal(loginResponse.ok(), true);
 });
 
-When<RatingWorld>("the institution user rates the completed booking", async function () {
+When<ApiWorld>("the institution user rates the completed booking", async function () {
   assert.ok(this.api, "API request context was not created.");
   this.responses.completed = await this.api.post(`/api/bookings/${this.bookingIds.completed}/rating`, {
     data: {
@@ -50,12 +50,12 @@ When<RatingWorld>("the institution user rates the completed booking", async func
   });
 });
 
-Then<RatingWorld>("the completed booking rating is saved", async function () {
+Then<ApiWorld>("the completed booking rating is saved", async function () {
   assert.equal(this.responses.completed.status(), 201);
   assert.equal(await ratingCountForBooking(this.bookingIds.completed), 1);
 });
 
-When<RatingWorld>("the institution user rates the normal booking", async function () {
+When<ApiWorld>("the institution user rates the normal booking", async function () {
   assert.ok(this.api, "API request context was not created.");
   this.responses.normal = await this.api.post(`/api/bookings/${this.bookingIds.normal}/rating`, {
     data: {
@@ -65,12 +65,12 @@ When<RatingWorld>("the institution user rates the normal booking", async functio
   });
 });
 
-Then<RatingWorld>("the normal booking rating is rejected", async function () {
+Then<ApiWorld>("the normal booking rating is rejected", async function () {
   assert.equal(this.responses.normal.status(), 409);
   const payload = await this.responses.normal.json();
   assert.equal(payload.error, "Only completed bookings can be rated.");
 });
 
-Then<RatingWorld>("no rating is saved for the normal booking", async function () {
+Then<ApiWorld>("no rating is saved for the normal booking", async function () {
   assert.equal(await ratingCountForBooking(this.bookingIds.normal), 0);
 });

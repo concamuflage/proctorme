@@ -11,6 +11,16 @@ type OrderSummaryProps = {
   title?: string;
 };
 
+/**
+ * Renders the order summary component.
+ *
+ * @param subtotal,
+  testIdPrefix,
+  legacySubtotalTestId,
+  title = "Booking summary", - Input used by order summary.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function OrderSummary({
   subtotal,
   testIdPrefix,

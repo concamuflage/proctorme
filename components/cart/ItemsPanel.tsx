@@ -15,6 +15,20 @@ type ItemsPanelProps = {
   testIdPrefix?: string;
 };
 
+/**
+ * Renders the items panel component.
+ *
+ * @param items,
+  onRemove,
+  children,
+  title = "Selected proctors",
+  emptyMessage = "No proctors selected.",
+  priceFractionDigits = 2,
+  className = "rounded-[2rem] border border-zinc-200 bg-zinc-50 p-4 shadow-sm sm:p-6",
+  testIdPrefix = "cart", - Input used by items panel.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ItemsPanel({
   items,
   onRemove,

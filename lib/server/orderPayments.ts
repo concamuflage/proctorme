@@ -96,6 +96,13 @@ type CartCheckoutRow = {
   session_window: unknown;
 };
 
+/**
+ * Gets utc day bounds for this flow.
+ *
+ * @param date - Input used by get utc day bounds.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function getUtcDayBounds(date: Date) {
   const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const end = new Date(start);
@@ -125,19 +132,48 @@ export type StripeCheckoutOrderStatus =
       state: "not_found";
     };
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Runs the positive number logic for this module.
+ *
+ * @param value - Input used by positive number.
+ * @param fallback - Input used by positive number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function positiveNumber(value: unknown, fallback: number) {
   const parsed = value == null ? NaN : toNumber(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/**
+ * Runs the round money logic for this module.
+ *
+ * @param value - Input used by round money.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/**
+ * Runs the expected stripe amount cents logic for this module.
+ *
+ * @param payload - Input used by expected stripe amount cents.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function expectedStripeAmountCents(payload: CheckoutOrderPayload) {
   const itemsCents = payload.items.reduce(
     (total, item) => total + Math.round(Number(item.unitPriceUsd) * 100) * Number(item.quantity),
@@ -146,6 +182,15 @@ export function expectedStripeAmountCents(payload: CheckoutOrderPayload) {
   return itemsCents + Math.round(Number(payload.shippingUsd) * 100);
 }
 
+/**
+ * Runs the assert stripe payment matches checkout payload logic for this module.
+ *
+ * @param payload,
+  checkoutSession,
+  paymentIntent, - Input used by assert stripe payment matches checkout payload.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function assertStripePaymentMatchesCheckoutPayload({
   payload,
   checkoutSession,
@@ -178,12 +223,26 @@ export function assertStripePaymentMatchesCheckoutPayload({
   }
 }
 
+/**
+ * Parses proctor user id from an external value.
+ *
+ * @param cartItemId - Input used by parse proctor user id.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 export function parseProctorUserId(cartItemId: string) {
   const [, proctorUserIdText] = cartItemId.split("-");
   const proctorUserId = Number(proctorUserIdText);
   return Number.isInteger(proctorUserId) && proctorUserId > 0 ? proctorUserId : null;
 }
 
+/**
+ * Runs the proctor name logic for this module.
+ *
+ * @param row - Input used by proctor name.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function proctorName(row: Pick<CartCheckoutRow, "first_name" | "last_name">) {
   return [row.first_name, row.last_name]
     .map((part) => (typeof part === "string" ? part.trim() : ""))
@@ -191,6 +250,13 @@ function proctorName(row: Pick<CartCheckoutRow, "first_name" | "last_name">) {
     .join(" ");
 }
 
+/**
+ * Runs the proctor address logic for this module.
+ *
+ * @param row - Input used by proctor address.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function proctorAddress(row: Pick<CartCheckoutRow, "address_street" | "address_city" | "address_state" | "address_zip_code">) {
   return [row.address_street, row.address_city, row.address_state, row.address_zip_code]
     .map((part) => (typeof part === "string" ? part.trim() : ""))
@@ -198,11 +264,25 @@ function proctorAddress(row: Pick<CartCheckoutRow, "address_street" | "address_c
     .join(", ");
 }
 
+/**
+ * Runs the date to iso logic for this module.
+ *
+ * @param value - Input used by date to iso.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function dateToIso(value: unknown) {
   if (value instanceof Date) return value.toISOString();
   return typeof value === "string" && value.trim() ? new Date(value).toISOString() : null;
 }
 
+/**
+ * Checks whether valid checkout order payload is true for this flow.
+ *
+ * @param payload - Input used by is valid checkout order payload.
+ *
+ * @returns True when the value satisfies the check.
+ */
 export function isValidCheckoutOrderPayload(payload: unknown): payload is CheckoutOrderPayload {
   if (!payload || typeof payload !== "object") {
     return false;
@@ -244,6 +324,13 @@ export function isValidCheckoutOrderPayload(payload: unknown): payload is Checko
   });
 }
 
+/**
+ * Runs the with schema bootstrap lock logic for this module.
+ *
+ * @param callback - Input used by with schema bootstrap lock.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function withSchemaBootstrapLock<T>(callback: (client: QueryClient) => Promise<T>) {
   const client = await pool.connect();
 
@@ -261,6 +348,13 @@ async function withSchemaBootstrapLock<T>(callback: (client: QueryClient) => Pro
   }
 }
 
+/**
+ * Runs the ensure order tables logic for this module.
+ *
+ * @param client - Input used by ensure order tables.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function ensureOrderTables(client: QueryClient = pool) {
   await client.query(
     `CREATE TABLE IF NOT EXISTS orders (
@@ -309,6 +403,11 @@ async function ensureOrderTables(client: QueryClient = pool) {
   await client.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS address_id INTEGER REFERENCES addresses(id)");
 }
 
+/**
+ * Runs the ensure stripe checkout session table logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function ensureStripeCheckoutSessionTable() {
   await withSchemaBootstrapLock(async (client) => {
     await ensureOrderTables(client);
@@ -326,6 +425,11 @@ export async function ensureStripeCheckoutSessionTable() {
   });
 }
 
+/**
+ * Runs the ensure stripe webhook events table logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function ensureStripeWebhookEventsTable() {
   await withSchemaBootstrapLock(async (client) => {
     await client.query(
@@ -344,6 +448,11 @@ async function ensureStripeWebhookEventsTable() {
   });
 }
 
+/**
+ * Runs the ensure payments table logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function ensurePaymentsTable() {
   await withSchemaBootstrapLock(async (client) => {
     await client.query(
@@ -374,17 +483,38 @@ async function ensurePaymentsTable() {
   });
 }
 
+/**
+ * Normalizes expandable id into the shape this flow expects.
+ *
+ * @param value - Input used by normalize expandable id.
+ *
+ * @returns The normalized value.
+ */
 function normalizeExpandableId<T extends { id?: string }>(value: string | T | null | undefined) {
   if (!value) return null;
   return typeof value === "string" ? value : value.id ?? null;
 }
 
+/**
+ * Runs the read promotion code value logic for this module.
+ *
+ * @param value - Input used by read promotion code value.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function readPromotionCodeValue(value: unknown) {
   if (!value || typeof value !== "object") return null;
   const code = (value as { code?: unknown }).code;
   return typeof code === "string" && code.trim() ? code.trim() : null;
 }
 
+/**
+ * Runs the read stripe promotion code id from checkout session logic for this module.
+ *
+ * @param checkoutSession - Input used by read stripe promotion code id from checkout session.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function readStripePromotionCodeIdFromCheckoutSession(
   checkoutSession: Stripe.Checkout.Session
 ): string | null {
@@ -393,6 +523,14 @@ export function readStripePromotionCodeIdFromCheckoutSession(
   return normalizeExpandableId(promotionCode);
 }
 
+/**
+ * Runs the read stripe payment discount details logic for this module.
+ *
+ * @param checkoutSession - Input used by read stripe payment discount details.
+ * @param expandedPromotionCode - Input used by read stripe payment discount details.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function readStripePaymentDiscountDetails(
   checkoutSession: Stripe.Checkout.Session,
   expandedPromotionCode?: Stripe.PromotionCode | null
@@ -416,6 +554,15 @@ export function readStripePaymentDiscountDetails(
   };
 }
 
+/**
+ * Runs the save stripe checkout session logic for this module.
+ *
+ * @param userId - Input used by save stripe checkout session.
+ * @param stripeSessionId - Input used by save stripe checkout session.
+ * @param payload - Input used by save stripe checkout session.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function saveStripeCheckoutSession(
   userId: number,
   stripeSessionId: string,
@@ -442,6 +589,13 @@ export async function saveStripeCheckoutSession(
   );
 }
 
+/**
+ * Runs the assert stripe checkout session rate limit logic for this module.
+ *
+ * @param userId - Input used by assert stripe checkout session rate limit.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function assertStripeCheckoutSessionRateLimit(userId: number) {
   await ensureStripeCheckoutSessionTable();
   const result = await pool.query(
@@ -460,6 +614,13 @@ export async function assertStripeCheckoutSessionRateLimit(userId: number) {
   }
 }
 
+/**
+ * Builds authoritative checkout order payload for this flow.
+ *
+ * @param userId, - Input used by build authoritative checkout order payload.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function buildAuthoritativeCheckoutOrderPayload({
   userId,
 }: {
@@ -583,6 +744,14 @@ export async function buildAuthoritativeCheckoutOrderPayload({
   };
 }
 
+/**
+ * Gets stripe checkout session for this flow.
+ *
+ * @param stripeSessionId - Input used by get stripe checkout session.
+ * @param userId - Input used by get stripe checkout session.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getStripeCheckoutSession(stripeSessionId: string, userId: number) {
   await ensureStripeCheckoutSessionTable();
   const result = await pool.query(
@@ -615,6 +784,13 @@ export async function getStripeCheckoutSession(stripeSessionId: string, userId: 
   };
 }
 
+/**
+ * Gets stripe checkout session by id for this flow.
+ *
+ * @param stripeSessionId - Input used by get stripe checkout session by id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getStripeCheckoutSessionById(stripeSessionId: string) {
   await ensureStripeCheckoutSessionTable();
   const result = await pool.query<StripeCheckoutSessionRow>(
@@ -641,6 +817,17 @@ export async function getStripeCheckoutSessionById(stripeSessionId: string) {
   };
 }
 
+/**
+ * Creates stripe webhook event for this flow.
+ *
+ * @param stripeEventId - Input used by create stripe webhook event.
+ * @param eventType - Input used by create stripe webhook event.
+ * @param rawPayload - Input used by create stripe webhook event.
+ * @param stripeCheckoutSessionId - Input used by create stripe webhook event.
+ * @param stripePaymentIntentId - Input used by create stripe webhook event.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function createStripeWebhookEvent(
   stripeEventId: string,
   eventType: string,
@@ -709,6 +896,14 @@ export async function createStripeWebhookEvent(
   };
 }
 
+/**
+ * Runs the mark stripe webhook event processed logic for this module.
+ *
+ * @param stripeEventId - Input used by mark stripe webhook event processed.
+ * @param orderId - Input used by mark stripe webhook event processed.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function markStripeWebhookEventProcessed(
   stripeEventId: string,
   orderId?: number | null
@@ -725,6 +920,26 @@ export async function markStripeWebhookEventProcessed(
   );
 }
 
+/**
+ * Runs the upsert stripe payment record logic for this module.
+ *
+ * @param stripePaymentIntentId,
+  stripeCheckoutSessionId,
+  stripeCustomerId,
+  stripeChargeId,
+  status,
+  amount,
+  currency,
+  customerEmail,
+  failureCode,
+  failureMessage,
+  paidAt,
+  failedAt,
+  orderId,
+  discountDetails, - Input used by upsert stripe payment record.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function upsertStripePaymentRecord({
   stripePaymentIntentId,
   stripeCheckoutSessionId,
@@ -857,6 +1072,14 @@ export async function upsertStripePaymentRecord({
   };
 }
 
+/**
+ * Gets stripe checkout order status for this flow.
+ *
+ * @param userId - Input used by get stripe checkout order status.
+ * @param stripeSessionId - Input used by get stripe checkout order status.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getStripeCheckoutOrderStatus(userId: number, stripeSessionId: string): Promise<StripeCheckoutOrderStatus> {
   await ensureStripeCheckoutSessionTable();
   await ensurePaymentsTable();
@@ -920,6 +1143,13 @@ export async function getStripeCheckoutOrderStatus(userId: number, stripeSession
   };
 }
 
+/**
+ * Normalizes stripe id into the shape this flow expects.
+ *
+ * @param value - Input used by normalize stripe id.
+ *
+ * @returns The normalized value.
+ */
 function normalizeStripeId(value: string | Stripe.Customer | Stripe.DeletedCustomer | Stripe.Charge | null): string | null {
   if (!value) {
     return null;
@@ -928,6 +1158,13 @@ function normalizeStripeId(value: string | Stripe.Customer | Stripe.DeletedCusto
   return typeof value === "string" ? value : value.id;
 }
 
+/**
+ * Runs the read stripe payment intent id logic for this module.
+ *
+ * @param value - Input used by read stripe payment intent id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function readStripePaymentIntentId(
   value: string | Stripe.PaymentIntent | null
 ): string | null {
@@ -938,18 +1175,43 @@ export function readStripePaymentIntentId(
   return typeof value === "string" ? value : value.id;
 }
 
+/**
+ * Runs the read stripe charge id logic for this module.
+ *
+ * @param latestCharge - Input used by read stripe charge id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function readStripeChargeId(
   latestCharge: string | Stripe.Charge | null | undefined
 ): string | null {
   return normalizeStripeId(latestCharge ?? null);
 }
 
+/**
+ * Runs the read stripe customer id logic for this module.
+ *
+ * @param customer - Input used by read stripe customer id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function readStripeCustomerId(
   customer: string | Stripe.Customer | Stripe.DeletedCustomer | null
 ): string | null {
   return normalizeStripeId(customer);
 }
 
+/**
+ * Runs the finalize paid order logic for this module.
+ *
+ * @param userId,
+  payload,
+  paymentProvider,
+  paymentReference,
+  paidAt, - Input used by finalize paid order.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function finalizePaidOrder({
   userId,
   payload,

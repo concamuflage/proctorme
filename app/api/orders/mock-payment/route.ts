@@ -6,10 +6,24 @@ import {
   isValidCheckoutOrderPayload,
 } from "@/lib/server/orderPayments";
 
+/**
+ * Runs the bad request logic for this module.
+ *
+ * @param message - Input used by bad request.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+/**
+ * Handles POST requests for the /api/orders/mock-payment route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Mock payments are disabled." }, { status: 404 });

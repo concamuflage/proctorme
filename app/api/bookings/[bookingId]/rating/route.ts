@@ -13,6 +13,11 @@ type BookingRatingRow = {
   status_name: unknown;
 };
 
+/**
+ * Resolves session user id from the available session or request context.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function resolveSessionUserId() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
@@ -21,10 +26,25 @@ async function resolveSessionUserId() {
   return Number.isInteger(userId) && userId > 0 ? userId : null;
 }
 
+/**
+ * Normalizes comment into the shape this flow expects.
+ *
+ * @param value - Input used by normalize comment.
+ *
+ * @returns The normalized value.
+ */
 function normalizeComment(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Handles POST requests for the /api/bookings/:bookingId/rating route.
+ *
+ * @param request - Input used by post.
+ * @param context - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request, context: RatingRouteContext) {
   const institutionUserId = await resolveSessionUserId();
   if (!institutionUserId) {

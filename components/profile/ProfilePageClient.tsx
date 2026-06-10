@@ -203,6 +203,13 @@ const AVAILABILITY_SLOTS = Array.from({ length: 17 }, (_, index) => {
   };
 });
 
+/**
+ * Formats hour for display.
+ *
+ * @param hour - Input used by format hour.
+ *
+ * @returns The formatted display value.
+ */
 function formatHour(hour: number) {
   const normalizedHour = hour % 24;
   if (normalizedHour === 0) return "12 AM";
@@ -211,6 +218,13 @@ function formatHour(hour: number) {
   return `${normalizedHour - 12} PM`;
 }
 
+/**
+ * Formats date for display.
+ *
+ * @param value - Input used by format date.
+ *
+ * @returns The formatted display value.
+ */
 function formatDate(value: string | null) {
   if (!value) return "Pending";
   return new Intl.DateTimeFormat("en-US", {
@@ -220,6 +234,13 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+/**
+ * Formats status for display.
+ *
+ * @param value - Input used by format status.
+ *
+ * @returns The formatted display value.
+ */
 function formatStatus(value: string) {
   return value
     .split("_")
@@ -228,22 +249,50 @@ function formatStatus(value: string) {
     .join(" ") || "Unknown";
 }
 
+/**
+ * Formats name for display.
+ *
+ * @param profile - Input used by format name.
+ *
+ * @returns The formatted display value.
+ */
 function formatName(profile: ProfileData["user"]) {
   return [profile.firstName, profile.lastName].filter(Boolean).join(" ") || profile.email;
 }
 
+/**
+ * Runs the profile image href logic for this module.
+ *
+ * @param url - Input used by profile image href.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function profileImageHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/proctor-files/profile-image?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Runs the diploma href logic for this module.
+ *
+ * @param url - Input used by diploma href.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function diplomaHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/account/proctor-application/diploma-file?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Formats role name for display.
+ *
+ * @param roleName - Input used by format role name.
+ *
+ * @returns The formatted display value.
+ */
 function formatRoleName(roleName: string) {
   if (roleName === "cooporate_user" || roleName === "corporate_user" || roleName === "interviewee") return "Organization user";
   return roleName
@@ -253,14 +302,36 @@ function formatRoleName(roleName: string) {
     .join(" ");
 }
 
+/**
+ * Checks whether corporate role name is true for this flow.
+ *
+ * @param roleName - Input used by is corporate role name.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isCorporateRoleName(roleName: string) {
   return roleName === "corporate_user" || roleName === "cooporate_user" || roleName === "interviewee";
 }
 
+/**
+ * Runs the availability slot key logic for this module.
+ *
+ * @param slot - Input used by availability slot key.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function availabilitySlotKey(slot: Pick<AvailabilitySlotState, "dayOfWeek" | "startTime" | "endTime">) {
   return `${slot.dayOfWeek}-${slot.startTime}-${slot.endTime}`;
 }
 
+/**
+ * Runs the availability range slots logic for this module.
+ *
+ * @param anchor - Input used by availability range slots.
+ * @param current - Input used by availability range slots.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function availabilityRangeSlots(anchor: AvailabilitySlotState, current: AvailabilitySlotState) {
   const startDay = Math.min(anchor.dayOfWeek, current.dayOfWeek);
   const endDay = Math.max(anchor.dayOfWeek, current.dayOfWeek);
@@ -286,6 +357,13 @@ function availabilityRangeSlots(anchor: AvailabilitySlotState, current: Availabi
   return slots;
 }
 
+/**
+ * Renders the profile page client component.
+ *
+ * @param _props - Input used by profile page client.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProfilePageClient(_props: { initialSection?: string } = {}) {
   const { addItem } = useCart();
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -345,6 +423,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
   useEffect(() => {
     let cancelled = false;
 
+    /**
+     * Loads profile needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadProfile() {
       setLoading(true);
       setError(null);
@@ -399,6 +482,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
   useEffect(() => {
     let cancelled = false;
 
+    /**
+     * Loads profile options needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadProfileOptions() {
       const response = await fetch("/api/account/proctor-application/options", { cache: "no-store" });
       const payload = await response.json().catch(() => null);
@@ -422,6 +510,13 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     };
   }, []);
 
+  /**
+   * Runs the save profile logic for this module.
+   *
+   * @param payload - Input used by save profile.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function saveProfile(payload: unknown) {
     setProfileSaving(true);
     setProfileMessage(null);
@@ -443,16 +538,42 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     }
   }
 
+  /**
+   * Updates education draft while preserving the surrounding form state.
+   *
+   * @param index - Input used by update education draft.
+   * @param field - Input used by update education draft.
+   * @param value - Input used by update education draft.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateEducationDraft(index: number, field: keyof EducationInput, value: string) {
     setSubmittedEducation(null);
     setEducationDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
   }
 
+  /**
+   * Updates education draft boolean while preserving the surrounding form state.
+   *
+   * @param index - Input used by update education draft boolean.
+   * @param field - Input used by update education draft boolean.
+   * @param value - Input used by update education draft boolean.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateEducationDraftBoolean(index: number, field: "educationVerificationAuthorized", value: boolean) {
     setSubmittedEducation(null);
     setEducationDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
   }
 
+  /**
+   * Runs the upload education diploma logic for this module.
+   *
+   * @param index - Input used by upload education diploma.
+   * @param file - Input used by upload education diploma.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function uploadEducationDiploma(index: number, file: File | null) {
     if (!file) return;
     setEducationError(null);
@@ -483,6 +604,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     setSubmittedEducation(null);
   }
 
+  /**
+   * Builds education payload for this flow.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function buildEducationPayload(): SubmittedEducation[] {
     return educationDraft.map((item) => ({
       degree: item.degree,
@@ -497,6 +623,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     }));
   }
 
+  /**
+   * Runs the submit education for review logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function submitEducationForReview() {
     setEducationError(null);
     setEducationMessage(null);
@@ -546,6 +677,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
 
     let cancelled = false;
 
+    /**
+     * Loads proctor application needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadProctorApplication() {
       setApplicationLoading(true);
       try {
@@ -589,6 +725,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
 
     let cancelled = false;
 
+    /**
+     * Loads organization applications needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadOrganizationApplications() {
       setOrganizationApplicationsLoading(true);
       setOrganizationApplicationsError(null);
@@ -621,6 +762,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
 
     let cancelled = false;
 
+    /**
+     * Loads session settings needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadSessionSettings() {
       setSessionLoading(true);
       setSessionError(null);
@@ -661,6 +807,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
 
     let cancelled = false;
 
+    /**
+     * Loads availability needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadAvailability() {
       setAvailabilityLoading(true);
       setAvailabilityError(null);
@@ -699,6 +850,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     };
   }, [activeRole]);
 
+  /**
+   * Runs the save availability logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function saveAvailability() {
     setAvailabilitySaving(true);
     setAvailabilityMessage(null);
@@ -726,6 +882,13 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     }
   }
 
+  /**
+   * Runs the save session settings logic for this module.
+   *
+   * @param successMessage - Input used by save session settings.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function saveSessionSettings(successMessage = "Session settings saved.") {
     setSessionSaving(true);
     setSessionMessage(null);
@@ -759,12 +922,26 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     }
   }
 
+  /**
+   * Updates session settings while preserving the surrounding form state.
+   *
+   * @param patch - Input used by update session settings.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateSessionSettings(patch: Partial<ProctorSessionSettings>) {
     setSessionSettings((current) => ({ ...current, ...patch }));
     setSessionMessage(null);
     setSessionError(null);
   }
 
+  /**
+   * Runs the edit profile change request logic for this module.
+   *
+   * @param request - Input used by edit profile change request.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function editProfileChangeRequest(request: ProfileChangeRequest) {
     if (request.changeType === "education") {
       const rows = Array.isArray(request.newValues.education)
@@ -808,6 +985,13 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     setSelectedSection("address");
   }
 
+  /**
+   * Converts a value to ggle availability slot.
+   *
+   * @param slot - Input used by toggle availability slot.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function toggleAvailabilitySlot(slot: AvailabilitySlotState) {
     setAvailability((current) => {
       const key = availabilitySlotKey(slot);
@@ -823,6 +1007,14 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
     });
   }
 
+  /**
+   * Runs the set availability slot logic for this module.
+   *
+   * @param slot - Input used by set availability slot.
+   * @param selected - Input used by set availability slot.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function setAvailabilitySlot(slot: AvailabilitySlotState, selected: boolean) {
     setAvailability((current) => {
       const key = availabilitySlotKey(slot);
@@ -1081,6 +1273,13 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
   );
 }
 
+/**
+ * Renders the proctor application details component.
+ *
+ * @param application - Input used by proctor application details.
+ *
+ * @returns The rendered UI for this component.
+ */
 function ProctorApplicationDetails({ application }: { application: ProctorApplication }) {
   const address = [application.street, application.city, application.state, application.zipCode, application.country]
     .filter(Boolean)
@@ -1133,6 +1332,13 @@ function ProctorApplicationDetails({ application }: { application: ProctorApplic
   );
 }
 
+/**
+ * Renders the section card component.
+ *
+ * @param title, children - Input used by section card.
+ *
+ * @returns The rendered UI for this component.
+ */
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -1142,6 +1348,11 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
+/**
+ * Renders the organization verification prompt component.
+ *
+ * @returns The rendered UI for this component.
+ */
 function OrganizationVerificationPrompt() {
   return (
     <div className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900 shadow-sm">
@@ -1156,6 +1367,25 @@ function OrganizationVerificationPrompt() {
   );
 }
 
+/**
+ * Renders the profile overview component.
+ *
+ * @param error,
+  message,
+  onSaveSession,
+  onSave,
+  onUpdateSession,
+  options,
+  profile,
+  saving,
+  sessionError,
+  sessionLoading,
+  sessionMessage,
+  sessionSaving,
+  sessionSettings, - Input used by profile overview.
+ *
+ * @returns The rendered UI for this component.
+ */
 function ProfileOverview({
   error,
   message,
@@ -1206,6 +1436,13 @@ function ProfileOverview({
     setImageUrls(profile.user.imageUrls || []);
   }, [profile, options.professions]);
 
+  /**
+   * Runs the upload profile image logic for this module.
+   *
+   * @param file - Input used by upload profile image.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function uploadProfileImage(file: File | null) {
     if (!file) return;
     setUploadingImage(true);
@@ -1229,6 +1466,13 @@ function ProfileOverview({
     }
   }
 
+  /**
+   * Runs the submit profile logic for this module.
+   *
+   * @param event - Input used by submit profile.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function submitProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLocalError(null);
@@ -1379,6 +1623,13 @@ function ProfileOverview({
   );
 }
 
+/**
+ * Renders the corporate profile overview component.
+ *
+ * @param profile - Input used by corporate profile overview.
+ *
+ * @returns The rendered UI for this component.
+ */
 function CorporateProfileOverview({ profile }: { profile: ProfileData }) {
   const user = profile.user;
   const organizationProfile = profile.organizationProfile;
@@ -1435,6 +1686,13 @@ function CorporateProfileOverview({ profile }: { profile: ProfileData }) {
   );
 }
 
+/**
+ * Renders the change organization section component.
+ *
+ * @param profile - Input used by change organization section.
+ *
+ * @returns The rendered UI for this component.
+ */
 function ChangeOrganizationSection({ profile }: { profile: ProfileData }) {
   const organizationProfile = profile.organizationProfile;
 
@@ -1475,6 +1733,13 @@ function ChangeOrganizationSection({ profile }: { profile: ProfileData }) {
   );
 }
 
+/**
+ * Renders the roles section component.
+ *
+ * @param profile - Input used by roles section.
+ *
+ * @returns The rendered UI for this component.
+ */
 function RolesSection({ profile }: { profile: ProfileData }) {
   const roleNames = new Set((profile.roles ?? []).map((role) => role.name));
   const canAddProctor = !roleNames.has("proctor");
@@ -1533,6 +1798,15 @@ function RolesSection({ profile }: { profile: ProfileData }) {
   );
 }
 
+/**
+ * Renders the bookings section component.
+ *
+ * @param addItem,
+  orders,
+  ordersError, - Input used by bookings section.
+ *
+ * @returns The rendered UI for this component.
+ */
 function BookingsSection({
   addItem,
   orders,
@@ -1609,6 +1883,19 @@ function BookingsSection({
   );
 }
 
+/**
+ * Renders the session editor component.
+ *
+ * @param onSave,
+  onUpdate,
+  sessionError,
+  sessionLoading,
+  sessionMessage,
+  sessionSaving,
+  settings, - Input used by session editor.
+ *
+ * @returns The rendered UI for this component.
+ */
 function SessionEditor({
   onSave,
   onUpdate,
@@ -1709,6 +1996,20 @@ function SessionEditor({
   );
 }
 
+/**
+ * Renders the address editor component.
+ *
+ * @param onEditRequest,
+  onSave,
+  onUpdate,
+  sessionError,
+  sessionLoading,
+  sessionMessage,
+  sessionSaving,
+  settings, - Input used by address editor.
+ *
+ * @returns The rendered UI for this component.
+ */
 function AddressEditor({
   onEditRequest,
   onSave,
@@ -1738,6 +2039,11 @@ function AddressEditor({
   const address = settings.address;
   const hasInvalidValues = !address.street || !address.city || !address.state || !address.zipCode;
 
+  /**
+   * Loads change requests needed by this flow.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function loadChangeRequests() {
     setRequestsLoading(true);
     setRequestsError(null);
@@ -1756,6 +2062,11 @@ function AddressEditor({
   useEffect(() => {
     let cancelled = false;
 
+    /**
+     * Loads states needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadStates() {
       const response = await fetch("/api/account/proctor-application/options", { cache: "no-store" });
       const payload = await response.json().catch(() => null);
@@ -1783,6 +2094,11 @@ function AddressEditor({
 
     let cancelled = false;
 
+    /**
+     * Loads cities needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadCities() {
       const response = await fetch(`/api/account/proctor-application/options?state=${encodeURIComponent(address.state)}`, {
         cache: "no-store",
@@ -1817,6 +2133,13 @@ function AddressEditor({
     setCustomCity("");
   }, [address.city, cities]);
 
+  /**
+   * Updates address while preserving the surrounding form state.
+   *
+   * @param patch - Input used by update address.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateAddress(patch: Partial<ProctorAddressSettings>) {
     onUpdate({
       address: {
@@ -1827,6 +2150,13 @@ function AddressEditor({
     });
   }
 
+  /**
+   * Updates city while preserving the surrounding form state.
+   *
+   * @param value - Input used by update city.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateCity(value: string) {
     setCityChoice(value);
     if (value !== "Other") {
@@ -1837,11 +2167,23 @@ function AddressEditor({
     }
   }
 
+  /**
+   * Updates custom city while preserving the surrounding form state.
+   *
+   * @param value - Input used by update custom city.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateCustomCity(value: string) {
     setCustomCity(value);
     updateAddress({ city: value });
   }
 
+  /**
+   * Runs the save address logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function saveAddress() {
     await onSave();
     await loadChangeRequests();
@@ -1909,6 +2251,13 @@ function AddressEditor({
   );
 }
 
+/**
+ * Renders the profile change requests section component.
+ *
+ * @param onEditRequest - Input used by profile change requests section.
+ *
+ * @returns The rendered UI for this component.
+ */
 function ProfileChangeRequestsSection({ onEditRequest }: { onEditRequest: (request: ProfileChangeRequest) => void }) {
   const [requests, setRequests] = useState<ProfileChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1917,6 +2266,11 @@ function ProfileChangeRequestsSection({ onEditRequest }: { onEditRequest: (reque
   useEffect(() => {
     let cancelled = false;
 
+    /**
+     * Loads requests needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadRequests() {
       setLoading(true);
       setError(null);
@@ -1950,6 +2304,17 @@ function ProfileChangeRequestsSection({ onEditRequest }: { onEditRequest: (reque
   );
 }
 
+/**
+ * Renders the verification requests section component.
+ *
+ * @param onEditRequest,
+  organizationApplications,
+  organizationApplicationsError,
+  organizationApplicationsLoading,
+  showProfileChangeRequests, - Input used by verification requests section.
+ *
+ * @returns The rendered UI for this component.
+ */
 function VerificationRequestsSection({
   onEditRequest,
   organizationApplications,
@@ -2038,12 +2403,26 @@ function VerificationRequestsSection({
   );
 }
 
+/**
+ * Formats month value for display.
+ *
+ * @param value - Input used by format month value.
+ *
+ * @returns The formatted display value.
+ */
 function formatMonthValue(value: string) {
   if (!/^\d{4}-\d{2}$/.test(value)) return "";
   const [year, month] = value.split("-").map(Number);
   return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
+/**
+ * Renders the submitted education summary component.
+ *
+ * @param education - Input used by submitted education summary.
+ *
+ * @returns The rendered UI for this component.
+ */
 function SubmittedEducationSummary({ education }: { education: SubmittedEducation[] }) {
   return (
     <div className="grid gap-3">
@@ -2080,6 +2459,13 @@ function SubmittedEducationSummary({ education }: { education: SubmittedEducatio
   );
 }
 
+/**
+ * Renders the verified education list component.
+ *
+ * @param educations - Input used by verified education list.
+ *
+ * @returns The rendered UI for this component.
+ */
 function VerifiedEducationList({ educations }: { educations: NonNullable<ProfileData["educations"]> }) {
   return (
     <section className="grid gap-3">
@@ -2124,6 +2510,21 @@ function VerifiedEducationList({ educations }: { educations: NonNullable<Profile
   );
 }
 
+/**
+ * Renders the availability editor component.
+ *
+ * @param availability,
+  availabilityError,
+  availabilityLoading,
+  availabilityMessage,
+  availabilitySaving,
+  onSave,
+  onSetSlot,
+  onToggleSlot,
+  timezone, - Input used by availability editor.
+ *
+ * @returns The rendered UI for this component.
+ */
 function AvailabilityEditor({
   availability,
   availabilityError,
@@ -2151,6 +2552,11 @@ function AvailabilityEditor({
   useEffect(() => {
     if (dragState === null) return;
 
+    /**
+     * Runs the stop dragging logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     function stopDragging() {
       setDragState(null);
     }
@@ -2159,6 +2565,14 @@ function AvailabilityEditor({
     return () => window.removeEventListener("pointerup", stopDragging);
   }, [dragState]);
 
+  /**
+   * Handles slot pointer down for this component.
+   *
+   * @param slot - Input used by handle slot pointer down.
+   * @param isSelected - Input used by handle slot pointer down.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function handleSlotPointerDown(slot: AvailabilitySlotState, isSelected: boolean) {
     const nextSelected = !isSelected;
     const slotKey = availabilitySlotKey(slot);
@@ -2171,6 +2585,13 @@ function AvailabilityEditor({
     onSetSlot(slot, nextSelected);
   }
 
+  /**
+   * Handles slot pointer enter for this component.
+   *
+   * @param slot - Input used by handle slot pointer enter.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function handleSlotPointerEnter(slot: AvailabilitySlotState) {
     if (dragState === null) return;
 
@@ -2288,6 +2709,13 @@ function AvailabilityEditor({
   );
 }
 
+/**
+ * Renders the detail row component.
+ *
+ * @param label, value - Input used by detail row.
+ *
+ * @returns The rendered UI for this component.
+ */
 function DetailRow({ label, value }: { label: string; value: string | number }) {
   return (
     <div>

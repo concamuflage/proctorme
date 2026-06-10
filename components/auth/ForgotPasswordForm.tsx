@@ -3,12 +3,24 @@
 import React, { useState } from "react";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
+/**
+ * Renders the forgot password form component.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Handles submit for this component.
+   *
+   * @param event - Input used by handle submit.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);

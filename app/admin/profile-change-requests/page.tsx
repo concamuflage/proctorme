@@ -16,6 +16,13 @@ type ProfileChangeRequest = {
   reviewNote: string;
 };
 
+/**
+ * Formats change type for display.
+ *
+ * @param value - Input used by format change type.
+ *
+ * @returns The formatted display value.
+ */
 function formatChangeType(value: string) {
   return value
     .split("_")
@@ -24,6 +31,11 @@ function formatChangeType(value: string) {
     .join(" ");
 }
 
+/**
+ * Renders the /admin/profile-change-requests page.
+ *
+ * @returns The page UI.
+ */
 export default function AdminProfileChangeRequestsPage() {
   const [requests, setRequests] = useState<ProfileChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +45,11 @@ export default function AdminProfileChangeRequestsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
 
+  /**
+   * Loads requests needed by this flow.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function loadRequests() {
     setLoading(true);
     setError(null);
@@ -54,6 +71,14 @@ export default function AdminProfileChangeRequestsPage() {
     void loadRequests();
   }, []);
 
+  /**
+   * Runs the review logic for this module.
+   *
+   * @param requestId - Input used by review.
+   * @param action - Input used by review.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function review(requestId: number, action: "approve" | "reject") {
     setBusyId(requestId);
     setError(null);

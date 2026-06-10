@@ -9,6 +9,11 @@ import ItemsPanel from "@/components/cart/ItemsPanel";
 import OrderSummary from "@/components/cart/OrderSummary";
 import { useCart } from "@/components/cart/CartContext";
 
+/**
+ * Renders the cart page content component.
+ *
+ * @returns The rendered UI for this component.
+ */
 function CartPageContent() {
   const searchParams = useSearchParams();
   const { status } = useSession();
@@ -24,6 +29,11 @@ function CartPageContent() {
   const [stripeCheckoutError, setStripeCheckoutError] = useState<string | null>(null);
   const canStartStripeCheckout = items.length > 0 && status !== "loading";
 
+  /**
+   * Handles stripe checkout for this component.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function handleStripeCheckout() {
     if (!canStartStripeCheckout) {
       setStripeCheckoutError("Select at least one proctor before completing payment.");
@@ -152,6 +162,11 @@ function CartPageContent() {
   );
 }
 
+/**
+ * Renders the /cart page.
+ *
+ * @returns The page UI.
+ */
 export default function CartPage() {
   return (
     <Suspense fallback={null}>

@@ -15,6 +15,13 @@ type CartItemRowProps = {
   testIdPrefix?: string;
 };
 
+/**
+ * Formats session for display.
+ *
+ * @param item - Input used by format session.
+ *
+ * @returns The formatted display value.
+ */
 function formatSession(item: CartItem) {
   if (!item.startIso || !item.endIso) return item.size ?? null;
 
@@ -35,12 +42,29 @@ function formatSession(item: CartItem) {
   return `${dateLabel}, ${timeFormatter.format(start)} - ${timeFormatter.format(end)}`;
 }
 
+/**
+ * Runs the image src logic for this module.
+ *
+ * @param url - Input used by image src.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function imageSrc(url: string) {
   return url.startsWith("gcs://")
     ? `/api/proctor-files/profile-image?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Renders the cart item row component.
+ *
+ * @param item,
+  onRemove,
+  priceFractionDigits = 2,
+  testIdPrefix = "cart", - Input used by cart item row.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function CartItemRow({
   item,
   onRemove,

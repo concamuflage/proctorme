@@ -23,6 +23,13 @@ const ROLE_COPY = {
   },
 };
 
+/**
+ * Renders the role verification client component.
+ *
+ * @param role - Input used by role verification client.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function RoleVerificationClient({ role }: RoleVerificationClientProps) {
   const { status } = useSession();
   const router = useRouter();
@@ -54,6 +61,11 @@ export default function RoleVerificationClient({ role }: RoleVerificationClientP
     }
 
     let cancelled = false;
+    /**
+     * Runs the add role logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function addRole() {
       setError(null);
       setMessage(ROLE_COPY[role].pending);
@@ -81,6 +93,11 @@ export default function RoleVerificationClient({ role }: RoleVerificationClientP
     };
   }, [role, router, status]);
 
+  /**
+   * Sends organization email verification for this flow.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function sendOrganizationEmailVerification() {
     setError(null);
     setSendingVerification(true);
@@ -99,6 +116,11 @@ export default function RoleVerificationClient({ role }: RoleVerificationClientP
     setMessage("Verification email sent. Open the link in that email before submitting this application.");
   }
 
+  /**
+   * Runs the refresh organization email verification status logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function refreshOrganizationEmailVerificationStatus() {
     if (!organizationEmail) return;
     const params = new URLSearchParams({ organizationEmail });
@@ -118,6 +140,11 @@ export default function RoleVerificationClient({ role }: RoleVerificationClientP
   useEffect(() => {
     if (role !== "corporate" || emailVerificationStatus !== "pending") return;
 
+    /**
+     * Handles focus for this component.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     function handleFocus() {
       void refreshOrganizationEmailVerificationStatus();
     }
@@ -133,6 +160,13 @@ export default function RoleVerificationClient({ role }: RoleVerificationClientP
     };
   }, [emailVerificationStatus, organizationEmail, role]);
 
+  /**
+   * Runs the submit corporate application logic for this module.
+   *
+   * @param event - Input used by submit corporate application.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function submitCorporateApplication(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);

@@ -12,6 +12,13 @@ import { AuthModalProvider } from "@/components/auth/AuthModalContext";
 // Providers component serves as a wrapper for all global providers in the app
 // this component is used in layout. Everything under layout.tsx gets access to the cart context.
 
+/**
+ * Renders the providers component.
+ *
+ * @param children - Input used by providers.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function Providers({ children }: { children: React.ReactNode }) {
   // children: React.ReactNode means this component accepts any valid React child elements
   return (

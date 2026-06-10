@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifyOrganizationEmailToken } from "@/lib/server/organizationEmailVerification";
 
+/**
+ * Handles GET requests for the /api/account/organization-application/verify-email route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email") || "";

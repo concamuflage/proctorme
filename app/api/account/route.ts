@@ -5,15 +5,37 @@ import { deleteCurrentUserAccount } from "@/lib/server/accountStore";
 import { loginUser } from "@/lib/server/localAuthStore";
 import { getUserIdByEmail } from "@/lib/server/profileStore";
 
+/**
+ * Runs the bad request logic for this module.
+ *
+ * @param message - Input used by bad request.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+/**
+ * Runs the confirm password logic for this module.
+ *
+ * @param email - Input used by confirm password.
+ * @param password - Input used by confirm password.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function confirmPassword(email: string, password: string) {
   const response = await loginUser({ email, password });
   return response.status >= 200 && response.status < 300;
 }
 
+/**
+ * Handles DELETE requests for the /api/account route.
+ *
+ * @param request - Input used by delete.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function DELETE(request: Request) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;

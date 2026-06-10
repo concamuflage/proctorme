@@ -5,6 +5,14 @@ type AvailabilityRouteContext = {
   params: Promise<{ proctorId: string }>;
 };
 
+/**
+ * Handles GET requests for the /api/proctors/:proctorId/availability route.
+ *
+ * @param request - Input used by get.
+ * @param context - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request, context: AvailabilityRouteContext) {
   const { proctorId: proctorIdText } = await context.params;
   const proctorId = Number(proctorIdText);

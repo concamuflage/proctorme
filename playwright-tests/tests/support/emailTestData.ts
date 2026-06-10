@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
 
+/**
+ * Runs the generate gmail alias logic for this module.
+ *
+ * @param email - Input used by generate gmail alias.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function generateGmailAlias(email: string) {
   const atIndex = email.indexOf("@");
   if (atIndex <= 0) throw new Error(`Signup email must be valid: ${email}`);

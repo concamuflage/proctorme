@@ -5,6 +5,11 @@ import { useCart } from "@/components/cart/CartContext"; // useCart is a custom 
 import ItemsPanel from "@/components/cart/ItemsPanel";
 import OrderSummary from "@/components/cart/OrderSummary";
 
+/**
+ * Renders the cart drawer component.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function CartDrawer() {
   
   // Destructure values and functions from useCart hook:

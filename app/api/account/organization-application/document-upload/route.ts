@@ -9,6 +9,13 @@ const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
 export const runtime = "nodejs";
 
+/**
+ * Runs the extension for logic for this module.
+ *
+ * @param file - Input used by extension for.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function extensionFor(file: File) {
   const nameExtension = path.extname(file.name || "").toLowerCase();
   if ([".pdf", ".jpg", ".jpeg", ".png"].includes(nameExtension)) return nameExtension;
@@ -18,6 +25,13 @@ function extensionFor(file: File) {
   return "";
 }
 
+/**
+ * Handles POST requests for the /api/account/organization-application/document-upload route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

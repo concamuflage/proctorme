@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  /**
+   * Runs the redirects logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async redirects() {
     return [
       {

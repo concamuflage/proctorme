@@ -4,6 +4,11 @@ const storage = new Storage({
   projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || undefined,
 });
 
+/**
+ * Gets upload bucket name for this flow.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function getUploadBucketName() {
   const explicitBucket = process.env.GCS_UPLOAD_BUCKET;
   if (explicitBucket?.trim()) return explicitBucket.trim();
@@ -19,6 +24,11 @@ export function getUploadBucketName() {
   return bucketName.trim();
 }
 
+/**
+ * Runs the allowed upload buckets logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function allowedUploadBuckets() {
   return new Set(
     [
@@ -31,10 +41,25 @@ export function allowedUploadBuckets() {
   );
 }
 
+/**
+ * Runs the gcs uri logic for this module.
+ *
+ * @param bucketName - Input used by gcs uri.
+ * @param objectName - Input used by gcs uri.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function gcsUri(bucketName: string, objectName: string) {
   return `gcs://${bucketName}/${objectName}`;
 }
 
+/**
+ * Parses gcs uri from an external value.
+ *
+ * @param value - Input used by parse gcs uri.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 export function parseGcsUri(value: string) {
   const match = value.match(/^gcs:\/\/([^/]+)\/(.+)$/);
   if (!match) return null;
@@ -44,6 +69,15 @@ export function parseGcsUri(value: string) {
   };
 }
 
+/**
+ * Runs the upload private object logic for this module.
+ *
+ * @param objectName,
+  bytes,
+  contentType, - Input used by upload private object.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function uploadPrivateObject({
   objectName,
   bytes,
@@ -65,6 +99,14 @@ export async function uploadPrivateObject({
   return gcsUri(bucketName, objectName);
 }
 
+/**
+ * Gets private object read url for this flow.
+ *
+ * @param gcsObjectUri - Input used by get private object read url.
+ * @param expiresInMs - Input used by get private object read url.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getPrivateObjectReadUrl(gcsObjectUri: string, expiresInMs = 10 * 60 * 1000) {
   const parsed = parseGcsUri(gcsObjectUri);
   if (!parsed || !allowedUploadBuckets().has(parsed.bucketName)) {
@@ -83,6 +125,13 @@ export async function getPrivateObjectReadUrl(gcsObjectUri: string, expiresInMs 
   return url;
 }
 
+/**
+ * Runs the download private object logic for this module.
+ *
+ * @param gcsObjectUri - Input used by download private object.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function downloadPrivateObject(gcsObjectUri: string) {
   const parsed = parseGcsUri(gcsObjectUri);
   if (!parsed || !allowedUploadBuckets().has(parsed.bucketName)) {

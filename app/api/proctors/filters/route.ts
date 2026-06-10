@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { getProctorFilterOptions } from "@/lib/server/proctorStore";
 
+/**
+ * Handles GET requests for the /api/proctors/filters route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

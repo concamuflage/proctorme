@@ -88,38 +88,95 @@ type BookingAddressResolution = {
   zipCode: string;
 };
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Runs the positive number logic for this module.
+ *
+ * @param value - Input used by positive number.
+ * @param fallback - Input used by positive number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function positiveNumber(value: unknown, fallback: number) {
   const parsed = value == null ? NaN : toNumber(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/**
+ * Runs the round money logic for this module.
+ *
+ * @param value - Input used by round money.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+/**
+ * Runs the date to iso logic for this module.
+ *
+ * @param value - Input used by date to iso.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function dateToIso(value: unknown) {
   if (value instanceof Date) return value.toISOString();
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+/**
+ * Parses proctor user id from an external value.
+ *
+ * @param cartItemId - Input used by parse proctor user id.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseProctorUserId(cartItemId: string) {
   const [, proctorUserIdText] = cartItemId.split("-");
   const proctorUserId = Number(proctorUserIdText);
   return Number.isInteger(proctorUserId) && proctorUserId > 0 ? proctorUserId : null;
 }
 
+/**
+ * Requires d text before allowing this flow to continue.
+ *
+ * @param value - Input used by required text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function requiredText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Normalizes comparable into the shape this flow expects.
+ *
+ * @param value - Input used by normalize comparable.
+ *
+ * @returns The normalized value.
+ */
 function normalizeComparable(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+/**
+ * Formats name for display.
+ *
+ * @param row - Input used by format name.
+ *
+ * @returns The formatted display value.
+ */
 function formatName(row: Pick<CartRow, "first_name" | "last_name">) {
   return [row.first_name, row.last_name]
     .map((part) => (typeof part === "string" ? part.trim() : ""))
@@ -127,6 +184,13 @@ function formatName(row: Pick<CartRow, "first_name" | "last_name">) {
     .join(" ");
 }
 
+/**
+ * Formats address for display.
+ *
+ * @param row - Input used by format address.
+ *
+ * @returns The formatted display value.
+ */
 function formatAddress(row: Pick<CartRow, "address_street" | "address_city" | "address_state" | "address_zip_code">) {
   return [row.address_street, row.address_city, row.address_state, row.address_zip_code]
     .map((part) => (typeof part === "string" ? part.trim() : ""))
@@ -134,6 +198,14 @@ function formatAddress(row: Pick<CartRow, "address_street" | "address_city" | "a
     .join(", ");
 }
 
+/**
+ * Resolves booking address from the available session or request context.
+ *
+ * @param client - Input used by resolve booking address.
+ * @param item - Input used by resolve booking address.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function resolveBookingAddress(client: { query: (text: string, params?: unknown[]) => Promise<{ rows: any[] }> }, item: ProctorCartItem): Promise<BookingAddressResolution> {
   const street = requiredText(item.bookingAddressStreet);
   const city = requiredText(item.bookingAddressCity);
@@ -236,6 +308,11 @@ async function resolveBookingAddress(client: { query: (text: string, params?: un
   };
 }
 
+/**
+ * Runs the ensure cart tables logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function ensureCartTables() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS carts (
@@ -312,6 +389,13 @@ async function ensureCartTables() {
   );
 }
 
+/**
+ * Gets cart for this flow.
+ *
+ * @param userId - Input used by get cart.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getCart(userId: number): Promise<PersistedCart> {
   await ensureCartTables();
 
@@ -382,6 +466,15 @@ export async function getCart(userId: number): Promise<PersistedCart> {
   };
 }
 
+/**
+ * Runs the save cart logic for this module.
+ *
+ * @param userId - Input used by save cart.
+ * @param items - Input used by save cart.
+ * @param _selections - Input used by save cart.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function saveCart(userId: number, items: SaveCartItem[], _selections?: SaveCartSelection) {
   await ensureCartTables();
 

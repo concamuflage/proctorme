@@ -10,6 +10,14 @@ type RouteContext = {
   }>;
 };
 
+/**
+ * Handles GET requests for the /api/profile/orders/:orderId/invoice/pdf route.
+ *
+ * @param _request - Input used by get.
+ * @param context - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(_request: Request, context: RouteContext) {
   const session = await getServerSession(authOptions);
   const userId =

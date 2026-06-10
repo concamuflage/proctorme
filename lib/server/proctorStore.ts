@@ -150,23 +150,60 @@ type AvailabilityWindow = {
   end: Date;
 };
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Runs the text logic for this module.
+ *
+ * @param value - Input used by text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Runs the positive number logic for this module.
+ *
+ * @param value - Input used by positive number.
+ * @param fallback - Input used by positive number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function positiveNumber(value: unknown, fallback: number) {
   const parsed = value == null ? NaN : toNumber(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/**
+ * Formats hour value for display.
+ *
+ * @param value - Input used by format hour value.
+ *
+ * @returns The formatted display value.
+ */
 function formatHourValue(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
+/**
+ * Formats hours for display.
+ *
+ * @param minimumHours - Input used by format hours.
+ * @param maximumHours - Input used by format hours.
+ *
+ * @returns The formatted display value.
+ */
 function formatHours(minimumHours: number, maximumHours: number) {
   if (minimumHours === maximumHours) {
     return `${formatHourValue(minimumHours)} hr`;
@@ -174,30 +211,67 @@ function formatHours(minimumHours: number, maximumHours: number) {
   return `${formatHourValue(minimumHours)}-${formatHourValue(maximumHours)} hr`;
 }
 
+/**
+ * Runs the text array logic for this module.
+ *
+ * @param value - Input used by text array.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function textArray(value: unknown) {
   return Array.isArray(value)
     ? value.map((item) => text(item)).filter(Boolean)
     : [];
 }
 
+/**
+ * Runs the start of local day logic for this module.
+ *
+ * @param date - Input used by start of local day.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function startOfLocalDay(date: Date) {
   const next = new Date(date);
   next.setHours(0, 0, 0, 0);
   return next;
 }
 
+/**
+ * Runs the add days logic for this module.
+ *
+ * @param date - Input used by add days.
+ * @param days - Input used by add days.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function addDays(date: Date, days: number) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
 }
 
+/**
+ * Runs the add hours logic for this module.
+ *
+ * @param date - Input used by add hours.
+ * @param hours - Input used by add hours.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function addHours(date: Date, hours: number) {
   const next = new Date(date);
   next.setHours(next.getHours() + hours);
   return next;
 }
 
+/**
+ * Formats date id for display.
+ *
+ * @param date - Input used by format date id.
+ *
+ * @returns The formatted display value.
+ */
 function formatDateId(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -205,6 +279,13 @@ function formatDateId(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Parses date id from an external value.
+ *
+ * @param value - Input used by parse date id.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseDateId(value: string | null | undefined) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return startOfLocalDay(new Date());
@@ -215,18 +296,39 @@ function parseDateId(value: string | null | undefined) {
   return Number.isFinite(date.getTime()) ? startOfLocalDay(date) : startOfLocalDay(new Date());
 }
 
+/**
+ * Parses date time from an external value.
+ *
+ * @param value - Input used by parse date time.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseDateTime(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isFinite(date.getTime()) ? date : null;
 }
 
+/**
+ * Parses number filter from an external value.
+ *
+ * @param value - Input used by parse number filter.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseNumberFilter(value: string | null | undefined) {
   if (!value) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * Parses availability window from an external value.
+ *
+ * @param filters - Input used by parse availability window.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseAvailabilityWindow(filters?: ProctorListFilters): AvailabilityWindow | null {
   const start = parseDateTime(filters?.start);
   const end = parseDateTime(filters?.end);
@@ -238,30 +340,74 @@ function parseAvailabilityWindow(filters?: ProctorListFilters): AvailabilityWind
   return { start, end };
 }
 
+/**
+ * Formats date for display.
+ *
+ * @param date - Input used by format date.
+ *
+ * @returns The formatted display value.
+ */
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
+/**
+ * Formats day for display.
+ *
+ * @param date - Input used by format day.
+ *
+ * @returns The formatted display value.
+ */
 function formatDay(date: Date) {
   return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
 }
 
+/**
+ * Formats time for display.
+ *
+ * @param date - Input used by format time.
+ *
+ * @returns The formatted display value.
+ */
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
 }
 
+/**
+ * Runs the time to minutes logic for this module.
+ *
+ * @param value - Input used by time to minutes.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function timeToMinutes(value: unknown) {
   const match = text(value).match(/^(\d{1,2}):(\d{2})/);
   if (!match) return null;
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
+/**
+ * Runs the slot overlaps booking logic for this module.
+ *
+ * @param start - Input used by slot overlaps booking.
+ * @param end - Input used by slot overlaps booking.
+ * @param bookings - Input used by slot overlaps booking.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function slotOverlapsBooking(start: Date, end: Date, bookings: BookingRow[]) {
   const startMs = start.getTime();
   const endMs = end.getTime();
   return bookings.some((booking) => booking.start_time_utc.getTime() < endMs && booking.end_time_utc.getTime() > startMs);
 }
 
+/**
+ * Runs the map rating logic for this module.
+ *
+ * @param row - Input used by map rating.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function mapRating(row: RatingRow): ProctorRating {
   const reviewerName = [text(row.reviewer_first_name), text(row.reviewer_last_name)].filter(Boolean).join(" ");
 
@@ -275,12 +421,26 @@ function mapRating(row: RatingRow): ProctorRating {
   };
 }
 
+/**
+ * Runs the date to iso date logic for this module.
+ *
+ * @param value - Input used by date to iso date.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function dateToIsoDate(value: Date | string | null) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return text(value) || null;
 }
 
+/**
+ * Runs the map education logic for this module.
+ *
+ * @param row - Input used by map education.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function mapEducation(row: EducationRow): ProctorEducation {
   return {
     degree: text(row.degree_name),
@@ -291,6 +451,13 @@ function mapEducation(row: EducationRow): ProctorEducation {
   };
 }
 
+/**
+ * Runs the map proctor logic for this module.
+ *
+ * @param row - Input used by map proctor.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function mapProctor(row: ProctorRow): ProctorRecord {
   const firstName = text(row.first_name);
   const lastName = text(row.last_name);
@@ -328,6 +495,13 @@ function mapProctor(row: ProctorRow): ProctorRecord {
   };
 }
 
+/**
+ * Gets proctor ratings for this flow.
+ *
+ * @param proctorId - Input used by get proctor ratings.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getProctorRatings(proctorId: number) {
   const result = await pool.query<RatingRow>(
     `
@@ -366,6 +540,13 @@ async function getProctorRatings(proctorId: number) {
   };
 }
 
+/**
+ * Gets proctor educations for this flow.
+ *
+ * @param proctorId - Input used by get proctor educations.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getProctorEducations(proctorId: number) {
   const result = await pool.query<EducationRow>(
     `
@@ -393,6 +574,13 @@ async function getProctorEducations(proctorId: number) {
   return result.rows.map(mapEducation);
 }
 
+/**
+ * Runs the list proctors logic for this module.
+ *
+ * @param filters - Input used by list proctors.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function listProctors(filters?: ProctorListFilters) {
   const params: Array<string | Date> = [];
   const whereClauses = ["r.name = 'proctor'", "u.deleted_at IS NULL"];
@@ -594,14 +782,37 @@ type GoogleTimeZoneResponse = {
   timeZoneId?: string;
 };
 
+/**
+ * Runs the google maps api key logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function googleMapsApiKey() {
   return process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY || "";
 }
 
+/**
+ * Runs the city location query logic for this module.
+ *
+ * @param city - Input used by city location query.
+ * @param state - Input used by city location query.
+ * @param country - Input used by city location query.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function cityLocationQuery(city: string, state: string, country: string) {
   return [city, state, country].map((part) => part.trim()).filter(Boolean).join(", ");
 }
 
+/**
+ * Gets google city time zone for this flow.
+ *
+ * @param city - Input used by get google city time zone.
+ * @param state - Input used by get google city time zone.
+ * @param country - Input used by get google city time zone.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getGoogleCityTimeZone(city: string, state: string, country: string) {
   const apiKey = googleMapsApiKey();
   if (!apiKey) return null;
@@ -646,6 +857,15 @@ async function getGoogleCityTimeZone(city: string, state: string, country: strin
   }
 }
 
+/**
+ * Runs the cache city time zone logic for this module.
+ *
+ * @param location - Input used by cache city time zone.
+ * @param timeZoneName - Input used by cache city time zone.
+ * @param source - Input used by cache city time zone.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function cacheCityTimeZone(location: CityTimezoneRow, timeZoneName: string, source: string) {
   const cityId = toNumber(location.city_id);
   const stateId = toNumber(location.state_id);
@@ -690,6 +910,15 @@ async function cacheCityTimeZone(location: CityTimezoneRow, timeZoneName: string
   );
 }
 
+/**
+ * Gets cached or resolved city time zone for this flow.
+ *
+ * @param city - Input used by get cached or resolved city time zone.
+ * @param state - Input used by get cached or resolved city time zone.
+ * @param country - Input used by get cached or resolved city time zone.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getCachedOrResolvedCityTimeZone(city: string, state: string, country: string) {
   const timezoneResult = await pool.query<CityTimezoneRow>(
     `
@@ -740,6 +969,13 @@ export async function getCachedOrResolvedCityTimeZone(city: string, state: strin
   return googleTimeZone;
 }
 
+/**
+ * Gets proctor filter options for this flow.
+ *
+ * @param filters - Input used by get proctor filter options.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getProctorFilterOptions(filters?: Pick<ProctorListFilters, "country" | "state" | "city" | "profession" | "gender">): Promise<ProctorFilterOptions> {
   const country = filters?.country?.trim();
   const state = filters?.state?.trim();
@@ -749,6 +985,13 @@ export async function getProctorFilterOptions(filters?: Pick<ProctorListFilters,
   const params: string[] = [];
   const baseWhere = ["r.name = 'proctor'", "u.deleted_at IS NULL"];
 
+  /**
+   * Runs the where without logic for this module.
+   *
+   * @param excluded - Input used by where without.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const whereWithout = (excluded: "country" | "state" | "city" | "profession" | "gender") => {
     const clauses = [...baseWhere];
     const values: string[] = [];
@@ -903,6 +1146,13 @@ export async function getProctorFilterOptions(filters?: Pick<ProctorListFilters,
   };
 }
 
+/**
+ * Gets proctor by id for this flow.
+ *
+ * @param proctorId - Input used by get proctor by id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getProctorById(proctorId: number) {
   const result = await pool.query<ProctorRow>(
     `
@@ -981,6 +1231,14 @@ export async function getProctorById(proctorId: number) {
   };
 }
 
+/**
+ * Gets proctor availability for this flow.
+ *
+ * @param proctorId - Input used by get proctor availability.
+ * @param options - Input used by get proctor availability.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getProctorAvailability(
   proctorId: number,
   options?: { start?: string | null; days?: number | null }

@@ -22,14 +22,33 @@ const STATIC_TITLES: Record<string, string> = {
   "/policies/shipping": "Service Areas",
 };
 
+/**
+ * Runs the with site name logic for this module.
+ *
+ * @param title - Input used by with site name.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function withSiteName(title: string) {
   return `${title} | ${SITE_NAME}`;
 }
 
+/**
+ * Runs the static title for path logic for this module.
+ *
+ * @param pathname - Input used by static title for path.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function staticTitleForPath(pathname: string) {
   return STATIC_TITLES[pathname] ?? SITE_NAME;
 }
 
+/**
+ * Renders the page title component.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function PageTitle() {
   const pathname = usePathname();
 

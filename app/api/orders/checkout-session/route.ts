@@ -28,10 +28,22 @@ type CheckoutSessionSelectionPayload = {
   shippingId?: unknown;
 };
 
+/**
+ * Runs the should share customer email with stripe logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function shouldShareCustomerEmailWithStripe() {
   return process.env.NODE_ENV === "production";
 }
 
+/**
+ * Gets app origin for this flow.
+ *
+ * @param request - Input used by get app origin.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function getAppOrigin(request: Request) {
   const configuredOrigin = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
   if (!configuredOrigin?.trim() && process.env.NODE_ENV === "production") {
@@ -45,15 +57,36 @@ function getAppOrigin(request: Request) {
   return parsedOrigin.origin;
 }
 
+/**
+ * Runs the read selection id logic for this module.
+ *
+ * @param value - Input used by read selection id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function readSelectionId(value: unknown) {
   const selectedId = Number(value);
   return Number.isInteger(selectedId) && selectedId > 0 ? selectedId : null;
 }
 
+/**
+ * Runs the bad request logic for this module.
+ *
+ * @param message - Input used by bad request.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+/**
+ * Handles POST requests for the /api/orders/checkout-session route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {

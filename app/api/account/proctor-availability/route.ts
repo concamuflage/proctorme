@@ -5,6 +5,11 @@ import {
   saveProctorAvailabilitySettings,
 } from "@/lib/server/proctorAvailabilityStore";
 
+/**
+ * Handles GET requests for the /api/account/proctor-availability route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const userId = await resolveSessionUserId();
   if (!userId) {
@@ -20,6 +25,13 @@ export async function GET() {
   }
 }
 
+/**
+ * Handles PUT requests for the /api/account/proctor-availability route.
+ *
+ * @param request - Input used by put.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function PUT(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {

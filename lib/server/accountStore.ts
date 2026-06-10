@@ -5,11 +5,24 @@ type QueryableClient = {
   query: typeof pool.query;
 };
 
+/**
+ * Runs the ensure account deletion columns logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function ensureAccountDeletionColumns() {
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE");
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_email TEXT");
 }
 
+/**
+ * Runs the has retained records logic for this module.
+ *
+ * @param client - Input used by has retained records.
+ * @param userId - Input used by has retained records.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function hasRetainedRecords(client: QueryableClient, userId: number) {
   const result = await client.query(
     `
@@ -30,10 +43,26 @@ async function hasRetainedRecords(client: QueryableClient, userId: number) {
   return result.rows[0]?.has_orders === true;
 }
 
+/**
+ * Runs the delete ephemeral account data logic for this module.
+ *
+ * @param client - Input used by delete ephemeral account data.
+ * @param userId - Input used by delete ephemeral account data.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function deleteEphemeralAccountData(client: QueryableClient, userId: number) {
   await client.query("DELETE FROM carts WHERE user_id = $1", [userId]);
 }
 
+/**
+ * Runs the soft delete user logic for this module.
+ *
+ * @param client - Input used by soft delete user.
+ * @param userId - Input used by soft delete user.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function softDeleteUser(client: QueryableClient, userId: number) {
   await client.query(
     `
@@ -57,11 +86,26 @@ async function softDeleteUser(client: QueryableClient, userId: number) {
   );
 }
 
+/**
+ * Runs the hard delete user logic for this module.
+ *
+ * @param client - Input used by hard delete user.
+ * @param userId - Input used by hard delete user.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function hardDeleteUser(client: QueryableClient, userId: number) {
   await client.query("DELETE FROM stripe_checkout_sessions WHERE user_id = $1 AND order_id IS NULL", [userId]);
   await client.query("DELETE FROM users WHERE id = $1", [userId]);
 }
 
+/**
+ * Runs the delete current user account logic for this module.
+ *
+ * @param userId - Input used by delete current user account.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function deleteCurrentUserAccount(userId: number): Promise<{ mode: DeleteAccountMode }> {
   await ensureAccountDeletionColumns();
 

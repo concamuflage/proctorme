@@ -34,6 +34,11 @@ import { getStripeServerClient } from "@/lib/server/stripe";
 // Ensure this route runs in Node.js runtime (required for Stripe SDK and raw body access)
 export const runtime = "nodejs";
 
+/**
+ * Gets webhook secret for this flow.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function getWebhookSecret() {
   // Read webhook signing secret used to verify Stripe signatures
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -44,11 +49,25 @@ function getWebhookSecret() {
 }
 
 // Converts Unix timestamp (seconds) to JavaScript Date, returns null if invalid
+/**
+ * Converts a value to date or null.
+ *
+ * @param value - Input used by to date or null.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toDateOrNull(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? new Date(value * 1000) : null;
 }
 
 // Fetches checkout session with expanded fields (payment intent, charge, discounts)
+/**
+ * Runs the retrieve checkout session with discounts logic for this module.
+ *
+ * @param session - Input used by retrieve checkout session with discounts.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function retrieveCheckoutSessionWithDiscounts(session: Stripe.Checkout.Session) {
   // Re-fetch the session with expanded fields to avoid additional API calls later
   return getStripeServerClient().checkout.sessions.retrieve(session.id, {
@@ -61,6 +80,13 @@ async function retrieveCheckoutSessionWithDiscounts(session: Stripe.Checkout.Ses
 }
 
 // Retrieves promotion code details associated with the checkout session (if any)
+/**
+ * Runs the retrieve promotion code for session logic for this module.
+ *
+ * @param session - Input used by retrieve promotion code for session.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function retrievePromotionCodeForSession(session: Stripe.Checkout.Session) {
   // Extract promotion code id (if present) from session
   const promotionCodeId = readStripePromotionCodeIdFromCheckoutSession(session);
@@ -77,6 +103,13 @@ async function retrievePromotionCodeForSession(session: Stripe.Checkout.Session)
 // - returning null if no valid payment intent exists
 // This ensures downstream logic always works with a complete PaymentIntent object
 // Retrieves PaymentIntent object, handling both expanded and non-expanded cases
+/**
+ * Runs the retrieve payment intent for session logic for this module.
+ *
+ * @param session - Input used by retrieve payment intent for session.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function retrievePaymentIntentForSession(session: Stripe.Checkout.Session) {
   // Handle both expanded object and string id forms of payment_intent
   if (!session.payment_intent) {
@@ -99,6 +132,14 @@ async function retrievePaymentIntentForSession(session: Stripe.Checkout.Session)
 }
 
 // Non-blocking email: failures are logged but do not break webhook processing
+/**
+ * Sends invoice email for order for this flow.
+ *
+ * @param userId - Input used by send invoice email for order.
+ * @param orderId - Input used by send invoice email for order.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function sendInvoiceEmailForOrder(userId: number, orderId: number) {
   try {
     const invoicePayload = await getInvoicePayloadForOrder(userId, orderId);
@@ -119,6 +160,14 @@ async function sendInvoiceEmailForOrder(userId: number, orderId: number) {
 
 // Main happy-path handler for successful payments
 // Performs validation, order finalization, payment recording, and email sending
+/**
+ * Records successful checkout session for this flow.
+ *
+ * @param stripeEventId - Input used by record successful checkout session.
+ * @param checkoutSession - Input used by record successful checkout session.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function recordSuccessfulCheckoutSession(
   stripeEventId: string,
   checkoutSession: Stripe.Checkout.Session
@@ -185,6 +234,13 @@ async function recordSuccessfulCheckoutSession(
 }
 
 // Entry point for all Stripe webhook events
+/**
+ * Handles POST requests for the /api/stripe/webhook route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   // Validate presence of Stripe signature header
   const signature = request.headers.get("stripe-signature");

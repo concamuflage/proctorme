@@ -1,5 +1,8 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
+/**
+ * Represents the role choice page abstraction used by this project.
+ */
 export class RoleChoicePage {
   readonly page: Page;
   readonly heading: Locator;
@@ -9,6 +12,11 @@ export class RoleChoicePage {
     this.heading = page.getByRole("heading", { name: "What do you want to do?" });
   }
 
+  /**
+   * Runs the wait for loaded logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async waitForLoaded() {
     await expect(this.page).toHaveURL(/\/account\/role-choice/, { timeout: 15_000 });
     await expect(this.heading).toBeVisible();

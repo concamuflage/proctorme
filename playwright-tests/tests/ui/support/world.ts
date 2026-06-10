@@ -9,6 +9,9 @@ import { closeUiDriver, createUiDriver, saveUiFailureArtifacts, type UiDriver } 
 // Cucumber creates one World object per scenario.
 // This class stores scenario-specific Playwright state and test data so steps
 // can share them through `this`.
+/**
+ * Represents the ui world abstraction used by this project.
+ */
 export class UiWorld {
   // Base URL for relative page.goto calls. Override with PLAYWRIGHT_BASE_URL
   // when running against staging or another local port.

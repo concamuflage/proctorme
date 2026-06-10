@@ -49,24 +49,50 @@ type ReviewOptions = {
 const INPUT_CLASS = "w-full rounded-lg border border-zinc-200 bg-white px-3 py-1 text-sm leading-5 text-zinc-900";
 const CUSTOM_INPUT_CLASS = "border-amber-300 bg-amber-50 ring-1 ring-amber-200";
 
+/**
+ * Runs the diploma href logic for this module.
+ *
+ * @param url - Input used by diploma href.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function diplomaHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/admin/proctor-applications/diploma-file?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Runs the profile image href logic for this module.
+ *
+ * @param url - Input used by profile image href.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function profileImageHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/admin/proctor-applications/profile-image-file?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Runs the government id href logic for this module.
+ *
+ * @param url - Input used by government id href.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function governmentIdHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/admin/proctor-applications/government-id-file?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Renders the /admin/proctor-applications page.
+ *
+ * @returns The page UI.
+ */
 export default function AdminProctorApplicationsPage() {
   const [applications, setApplications] = useState<ProctorApplication[]>([]);
   const [drafts, setDrafts] = useState<Record<number, ProctorApplication>>({});
@@ -82,6 +108,11 @@ export default function AdminProctorApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  /**
+   * Loads applications needed by this flow.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function loadApplications() {
     setLoading(true);
     setError(null);
@@ -127,6 +158,15 @@ export default function AdminProctorApplicationsPage() {
     void loadApplications();
   }, []);
 
+  /**
+   * Updates draft while preserving the surrounding form state.
+   *
+   * @param applicationId - Input used by update draft.
+   * @param field - Input used by update draft.
+   * @param value - Input used by update draft.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateDraft(applicationId: number, field: keyof ProctorApplication, value: string | number | string[]) {
     setDrafts((current) => ({
       ...current,
@@ -137,6 +177,16 @@ export default function AdminProctorApplicationsPage() {
     }));
   }
 
+  /**
+   * Updates education while preserving the surrounding form state.
+   *
+   * @param applicationId - Input used by update education.
+   * @param index - Input used by update education.
+   * @param field - Input used by update education.
+   * @param value - Input used by update education.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateEducation(applicationId: number, index: number, field: "degree" | "school" | "major" | "startMonth" | "endMonth" | "schoolEmail" | "schoolEmailVerificationStatus", value: string) {
     setDrafts((current) => ({
       ...current,
@@ -149,6 +199,16 @@ export default function AdminProctorApplicationsPage() {
     }));
   }
 
+  /**
+   * Updates education boolean while preserving the surrounding form state.
+   *
+   * @param applicationId - Input used by update education boolean.
+   * @param index - Input used by update education boolean.
+   * @param field - Input used by update education boolean.
+   * @param value - Input used by update education boolean.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateEducationBoolean(applicationId: number, index: number, field: "educationVerificationAuthorized", value: boolean) {
     setDrafts((current) => ({
       ...current,
@@ -161,6 +221,14 @@ export default function AdminProctorApplicationsPage() {
     }));
   }
 
+  /**
+   * Runs the review logic for this module.
+   *
+   * @param applicationId - Input used by review.
+   * @param action - Input used by review.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async function review(applicationId: number, action: "approve" | "reject") {
     setBusyId(applicationId);
     setError(null);
@@ -179,6 +247,14 @@ export default function AdminProctorApplicationsPage() {
     await loadApplications();
   }
 
+  /**
+   * Checks whether custom value is true for this flow.
+   *
+   * @param value - Input used by is custom value.
+   * @param options - Input used by is custom value.
+   *
+   * @returns True when the value satisfies the check.
+   */
   function isCustomValue(value: string | undefined, options: string[]) {
     const normalizedValue = (value || "").trim().toLowerCase();
     if (!normalizedValue) return false;
@@ -421,6 +497,13 @@ export default function AdminProctorApplicationsPage() {
   );
 }
 
+/**
+ * Renders the form section component.
+ *
+ * @param title, children - Input used by form section.
+ *
+ * @returns The rendered UI for this component.
+ */
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="grid gap-4 border-t border-zinc-100 pt-6 first:border-t-0 first:pt-0">
@@ -430,6 +513,13 @@ function FormSection({ title, children }: { title: string; children: React.React
   );
 }
 
+/**
+ * Renders the field component.
+ *
+ * @param label, children, className = "" - Input used by field.
+ *
+ * @returns The rendered UI for this component.
+ */
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`grid gap-1 text-sm font-medium text-zinc-700 ${className}`}>
@@ -439,17 +529,44 @@ function Field({ label, children, className = "" }: { label: string; children: R
   );
 }
 
+/**
+ * Runs the school email status text logic for this module.
+ *
+ * @param status - Input used by school email status text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function schoolEmailStatusText(status: string) {
   if (status === "verified") return "Email verified";
   if (status === "pending") return "Email pending";
   return "Email not provided";
 }
 
+/**
+ * Runs the fit width logic for this module.
+ *
+ * @param value - Input used by fit width.
+ * @param minCh - Input used by fit width.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function fitWidth(value: string, minCh: number) {
   const length = Math.max(minCh, value.length + 4);
   return { width: `min(${length}ch, 100%)` };
 }
 
+/**
+ * Renders the text fit input component.
+ *
+ * @param value,
+  onChange,
+  type = "text",
+  placeholder,
+  minCh = 16,
+  fixedWidth = false, - Input used by text fit input.
+ *
+ * @returns The rendered UI for this component.
+ */
 function TextFitInput({
   value,
   onChange,
@@ -477,6 +594,16 @@ function TextFitInput({
   );
 }
 
+/**
+ * Renders the review input component.
+ *
+ * @param value,
+  onChange,
+  isCustom,
+  minCh = 12, - Input used by review input.
+ *
+ * @returns The rendered UI for this component.
+ */
 function ReviewInput({
   value,
   onChange,
@@ -505,6 +632,16 @@ function ReviewInput({
   );
 }
 
+/**
+ * Renders the review select component.
+ *
+ * @param value,
+  onChange,
+  options,
+  isCustom, - Input used by review select.
+ *
+ * @returns The rendered UI for this component.
+ */
 function ReviewSelect({
   value,
   onChange,

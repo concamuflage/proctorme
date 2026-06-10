@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/proctor";
 
+/**
+ * Renders the footer component.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function Footer() {
   return (
     <footer className="border-t border-zinc-200 bg-zinc-50">

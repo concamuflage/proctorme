@@ -38,6 +38,13 @@ type PdfCommand = string;
 const BUSINESS_EMAIL = "info@proctorme.shop";
 const BUSINESS_WEBSITE = "www.proctorme.shop";
 
+/**
+ * Converts a value to pdf safe text.
+ *
+ * @param value - Input used by to pdf safe text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toPdfSafeText(value: string) {
   return value
     .normalize("NFKD")
@@ -47,10 +54,25 @@ function toPdfSafeText(value: string) {
     .replace(/\)/g, "\\)");
 }
 
+/**
+ * Formats usd for display.
+ *
+ * @param value - Input used by format usd.
+ *
+ * @returns The formatted display value.
+ */
 function formatUsd(value: number) {
   return `$${value.toFixed(2)}`;
 }
 
+/**
+ * Runs the estimate text width logic for this module.
+ *
+ * @param text - Input used by estimate text width.
+ * @param fontSize - Input used by estimate text width.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function estimateTextWidth(text: string, fontSize: number) {
   let units = 0;
   for (const char of text) {
@@ -72,6 +94,15 @@ function estimateTextWidth(text: string, fontSize: number) {
   return units * fontSize;
 }
 
+/**
+ * Runs the wrap text logic for this module.
+ *
+ * @param text - Input used by wrap text.
+ * @param maxWidth - Input used by wrap text.
+ * @param fontSize - Input used by wrap text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function wrapText(text: string, maxWidth: number, fontSize: number) {
   const words = text.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return [""];
@@ -99,6 +130,13 @@ function wrapText(text: string, maxWidth: number, fontSize: number) {
   return lines;
 }
 
+/**
+ * Formats address for display.
+ *
+ * @param address - Input used by format address.
+ *
+ * @returns The formatted display value.
+ */
 function formatAddress(address: InvoiceAddress) {
   const cityLine = [address.city, address.state, address.zipCode]
     .map((part) => part.trim())
@@ -110,6 +148,16 @@ function formatAddress(address: InvoiceAddress) {
     .filter(Boolean);
 }
 
+/**
+ * Runs the pdf text logic for this module.
+ *
+ * @param x - Input used by pdf text.
+ * @param y - Input used by pdf text.
+ * @param text - Input used by pdf text.
+ * @param options - Input used by pdf text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function pdfText(x: number, y: number, text: string, options?: { size?: number; font?: "F1" | "F2"; color?: [number, number, number] }) {
   const size = options?.size ?? 12;
   const font = options?.font ?? "F1";
@@ -124,10 +172,33 @@ function pdfText(x: number, y: number, text: string, options?: { size?: number; 
   ].join("\n");
 }
 
+/**
+ * Runs the pdf line logic for this module.
+ *
+ * @param x1 - Input used by pdf line.
+ * @param y1 - Input used by pdf line.
+ * @param x2 - Input used by pdf line.
+ * @param y2 - Input used by pdf line.
+ * @param color - Input used by pdf line.
+ * @param width - Input used by pdf line.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function pdfLine(x1: number, y1: number, x2: number, y2: number, color: [number, number, number], width = 1) {
   return [`${width} w`, `${color[0]} ${color[1]} ${color[2]} RG`, `${x1} ${y1} m`, `${x2} ${y2} l`, "S"].join("\n");
 }
 
+/**
+ * Runs the pdf rect logic for this module.
+ *
+ * @param x - Input used by pdf rect.
+ * @param y - Input used by pdf rect.
+ * @param width - Input used by pdf rect.
+ * @param height - Input used by pdf rect.
+ * @param options - Input used by pdf rect.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function pdfRect(x: number, y: number, width: number, height: number, options: { stroke?: [number, number, number]; fill?: [number, number, number]; radius?: number }) {
   const radius = options.radius ?? 0;
   const right = x + width;
@@ -163,6 +234,18 @@ function pdfRect(x: number, y: number, width: number, height: number, options: {
   return commands.join("\n");
 }
 
+/**
+ * Runs the draw wrapped text logic for this module.
+ *
+ * @param commands - Input used by draw wrapped text.
+ * @param x - Input used by draw wrapped text.
+ * @param startY - Input used by draw wrapped text.
+ * @param maxWidth - Input used by draw wrapped text.
+ * @param text - Input used by draw wrapped text.
+ * @param options - Input used by draw wrapped text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function drawWrappedText(commands: PdfCommand[], x: number, startY: number, maxWidth: number, text: string, options?: { size?: number; font?: "F1" | "F2"; color?: [number, number, number]; lineHeight?: number }) {
   const size = options?.size ?? 12;
   const lineHeight = options?.lineHeight ?? size + 4;
@@ -177,6 +260,18 @@ function drawWrappedText(commands: PdfCommand[], x: number, startY: number, maxW
   return y;
 }
 
+/**
+ * Runs the draw address card logic for this module.
+ *
+ * @param commands - Input used by draw address card.
+ * @param x - Input used by draw address card.
+ * @param yTop - Input used by draw address card.
+ * @param width - Input used by draw address card.
+ * @param title - Input used by draw address card.
+ * @param address - Input used by draw address card.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function drawAddressCard(commands: PdfCommand[], x: number, yTop: number, width: number, title: string, address: InvoiceAddress) {
   const height = 126;
   const y = yTop - height;
@@ -197,6 +292,14 @@ function drawAddressCard(commands: PdfCommand[], x: number, yTop: number, width:
   }
 }
 
+/**
+ * Creates invoice number for this flow.
+ *
+ * @param date - Input used by create invoice number.
+ * @param sequenceNumber - Input used by create invoice number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function createInvoiceNumber(date = new Date(), sequenceNumber?: number | string) {
   const stamp = [
     date.getUTCFullYear(),
@@ -209,6 +312,13 @@ export function createInvoiceNumber(date = new Date(), sequenceNumber?: number |
   return `PM-${stamp}${sequence}`;
 }
 
+/**
+ * Builds invoice pdf for this flow.
+ *
+ * @param payload - Input used by build invoice pdf.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function buildInvoicePdf(payload: InvoicePayload) {
   const pageWidth = 612;
   const pageHeight = 792;

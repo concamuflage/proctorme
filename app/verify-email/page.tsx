@@ -7,6 +7,11 @@ import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 type VerificationState = "loading" | "success" | "error";
 
+/**
+ * Renders the verify email page content component.
+ *
+ * @returns The rendered UI for this component.
+ */
 function VerifyEmailPageContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
@@ -26,6 +31,11 @@ function VerifyEmailPageContent() {
     const verificationToken = token;
     const controller = new AbortController();
 
+    /**
+     * Runs the verify email logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function verifyEmail() {
       const params = new URLSearchParams({
         email: verificationEmail,
@@ -81,6 +91,11 @@ function VerifyEmailPageContent() {
   );
 }
 
+/**
+ * Renders the /verify-email page.
+ *
+ * @returns The page UI.
+ */
 export default function VerifyEmailPage() {
   return (
     <Suspense fallback={null}>

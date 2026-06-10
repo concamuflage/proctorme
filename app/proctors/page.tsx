@@ -43,6 +43,13 @@ const EMPTY_FILTER_OPTIONS: ProctorFilterOptions = {
   cityTimeZone: null,
 };
 
+/**
+ * Formats location for display.
+ *
+ * @param proctor - Input used by format location.
+ *
+ * @returns The formatted display value.
+ */
 function formatLocation(proctor: ProctorApiItem) {
   return [proctor.city, proctor.state, proctor.country]
     .map((part) => (typeof part === "string" ? part.trim() : ""))
@@ -50,6 +57,11 @@ function formatLocation(proctor: ProctorApiItem) {
     .join(", ");
 }
 
+/**
+ * Converts a value to day date id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function todayDateId() {
   const date = new Date();
   const year = date.getFullYear();
@@ -58,6 +70,14 @@ function todayDateId() {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Runs the time zone offset ms logic for this module.
+ *
+ * @param date - Input used by time zone offset ms.
+ * @param timeZone - Input used by time zone offset ms.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function timeZoneOffsetMs(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -82,6 +102,15 @@ function timeZoneOffsetMs(date: Date, timeZone: string) {
   return asUtc - date.getTime();
 }
 
+/**
+ * Runs the zoned local time to utc logic for this module.
+ *
+ * @param dateId - Input used by zoned local time to utc.
+ * @param time - Input used by zoned local time to utc.
+ * @param timeZone - Input used by zoned local time to utc.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function zonedLocalTimeToUtc(dateId: string, time: string, timeZone: string) {
   const [year, month, day] = dateId.split("-").map(Number);
   const [hour, minute] = time.split(":").map(Number);
@@ -96,6 +125,17 @@ function zonedLocalTimeToUtc(dateId: string, time: string, timeZone: string) {
   return Number.isFinite(date.getTime()) ? date : null;
 }
 
+/**
+ * Runs the availability window logic for this module.
+ *
+ * @param dateId - Input used by availability window.
+ * @param startTime - Input used by availability window.
+ * @param endTime - Input used by availability window.
+ * @param city - Input used by availability window.
+ * @param cityTimeZone - Input used by availability window.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function availabilityWindow(dateId: string, startTime: string, endTime: string, city: string, cityTimeZone: string | null) {
   const hasAnyValue = Boolean(dateId || startTime || endTime);
   if (!hasAnyValue) return { startIso: null, endIso: null, error: null };
@@ -126,6 +166,17 @@ function availabilityWindow(dateId: string, startTime: string, endTime: string, 
   return { startIso: start.toISOString(), endIso: end.toISOString(), error: null };
 }
 
+/**
+ * Renders the filter select component.
+ *
+ * @param id,
+  label,
+  value,
+  options,
+  onChange, - Input used by filter select.
+ *
+ * @returns The rendered UI for this component.
+ */
 function FilterSelect({
   id,
   label,
@@ -159,6 +210,11 @@ function FilterSelect({
   );
 }
 
+/**
+ * Renders the proctors page content component.
+ *
+ * @returns The rendered UI for this component.
+ */
 function ProctorsPageContent() {
   const [proctorsData, setProctorsData] = useState<ProctorApiItem[]>([]);
   const [filterOptions, setFilterOptions] = useState<ProctorFilterOptions>(EMPTY_FILTER_OPTIONS);
@@ -192,6 +248,11 @@ function ProctorsPageContent() {
   useEffect(() => {
     const controller = new AbortController();
 
+    /**
+     * Loads filter options needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadFilterOptions() {
       setFilterOptionsLoading(true);
       try {
@@ -249,6 +310,11 @@ function ProctorsPageContent() {
   useEffect(() => {
     const controller = new AbortController();
 
+    /**
+     * Fetches proctors from the relevant API.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     const fetchProctors = async () => {
       if (availabilityFilter.error) {
         setError(availabilityFilter.error);
@@ -324,6 +390,11 @@ function ProctorsPageContent() {
     }));
   }, [proctorsData]);
 
+  /**
+   * Runs the reset filters logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const resetFilters = () => {
     setCountryFilter("");
     setStateFilter("");
@@ -521,6 +592,11 @@ function ProctorsPageContent() {
   );
 }
 
+/**
+ * Renders the /proctors page.
+ *
+ * @returns The page UI.
+ */
 export default function ProctorsPage() {
   return (
     <Suspense fallback={null}>

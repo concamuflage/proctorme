@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { requireAdminUserId } from "@/lib/server/sessionUser";
 import { listOrganizationApplications } from "@/lib/server/organizationApplicationStore";
 
+/**
+ * Handles GET requests for the /api/admin/organization-applications route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const adminUserId = await requireAdminUserId();
   if (!adminUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

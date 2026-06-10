@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { resolveSessionUserId } from "@/lib/server/sessionUser";
 import { listProfileChangeRequestsForUser, submitProfileChangeRequest } from "@/lib/server/profileChangeRequestStore";
 
+/**
+ * Handles GET requests for the /api/account/profile-change-requests route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const userId = await resolveSessionUserId();
   if (!userId) {
@@ -17,6 +22,13 @@ export async function GET() {
   }
 }
 
+/**
+ * Handles POST requests for the /api/account/profile-change-requests route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {

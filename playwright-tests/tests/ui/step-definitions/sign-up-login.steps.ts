@@ -17,6 +17,13 @@ const loginPages = new WeakMap<UiWorld, LoginPage>();
 const verifyEmailPages = new WeakMap<UiWorld, VerifyEmailPage>();
 const roleChoicePages = new WeakMap<UiWorld, RoleChoicePage>();
 
+/**
+ * Runs the signup page logic for this module.
+ *
+ * @param world - Input used by signup page.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function signupPage(world: UiWorld) {
   assert.ok(world.page, "Page was not created.");
   let page = signupPages.get(world);
@@ -27,6 +34,13 @@ function signupPage(world: UiWorld) {
   return page;
 }
 
+/**
+ * Runs the login page logic for this module.
+ *
+ * @param world - Input used by login page.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function loginPage(world: UiWorld) {
   assert.ok(world.page, "Page was not created.");
   let page = loginPages.get(world);
@@ -37,6 +51,13 @@ function loginPage(world: UiWorld) {
   return page;
 }
 
+/**
+ * Runs the verify email page logic for this module.
+ *
+ * @param world - Input used by verify email page.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function verifyEmailPage(world: UiWorld) {
   assert.ok(world.page, "Page was not created.");
   let page = verifyEmailPages.get(world);
@@ -47,6 +68,13 @@ function verifyEmailPage(world: UiWorld) {
   return page;
 }
 
+/**
+ * Runs the role choice page logic for this module.
+ *
+ * @param world - Input used by role choice page.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function roleChoicePage(world: UiWorld) {
   assert.ok(world.page, "Page was not created.");
   let page = roleChoicePages.get(world);

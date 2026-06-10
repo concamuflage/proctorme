@@ -45,12 +45,26 @@ type EducationFieldsProps = {
   uploadingEducationIndex: number | null;
 };
 
+/**
+ * Runs the diploma href logic for this module.
+ *
+ * @param url - Input used by diploma href.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function diplomaHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/account/proctor-application/diploma-file?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Renders the field component.
+ *
+ * @param label, children - Input used by field.
+ *
+ * @returns The rendered UI for this component.
+ */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="grid gap-2 text-sm font-medium text-zinc-700">
@@ -60,6 +74,24 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+/**
+ * Renders the education fields component.
+ *
+ * @param degreeOptions,
+  education,
+  inputClassName,
+  majorOptions,
+  onAddEducation,
+  onBooleanChange,
+  onChange,
+  onDiplomaUpload,
+  onRemoveEducation,
+  schoolOptions,
+  siteName,
+  uploadingEducationIndex, - Input used by education fields.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function EducationFields({
   degreeOptions,
   education,
@@ -74,6 +106,14 @@ export default function EducationFields({
   siteName,
   uploadingEducationIndex,
 }: EducationFieldsProps) {
+  /**
+   * Updates degree while preserving the surrounding form state.
+   *
+   * @param index - Input used by update degree.
+   * @param value - Input used by update degree.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   function updateDegree(index: number, value: string) {
     onChange(index, "degree", value);
   }

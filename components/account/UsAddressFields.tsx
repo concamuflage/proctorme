@@ -26,6 +26,13 @@ type UsAddressFieldsProps = {
   zipCode: string;
 };
 
+/**
+ * Renders the field component.
+ *
+ * @param label, children, className = "" - Input used by field.
+ *
+ * @returns The rendered UI for this component.
+ */
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`grid gap-2 text-sm font-medium text-zinc-700 ${className}`}>
@@ -35,6 +42,28 @@ function Field({ label, children, className = "" }: { label: string; children: R
   );
 }
 
+/**
+ * Renders the us address fields component.
+ *
+ * @param city,
+  cityOptions,
+  country = "United States",
+  customCity,
+  gridClassName = "grid gap-4 md:grid-cols-4",
+  inputClassName,
+  onCityChange,
+  onCustomCityChange,
+  onStateChange,
+  onStreetChange,
+  onZipCodeChange,
+  state,
+  stateOptions,
+  street,
+  streetFieldClassName = "md:col-span-2",
+  zipCode, - Input used by us address fields.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function UsAddressFields({
   city,
   cityOptions,

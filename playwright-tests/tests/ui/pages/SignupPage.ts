@@ -8,6 +8,9 @@ type SignupDetails = {
   confirmPassword?: string;
 };
 
+/**
+ * Represents the signup page abstraction used by this project.
+ */
 export class SignupPage {
   readonly page: Page;
   readonly heading: Locator;
@@ -37,30 +40,77 @@ export class SignupPage {
     this.signInLink = page.getByRole("link", { name: "Sign in" });
   }
 
+  /**
+   * Runs the goto logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async goto() {
     await this.page.goto("/signup");
   }
 
+  /**
+   * Runs the fill first name logic for this module.
+   *
+   * @param firstName - Input used by fill first name.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async fillFirstName(firstName: string) {
     await this.firstNameInput.fill(firstName);
   }
 
+  /**
+   * Runs the fill last name logic for this module.
+   *
+   * @param lastName - Input used by fill last name.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async fillLastName(lastName: string) {
     await this.lastNameInput.fill(lastName);
   }
 
+  /**
+   * Runs the fill email logic for this module.
+   *
+   * @param email - Input used by fill email.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async fillEmail(email: string) {
     await this.emailInput.fill(email);
   }
 
+  /**
+   * Runs the fill password logic for this module.
+   *
+   * @param password - Input used by fill password.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async fillPassword(password: string) {
     await this.passwordInput.fill(password);
   }
 
+  /**
+   * Runs the fill confirm password logic for this module.
+   *
+   * @param confirmPassword - Input used by fill confirm password.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async fillConfirmPassword(confirmPassword: string) {
     await this.confirmPasswordInput.fill(confirmPassword);
   }
 
+  /**
+   * Runs the fill form logic for this module.
+   *
+   * @param details - Input used by fill form.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async fillForm(details: SignupDetails) {
     await this.fillFirstName(details.firstName);
     await this.fillLastName(details.lastName);
@@ -69,15 +119,32 @@ export class SignupPage {
     await this.fillConfirmPassword(details.confirmPassword ?? details.password);
   }
 
+  /**
+   * Runs the submit logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async submit() {
     await this.submitButton.click();
   }
 
+  /**
+   * Runs the signup logic for this module.
+   *
+   * @param details - Input used by signup.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async signup(details: SignupDetails) {
     await this.fillForm(details);
     await this.submit();
   }
 
+  /**
+   * Runs the resend verification email logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   async resendVerificationEmail() {
     await this.resendVerificationButton.click();
   }

@@ -3,10 +3,24 @@ import { getServerSession } from "next-auth";
 import pool from "@/lib/server/database/pool";
 import { authOptions } from "@/lib/auth";
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Converts a value to iso string.
+ *
+ * @param value - Input used by to iso string.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toIsoString(value: unknown) {
   if (value == null) {
     return null;
@@ -59,6 +73,14 @@ type RouteContext = {
   }>;
 };
 
+/**
+ * Handles GET requests for the /api/profile/orders/:orderId route.
+ *
+ * @param _request - Input used by get.
+ * @param context - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(_request: Request, context: RouteContext) {
   const session = await getServerSession(authOptions);
   const userId =

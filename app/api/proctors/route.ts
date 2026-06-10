@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
 import { listProctors } from "@/lib/server/proctorStore";
 
+/**
+ * Parses date time param from an external value.
+ *
+ * @param value - Input used by parse date time param.
+ *
+ * @returns The parsed value, or null when parsing fails.
+ */
 function parseDateTimeParam(value: string | null) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isFinite(date.getTime()) ? date : null;
 }
 
+/**
+ * Handles GET requests for the /api/proctors route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

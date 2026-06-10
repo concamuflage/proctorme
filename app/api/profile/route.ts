@@ -3,6 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getProfile, getUserIdByEmail, updateProfile } from "@/lib/server/profileStore";
 
+/**
+ * Resolves session user id from the available session or request context.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function resolveSessionUserId() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -21,6 +26,11 @@ async function resolveSessionUserId() {
   return { session, userId: null };
 }
 
+/**
+ * Handles GET requests for the /api/profile route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const { userId } = await resolveSessionUserId();
   if (!userId) {
@@ -37,6 +47,13 @@ export async function GET() {
   }
 }
 
+/**
+ * Handles POST requests for the /api/profile route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const { userId } = await resolveSessionUserId();
   if (!userId) {
@@ -54,10 +71,24 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * Handles PUT requests for the /api/profile route.
+ *
+ * @param request - Input used by put.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function PUT(request: Request) {
   return POST(request);
 }
 
+/**
+ * Handles DELETE requests for the /api/profile route.
+ *
+ * @param request - Input used by delete.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function DELETE(request: Request) {
   const { userId } = await resolveSessionUserId();
   if (!userId) {

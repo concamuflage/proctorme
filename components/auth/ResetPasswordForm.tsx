@@ -11,6 +11,13 @@ type ResetPasswordFormProps = {
   token: string;
 };
 
+/**
+ * Renders the reset password form component.
+ *
+ * @param email, token - Input used by reset password form.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -19,6 +26,13 @@ export default function ResetPasswordForm({ email, token }: ResetPasswordFormPro
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
+  /**
+   * Handles submit for this component.
+   *
+   * @param event - Input used by handle submit.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);

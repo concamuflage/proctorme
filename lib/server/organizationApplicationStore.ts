@@ -26,30 +26,72 @@ type OrganizationApplicationRow = {
   domain_verified: unknown;
 };
 
+/**
+ * Runs the text logic for this module.
+ *
+ * @param value - Input used by text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Runs the date text logic for this module.
+ *
+ * @param value - Input used by date text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function dateText(value: unknown) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString();
   return String(value);
 }
 
+/**
+ * Normalizes email into the shape this flow expects.
+ *
+ * @param value - Input used by normalize email.
+ *
+ * @returns The normalized value.
+ */
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
+/**
+ * Runs the organization domain logic for this module.
+ *
+ * @param email - Input used by organization domain.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function organizationDomain(email: string) {
   const normalized = normalizeEmail(email);
   const atIndex = normalized.lastIndexOf("@");
   return atIndex >= 0 ? normalized.slice(atIndex + 1) : "";
 }
 
+/**
+ * Normalizes input into the shape this flow expects.
+ *
+ * @param payload - Input used by normalize input.
+ *
+ * @returns The normalized value.
+ */
 function normalizeInput(payload: unknown): OrganizationApplicationInput {
   const data = payload && typeof payload === "object" && !Array.isArray(payload) ? payload as Record<string, unknown> : {};
   return {
@@ -58,12 +100,26 @@ function normalizeInput(payload: unknown): OrganizationApplicationInput {
   };
 }
 
+/**
+ * Runs the validate organization application input logic for this module.
+ *
+ * @param input - Input used by validate organization application input.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function validateOrganizationApplicationInput(input: OrganizationApplicationInput) {
   if (!input.organizationName) return "Organization name is required.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.organizationEmail)) return "A valid organization email is required.";
   return null;
 }
 
+/**
+ * Runs the map application logic for this module.
+ *
+ * @param row - Input used by map application.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function mapApplication(row: OrganizationApplicationRow) {
   const applicantName = [text(row.first_name), text(row.last_name)].filter(Boolean).join(" ");
   return {
@@ -87,6 +143,14 @@ function mapApplication(row: OrganizationApplicationRow) {
   };
 }
 
+/**
+ * Runs the submit organization application logic for this module.
+ *
+ * @param userId - Input used by submit organization application.
+ * @param payload - Input used by submit organization application.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function submitOrganizationApplication(userId: number, payload: unknown) {
   const input = normalizeInput(payload);
   const validationError = validateOrganizationApplicationInput(input);
@@ -156,6 +220,13 @@ export async function submitOrganizationApplication(userId: number, payload: unk
   }
 }
 
+/**
+ * Runs the list organization applications for user logic for this module.
+ *
+ * @param userId - Input used by list organization applications for user.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function listOrganizationApplicationsForUser(userId: number) {
   const result = await pool.query<OrganizationApplicationRow>(
     `
@@ -170,6 +241,13 @@ export async function listOrganizationApplicationsForUser(userId: number) {
   return result.rows.map(mapApplication);
 }
 
+/**
+ * Gets approved organization profile for this flow.
+ *
+ * @param userId - Input used by get approved organization profile.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getApprovedOrganizationProfile(userId: number) {
   const result = await pool.query<OrganizationApplicationRow>(
     `
@@ -195,6 +273,11 @@ export async function getApprovedOrganizationProfile(userId: number) {
   return result.rows[0] ? mapApplication(result.rows[0]) : null;
 }
 
+/**
+ * Runs the list organization applications logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function listOrganizationApplications() {
   const result = await pool.query<OrganizationApplicationRow>(
     `
@@ -225,6 +308,13 @@ export async function listOrganizationApplications() {
   return result.rows.map(mapApplication);
 }
 
+/**
+ * Runs the corporate role id logic for this module.
+ *
+ * @param client - Input used by corporate role id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function corporateRoleId(client: typeof pool) {
   const result = await client.query<{ id: unknown }>(
     `
@@ -241,6 +331,13 @@ async function corporateRoleId(client: typeof pool) {
   return id;
 }
 
+/**
+ * Runs the corporate organization type id logic for this module.
+ *
+ * @param client - Input used by corporate organization type id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function corporateOrganizationTypeId(client: typeof pool) {
   const result = await client.query<{ id: unknown }>(
     "SELECT id FROM organization_type WHERE name = 'corporate' LIMIT 1"
@@ -250,6 +347,14 @@ async function corporateOrganizationTypeId(client: typeof pool) {
   return id;
 }
 
+/**
+ * Runs the upsert organization logic for this module.
+ *
+ * @param client - Input used by upsert organization.
+ * @param organizationName - Input used by upsert organization.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function upsertOrganization(client: typeof pool, organizationName: string) {
   const existing = await client.query<{ id: unknown }>(
     "SELECT id FROM organization WHERE lower(name) = lower($1) LIMIT 1",
@@ -270,6 +375,15 @@ async function upsertOrganization(client: typeof pool, organizationName: string)
   return toNumber(created.rows[0].id);
 }
 
+/**
+ * Runs the find mapped organization id logic for this module.
+ *
+ * @param client - Input used by find mapped organization id.
+ * @param organizationName - Input used by find mapped organization id.
+ * @param domain - Input used by find mapped organization id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function findMappedOrganizationId(client: typeof pool, organizationName: string, domain: string) {
   if (!domain) return null;
   const result = await client.query<{ id: unknown }>(
@@ -287,12 +401,28 @@ async function findMappedOrganizationId(client: typeof pool, organizationName: s
   return result.rows[0]?.id == null ? null : toNumber(result.rows[0].id);
 }
 
+/**
+ * Runs the organization verification expires at logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function organizationVerificationExpiresAt() {
   const expiresAt = new Date();
   expiresAt.setMonth(expiresAt.getMonth() + 6);
   return expiresAt;
 }
 
+/**
+ * Runs the activate organization user logic for this module.
+ *
+ * @param client - Input used by activate organization user.
+ * @param userId,
+    organizationId,
+    organizationEmail,
+    expiresAt, - Input used by activate organization user.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function activateOrganizationUser(
   client: typeof pool,
   {
@@ -343,6 +473,16 @@ async function activateOrganizationUser(
   );
 }
 
+/**
+ * Runs the review organization application logic for this module.
+ *
+ * @param applicationId - Input used by review organization application.
+ * @param adminUserId - Input used by review organization application.
+ * @param action - Input used by review organization application.
+ * @param note - Input used by review organization application.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function reviewOrganizationApplication(applicationId: number, adminUserId: number, action: "approve" | "reject", note = "") {
   const client = await pool.connect();
   try {

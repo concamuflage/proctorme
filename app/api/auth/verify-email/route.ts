@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifyEmailToken } from "@/lib/server/localAuthStore";
 
+/**
+ * Handles GET requests for the /api/auth/verify-email route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

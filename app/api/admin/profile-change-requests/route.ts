@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { requireAdminUserId } from "@/lib/server/sessionUser";
 import { listProfileChangeRequests } from "@/lib/server/profileChangeRequestStore";
 
+/**
+ * Handles GET requests for the /api/admin/profile-change-requests route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const adminUserId = await requireAdminUserId();
   if (!adminUserId) {

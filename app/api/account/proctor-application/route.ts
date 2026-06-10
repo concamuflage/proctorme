@@ -9,6 +9,11 @@ import {
   validateProctorApplicationInput,
 } from "@/lib/server/proctorApplicationStore";
 
+/**
+ * Handles GET requests for the /api/account/proctor-application route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const userId = await resolveSessionUserId();
   if (!userId) {
@@ -27,6 +32,13 @@ export async function GET() {
   }
 }
 
+/**
+ * Handles POST requests for the /api/account/proctor-application route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {
@@ -49,6 +61,13 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * Handles PATCH requests for the /api/account/proctor-application route.
+ *
+ * @param request - Input used by patch.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function PATCH(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {

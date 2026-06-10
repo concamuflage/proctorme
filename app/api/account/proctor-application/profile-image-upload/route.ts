@@ -9,6 +9,13 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export const runtime = "nodejs";
 
+/**
+ * Runs the extension for logic for this module.
+ *
+ * @param file - Input used by extension for.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function extensionFor(file: File) {
   const nameExtension = path.extname(file.name || "").toLowerCase();
   if ([".jpg", ".jpeg", ".png", ".webp"].includes(nameExtension)) {
@@ -21,6 +28,13 @@ function extensionFor(file: File) {
   return "";
 }
 
+/**
+ * Handles POST requests for the /api/account/proctor-application/profile-image-upload route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {

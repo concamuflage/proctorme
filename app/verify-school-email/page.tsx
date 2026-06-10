@@ -6,6 +6,11 @@ import { useSearchParams } from "next/navigation";
 
 type VerificationState = "loading" | "success" | "error";
 
+/**
+ * Renders the verify school email page content component.
+ *
+ * @returns The rendered UI for this component.
+ */
 function VerifySchoolEmailPageContent() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
@@ -29,6 +34,11 @@ function VerifySchoolEmailPageContent() {
     });
     const controller = new AbortController();
 
+    /**
+     * Runs the verify school email logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function verifySchoolEmail() {
       const response = await fetch(`/api/account/proctor-application/verify-school-email?${params.toString()}`, {
         method: "GET",
@@ -77,6 +87,11 @@ function VerifySchoolEmailPageContent() {
   );
 }
 
+/**
+ * Renders the /verify-school-email page.
+ *
+ * @returns The page UI.
+ */
 export default function VerifySchoolEmailPage() {
   return (
     <Suspense fallback={null}>

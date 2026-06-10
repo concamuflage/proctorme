@@ -10,6 +10,14 @@ type RouteContext = {
   params: Promise<{ applicationId: string }>;
 };
 
+/**
+ * Handles POST requests for the /api/admin/proctor-applications/:applicationId route.
+ *
+ * @param request - Input used by post.
+ * @param context - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request, context: RouteContext) {
   const adminUserId = await requireAdminUserId();
   if (!adminUserId) {

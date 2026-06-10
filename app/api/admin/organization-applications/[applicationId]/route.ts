@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { requireAdminUserId } from "@/lib/server/sessionUser";
 import { reviewOrganizationApplication } from "@/lib/server/organizationApplicationStore";
 
+/**
+ * Handles POST requests for the /api/admin/organization-applications/:applicationId route.
+ *
+ * @param request - Input used by post.
+ * @param context - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request, context: { params: Promise<{ applicationId: string }> }) {
   const adminUserId = await requireAdminUserId();
   if (!adminUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -81,6 +81,14 @@ const CartContext = createContext<CartContextValue | null>(null);
 // used for updating the state when various actions on the cart is taken.
 // dispatch({ type: "ADD", item }),the object parameter is the action
 
+/**
+ * Runs the cart reducer logic for this module.
+ *
+ * @param state - Input used by cart reducer.
+ * @param action - Input used by cart reducer.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function cartReducer(state: CartState, action: CartAction): CartState {
   // Reducer function updates cart state based on action type and payload
   switch (action.type) {
@@ -155,6 +163,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 // </CartContext.Provider>
 
 
+/**
+ * Renders the cart provider component.
+ *
+ * @param children - Input used by cart provider.
+ *
+ * @returns The rendered UI for this component.
+ */
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   // children represents nested components that will have access to the cart context
@@ -183,6 +198,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false;
 
+    /**
+     * Runs the hydrate cart logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     const hydrateCart = async () => {
       if (!session?.user) {
         cartHydrated.current = false;
@@ -267,6 +287,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false;
 
+    /**
+     * Runs the persist cart logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     const persistCart = async () => {
       try {
         const response = await fetch("/api/cart", {
@@ -313,6 +338,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false;
 
+    /**
+     * Runs the sync cart proctors logic for this module.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     const syncCartProctors = async () => {
       try {
         const proctors = await Promise.all(
@@ -449,6 +479,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 
 
+/**
+ * Runs the use cart logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function useCart() {
   //“Give me the current value provided by the nearest <CartContext.Provider> above me in the component tree.”
   // const CartContext = createContext<CartContextValue | null>(null);

@@ -36,24 +36,57 @@ type FindVerificationEmailOptions = {
 
 const verificationLinkPattern = /https?:\/\/[^\s"'<>]+\/verify-email\?[^\s"'<>]+/g;
 
+/**
+ * Requires d env value before allowing this flow to continue.
+ *
+ * @param name - Input used by required env value.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function requiredEnvValue(name: string) {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required environment value: ${name}`);
   return value;
 }
 
+/**
+ * Runs the expected resend from email logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export function expectedResendFromEmail() {
   return requiredEnvValue("RESEND_FROM_EMAIL");
 }
 
+/**
+ * Runs the encode query logic for this module.
+ *
+ * @param value - Input used by encode query.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function encodeQuery(value: string) {
   return encodeURIComponent(value);
 }
 
+/**
+ * Runs the quote gmail term logic for this module.
+ *
+ * @param value - Input used by quote gmail term.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function quoteGmailTerm(value: string) {
   return `"${value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}"`;
 }
 
+/**
+ * Runs the decode html entities logic for this module.
+ *
+ * @param value - Input used by decode html entities.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function decodeHtmlEntities(value: string) {
   return value
     .replaceAll("&amp;", "&")
@@ -63,10 +96,25 @@ function decodeHtmlEntities(value: string) {
     .replaceAll("&#39;", "'");
 }
 
+/**
+ * Runs the base64 url decode logic for this module.
+ *
+ * @param value - Input used by base64 url decode.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function base64UrlDecode(value: string) {
   return Buffer.from(value, "base64url").toString("utf8");
 }
 
+/**
+ * Runs the collect body parts logic for this module.
+ *
+ * @param part - Input used by collect body parts.
+ * @param body - Input used by collect body parts.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function collectBodyParts(part: GmailPart | undefined, body: string[]) {
   if (!part) return;
 
@@ -79,17 +127,37 @@ function collectBodyParts(part: GmailPart | undefined, body: string[]) {
   }
 }
 
+/**
+ * Runs the message body logic for this module.
+ *
+ * @param message - Input used by message body.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function messageBody(message: GmailMessage) {
   const body: string[] = [];
   collectBodyParts(message.payload, body);
   return body.join("\n");
 }
 
+/**
+ * Runs the header value logic for this module.
+ *
+ * @param message - Input used by header value.
+ * @param headerName - Input used by header value.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function headerValue(message: GmailMessage, headerName: string) {
   const header = message.payload?.headers?.find((item) => item.name.toLowerCase() === headerName.toLowerCase());
   return header?.value ?? "";
 }
 
+/**
+ * Runs the access token logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function accessToken() {
   const configuredAccessToken = process.env.GMAIL_ACCESS_TOKEN;
   if (configuredAccessToken) return configuredAccessToken;
@@ -118,6 +186,14 @@ async function accessToken() {
   return String(payload.access_token);
 }
 
+/**
+ * Gets json for this flow.
+ *
+ * @param url - Input used by get json.
+ * @param token - Input used by get json.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getJson<T>(url: string, token: string): Promise<T> {
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -131,6 +207,13 @@ async function getJson<T>(url: string, token: string): Promise<T> {
   return payload as T;
 }
 
+/**
+ * Runs the extract verification link logic for this module.
+ *
+ * @param message - Input used by extract verification link.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function extractVerificationLink(message: GmailMessage) {
   const body = messageBody(message);
   for (const match of body.matchAll(verificationLinkPattern)) {
@@ -143,10 +226,25 @@ function extractVerificationLink(message: GmailMessage) {
   return null;
 }
 
+/**
+ * Runs the sleep logic for this module.
+ *
+ * @param ms - Input used by sleep.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Runs the find verification email once logic for this module.
+ *
+ * @param token - Input used by find verification email once.
+ * @param recipientEmail - Input used by find verification email once.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function findVerificationEmailOnce(
   token: string,
   recipientEmail: string
@@ -193,6 +291,14 @@ async function findVerificationEmailOnce(
   return null;
 }
 
+/**
+ * Runs the find latest verification email logic for this module.
+ *
+ * @param recipientEmail - Input used by find latest verification email.
+ * @param options - Input used by find latest verification email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function findLatestVerificationEmail(
   recipientEmail: string,
   options: FindVerificationEmailOptions = {}

@@ -3,6 +3,13 @@ import { Given, Then } from "@cucumber/cucumber";
 import { expect } from "@playwright/test";
 import type { UiWorld } from "../support/world";
 
+/**
+ * Runs the escaped reg exp logic for this module.
+ *
+ * @param value - Input used by escaped reg exp.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function escapedRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

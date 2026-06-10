@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { resolveSessionUserId } from "@/lib/server/sessionUser";
 import { getVerifiedOrganizationEmailStatus, sendOrganizationEmailVerification } from "@/lib/server/organizationEmailVerification";
 
+/**
+ * Handles GET requests for the /api/account/organization-application/send-email-verification route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,6 +24,13 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * Handles POST requests for the /api/account/organization-application/send-email-verification route.
+ *
+ * @param request - Input used by post.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function POST(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

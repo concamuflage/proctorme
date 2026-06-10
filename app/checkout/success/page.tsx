@@ -17,6 +17,11 @@ const FINALIZE_REQUEST_TIMEOUT_MS = 5000;
 
 
 // Main component handling checkout success flow and UI state
+/**
+ * Renders the checkout success page content component.
+ *
+ * @returns The rendered UI for this component.
+ */
 function CheckoutSuccessPageContent() {
   // Read query parameters returned from Stripe redirect
   const searchParams = useSearchParams();
@@ -80,6 +85,11 @@ function CheckoutSuccessPageContent() {
 
     let cancelled = false;
 
+    /**
+     * Loads webhook order needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadWebhookOrder() {
       setLoading(true);
       setError(null);
@@ -232,6 +242,11 @@ function CheckoutSuccessPageContent() {
   );
 }
 
+/**
+ * Renders the /checkout/success page.
+ *
+ * @returns The page UI.
+ */
 export default function CheckoutSuccessPage() {
   return (
     <Suspense fallback={null}>

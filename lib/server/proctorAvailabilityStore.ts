@@ -17,24 +17,59 @@ type TimezoneRow = {
   timezone_name: unknown;
 };
 
+/**
+ * Runs the text logic for this module.
+ *
+ * @param value - Input used by text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Normalizes time into the shape this flow expects.
+ *
+ * @param value - Input used by normalize time.
+ *
+ * @returns The normalized value.
+ */
 function normalizeTime(value: unknown) {
   const trimmed = text(value);
   return /^\d{2}:\d{2}$/.test(trimmed) ? trimmed : "";
 }
 
+/**
+ * Runs the time to minutes logic for this module.
+ *
+ * @param value - Input used by time to minutes.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function timeToMinutes(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
 }
 
+/**
+ * Normalizes availability input into the shape this flow expects.
+ *
+ * @param payload - Input used by normalize availability input.
+ *
+ * @returns The normalized value.
+ */
 function normalizeAvailabilityInput(payload: unknown) {
   const data = typeof payload === "object" && payload !== null ? payload as Record<string, unknown> : {};
   const rows = Array.isArray(data.availability) ? data.availability : [];
@@ -59,6 +94,13 @@ function normalizeAvailabilityInput(payload: unknown) {
   return { availability };
 }
 
+/**
+ * Gets user timezone for this flow.
+ *
+ * @param userId - Input used by get user timezone.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getUserTimezone(userId: number) {
   const result = await pool.query<TimezoneRow>(
     `
@@ -74,6 +116,13 @@ async function getUserTimezone(userId: number) {
   return text(result.rows[0]?.timezone_name);
 }
 
+/**
+ * Gets proctor availability settings for this flow.
+ *
+ * @param userId - Input used by get proctor availability settings.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getProctorAvailabilitySettings(userId: number) {
   const [availabilityResult, userTimezone] = await Promise.all([
     pool.query<AvailabilityRow>(
@@ -100,6 +149,14 @@ export async function getProctorAvailabilitySettings(userId: number) {
   };
 }
 
+/**
+ * Runs the save proctor availability settings logic for this module.
+ *
+ * @param userId - Input used by save proctor availability settings.
+ * @param payload - Input used by save proctor availability settings.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function saveProctorAvailabilitySettings(userId: number, payload: unknown) {
   const roles = await getUserRoles(userId);
   if (!roles.some((role) => role.name === "proctor")) {

@@ -53,14 +53,35 @@ type EducationValues = {
   schoolEmailVerificationStatus: string;
 };
 
+/**
+ * Runs the text logic for this module.
+ *
+ * @param value - Input used by text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Runs the json object logic for this module.
+ *
+ * @param value - Input used by json object.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function jsonObject(value: unknown): Record<string, unknown> {
   if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
   if (typeof value !== "string") return {};
@@ -72,6 +93,13 @@ function jsonObject(value: unknown): Record<string, unknown> {
   }
 }
 
+/**
+ * Runs the json array logic for this module.
+ *
+ * @param value - Input used by json array.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function jsonArray(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string") return [];
@@ -83,10 +111,24 @@ function jsonArray(value: unknown): unknown[] {
   }
 }
 
+/**
+ * Runs the text array logic for this module.
+ *
+ * @param value - Input used by text array.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function textArray(value: unknown) {
   return jsonArray(value).map(text).filter(Boolean);
 }
 
+/**
+ * Normalizes address values into the shape this flow expects.
+ *
+ * @param value - Input used by normalize address values.
+ *
+ * @returns The normalized value.
+ */
 function normalizeAddressValues(value: Record<string, unknown>): AddressValues {
   return {
     street: text(value.street),
@@ -97,11 +139,25 @@ function normalizeAddressValues(value: Record<string, unknown>): AddressValues {
   };
 }
 
+/**
+ * Normalizes month into the shape this flow expects.
+ *
+ * @param value - Input used by normalize month.
+ *
+ * @returns The normalized value.
+ */
 function normalizeMonth(value: string) {
   const trimmed = value.trim();
   return /^\d{4}-\d{2}$/.test(trimmed) ? `${trimmed}-01` : null;
 }
 
+/**
+ * Normalizes education values into the shape this flow expects.
+ *
+ * @param value - Input used by normalize education values.
+ *
+ * @returns The normalized value.
+ */
 function normalizeEducationValues(value: unknown): EducationValues[] {
   const data = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   return jsonArray(data.education)
@@ -124,6 +180,13 @@ function normalizeEducationValues(value: unknown): EducationValues[] {
     }));
 }
 
+/**
+ * Runs the map request logic for this module.
+ *
+ * @param row - Input used by map request.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function mapRequest(row: ChangeRequestRow): ProfileChangeRequest {
   const firstName = text(row.first_name);
   const lastName = text(row.last_name);
@@ -142,6 +205,13 @@ function mapRequest(row: ChangeRequestRow): ProfileChangeRequest {
   };
 }
 
+/**
+ * Gets current proctor address for this flow.
+ *
+ * @param userId - Input used by get current proctor address.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getCurrentProctorAddress(userId: number): Promise<AddressValues> {
   const result = await pool.query(
     `
@@ -175,6 +245,13 @@ export async function getCurrentProctorAddress(userId: number): Promise<AddressV
   };
 }
 
+/**
+ * Gets current proctor educations for this flow.
+ *
+ * @param userId - Input used by get current proctor educations.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getCurrentProctorEducations(userId: number): Promise<EducationValues[]> {
   const result = await pool.query<{
     degree: unknown;
@@ -215,6 +292,15 @@ export async function getCurrentProctorEducations(userId: number): Promise<Educa
   }));
 }
 
+/**
+ * Runs the submit profile change request logic for this module.
+ *
+ * @param userId - Input used by submit profile change request.
+ * @param changeType - Input used by submit profile change request.
+ * @param newValues - Input used by submit profile change request.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function submitProfileChangeRequest(userId: number, changeType: ProfileChangeType, newValues: Record<string, unknown>) {
   const oldValues = changeType === "address"
     ? await getCurrentProctorAddress(userId)
@@ -245,6 +331,11 @@ export async function submitProfileChangeRequest(userId: number, changeType: Pro
   return mapRequest(result.rows[0]);
 }
 
+/**
+ * Runs the list profile change requests logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function listProfileChangeRequests() {
   const result = await pool.query<ChangeRequestRow>(
     `
@@ -261,6 +352,13 @@ export async function listProfileChangeRequests() {
   return result.rows.map(mapRequest);
 }
 
+/**
+ * Runs the list profile change requests for user logic for this module.
+ *
+ * @param userId - Input used by list profile change requests for user.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function listProfileChangeRequestsForUser(userId: number) {
   const result = await pool.query<ChangeRequestRow>(
     `
@@ -277,6 +375,14 @@ export async function listProfileChangeRequestsForUser(userId: number) {
   return result.rows.map(mapRequest);
 }
 
+/**
+ * Runs the upsert address logic for this module.
+ *
+ * @param client - Input used by upsert address.
+ * @param address - Input used by upsert address.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function upsertAddress(client: typeof pool, address: AddressValues) {
   const countryResult = await client.query<{ id: unknown }>(
     "SELECT id FROM countries WHERE country = 'United States' LIMIT 1"
@@ -317,6 +423,13 @@ async function upsertAddress(client: typeof pool, address: AddressValues) {
   return addressId;
 }
 
+/**
+ * Runs the timezone id for address logic for this module.
+ *
+ * @param address - Input used by timezone id for address.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function timezoneIdForAddress(address: AddressValues) {
   const timezoneName = await getCachedOrResolvedCityTimeZone(address.city, address.state, address.country);
   if (!timezoneName) return null;
@@ -335,11 +448,28 @@ async function timezoneIdForAddress(address: AddressValues) {
   return Number.isInteger(timezoneId) ? timezoneId : null;
 }
 
+/**
+ * Gets existing degree id for this flow.
+ *
+ * @param client - Input used by get existing degree id.
+ * @param name - Input used by get existing degree id.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function getExistingDegreeId(client: typeof pool, name: string) {
   const result = await client.query<{ id: unknown }>("SELECT id FROM degrees WHERE name = $1 LIMIT 1", [name]);
   return result.rows[0]?.id == null ? null : toNumber(result.rows[0].id);
 }
 
+/**
+ * Runs the upsert named logic for this module.
+ *
+ * @param client - Input used by upsert named.
+ * @param table - Input used by upsert named.
+ * @param name - Input used by upsert named.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function upsertNamed(client: typeof pool, table: "schools" | "majors", name: string) {
   const result = await client.query<{ id: unknown }>(
     `INSERT INTO ${table} (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
@@ -348,6 +478,15 @@ async function upsertNamed(client: typeof pool, table: "schools" | "majors", nam
   return toNumber(result.rows[0].id);
 }
 
+/**
+ * Runs the apply education request logic for this module.
+ *
+ * @param client - Input used by apply education request.
+ * @param userId - Input used by apply education request.
+ * @param values - Input used by apply education request.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function applyEducationRequest(client: typeof pool, userId: number, values: Record<string, unknown>) {
   const educations = normalizeEducationValues(values);
   if (educations.length === 0) throw new Error("Education request is incomplete.");
@@ -394,6 +533,16 @@ async function applyEducationRequest(client: typeof pool, userId: number, values
   }
 }
 
+/**
+ * Runs the review profile change request logic for this module.
+ *
+ * @param requestId - Input used by review profile change request.
+ * @param adminUserId - Input used by review profile change request.
+ * @param action - Input used by review profile change request.
+ * @param note - Input used by review profile change request.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function reviewProfileChangeRequest(requestId: number, adminUserId: number, action: "approve" | "reject", note = "") {
   const client = await pool.connect();
   try {

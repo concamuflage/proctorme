@@ -19,12 +19,26 @@ type NamedOptionRow = {
   name: string;
 };
 
+/**
+ * Runs the other last logic for this module.
+ *
+ * @param values - Input used by other last.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function otherLast(values: string[]) {
   return values
     .filter((value) => value !== "Other")
     .concat(values.includes("Other") ? ["Other"] : []);
 }
 
+/**
+ * Handles GET requests for the /api/account/proctor-application/options route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/proctor";
 
+/**
+ * Renders the /about page.
+ *
+ * @returns The page UI.
+ */
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">

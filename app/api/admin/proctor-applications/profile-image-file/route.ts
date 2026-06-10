@@ -4,6 +4,13 @@ import { requireAdminUserId } from "@/lib/server/sessionUser";
 
 export const runtime = "nodejs";
 
+/**
+ * Handles GET requests for the /api/admin/proctor-applications/profile-image-file route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   const adminUserId = await requireAdminUserId();
   if (!adminUserId) {

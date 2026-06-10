@@ -22,6 +22,11 @@ type SaveCartPayload = {
   shippingId?: number | null;
 };
 
+/**
+ * Resolves session user id from the available session or request context.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function resolveSessionUserId() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -40,6 +45,13 @@ async function resolveSessionUserId() {
   return null;
 }
 
+/**
+ * Checks whether valid payload is true for this flow.
+ *
+ * @param payload - Input used by is valid payload.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isValidPayload(payload: unknown): payload is SaveCartPayload {
   if (!payload || typeof payload !== "object") {
     return false;
@@ -73,10 +85,22 @@ function isValidPayload(payload: unknown): payload is SaveCartPayload {
   });
 }
 
+/**
+ * Checks whether valid selection id is true for this flow.
+ *
+ * @param value - Input used by is valid selection id.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isValidSelectionId(value: unknown) {
   return value == null || (Number.isInteger(Number(value)) && Number(value) > 0);
 }
 
+/**
+ * Handles GET requests for the /api/cart route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const userId = await resolveSessionUserId();
   if (!userId) {
@@ -92,6 +116,13 @@ export async function GET() {
   }
 }
 
+/**
+ * Handles PUT requests for the /api/cart route.
+ *
+ * @param request - Input used by put.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function PUT(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {

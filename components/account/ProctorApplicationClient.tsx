@@ -30,18 +30,40 @@ const COUNTRY_CURRENCY = {
   },
 } as const;
 
+/**
+ * Runs the profile image href logic for this module.
+ *
+ * @param url - Input used by profile image href.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function profileImageHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/account/proctor-application/profile-image-file?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Runs the government id href logic for this module.
+ *
+ * @param url - Input used by government id href.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function governmentIdHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/account/proctor-application/government-id-file?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Checks whether at least age is true for this flow.
+ *
+ * @param dateOfBirth - Input used by is at least age.
+ * @param age - Input used by is at least age.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isAtLeastAge(dateOfBirth: string, age: number) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return false;
   const [year, month, day] = dateOfBirth.split("-").map(Number);
@@ -53,6 +75,11 @@ function isAtLeastAge(dateOfBirth: string, age: number) {
   return birthDate.getTime() <= threshold.getTime();
 }
 
+/**
+ * Renders the proctor application client component.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProctorApplicationClient() {
   const router = useRouter();
   const { status } = useSession();
@@ -107,6 +134,11 @@ export default function ProctorApplicationClient() {
     }
 
     let cancelled = false;
+    /**
+     * Loads application needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadApplication() {
       const [applicationResponse, optionsResponse] = await Promise.all([
         fetch("/api/account/proctor-application", { cache: "no-store" }),
@@ -184,6 +216,11 @@ export default function ProctorApplicationClient() {
     }
 
     let cancelled = false;
+    /**
+     * Loads cities needed by this flow.
+     *
+     * @returns The result used by the surrounding flow.
+     */
     async function loadCities() {
       const response = await fetch(`/api/account/proctor-application/options?state=${encodeURIComponent(stateValue)}`, { cache: "no-store" });
       const payload = await response.json().catch(() => null);
@@ -205,14 +242,40 @@ export default function ProctorApplicationClient() {
     }
   }, [city, cityOptions]);
 
+  /**
+   * Updates education while preserving the surrounding form state.
+   *
+   * @param index - Input used by update education.
+   * @param field - Input used by update education.
+   * @param value - Input used by update education.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const updateEducation = (index: number, field: keyof EducationInput, value: string) => {
     setEducation((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
   };
 
+  /**
+   * Updates education boolean while preserving the surrounding form state.
+   *
+   * @param index - Input used by update education boolean.
+   * @param field - Input used by update education boolean.
+   * @param value - Input used by update education boolean.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const updateEducationBoolean = (index: number, field: "educationVerificationAuthorized", value: boolean) => {
     setEducation((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
   };
 
+  /**
+   * Runs the upload diploma logic for this module.
+   *
+   * @param index - Input used by upload diploma.
+   * @param file - Input used by upload diploma.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const uploadDiploma = async (index: number, file: File | null) => {
     if (!file) return;
     setError(null);
@@ -242,6 +305,13 @@ export default function ProctorApplicationClient() {
     ));
   };
 
+  /**
+   * Runs the upload profile image logic for this module.
+   *
+   * @param file - Input used by upload profile image.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const uploadProfileImage = async (file: File | null) => {
     if (!file) return;
     setError(null);
@@ -261,6 +331,13 @@ export default function ProctorApplicationClient() {
     setImageUrls((current) => [...current, payload.url]);
   };
 
+  /**
+   * Runs the upload government id logic for this module.
+   *
+   * @param file - Input used by upload government id.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const uploadGovernmentId = async (file: File | null) => {
     if (!file) return;
     setError(null);
@@ -288,6 +365,11 @@ export default function ProctorApplicationClient() {
     setGovernmentIdUrls((current) => [...current, payload.url]);
   };
 
+  /**
+   * Runs the validate active step logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const validateActiveStep = () => {
     const resolvedGender = isCustomGender ? customGender.trim() : gender;
     const resolvedCity = city === "Other" ? customCity.trim() : city;
@@ -338,6 +420,11 @@ export default function ProctorApplicationClient() {
     return null;
   };
 
+  /**
+   * Builds application payload for this flow.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const buildApplicationPayload = () => {
     const resolvedGender = gender === "Other" ? customGender.trim() : gender;
     const resolvedCity = city === "Other" ? customCity.trim() : city;
@@ -374,6 +461,11 @@ export default function ProctorApplicationClient() {
     };
   };
 
+  /**
+   * Runs the continue to next step logic for this module.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const continueToNextStep = async () => {
     setError(null);
     setNotice(null);
@@ -397,6 +489,13 @@ export default function ProctorApplicationClient() {
     setActiveStep((current) => Math.min(current + 1, FORM_STEPS.length - 1));
   };
 
+  /**
+   * Handles submit for this component.
+   *
+   * @param event - Input used by handle submit.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -733,6 +832,13 @@ export default function ProctorApplicationClient() {
   );
 }
 
+/**
+ * Renders the form section component.
+ *
+ * @param title, children - Input used by form section.
+ *
+ * @returns The rendered UI for this component.
+ */
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="grid gap-4 border-t border-zinc-100 pt-6 first:border-t-0 first:pt-0">
@@ -742,6 +848,13 @@ function FormSection({ title, children }: { title: string; children: React.React
   );
 }
 
+/**
+ * Renders the field component.
+ *
+ * @param label, children, className = "" - Input used by field.
+ *
+ * @returns The rendered UI for this component.
+ */
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`grid gap-2 text-sm font-medium text-zinc-700 ${className}`}>

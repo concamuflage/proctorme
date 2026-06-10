@@ -4,6 +4,13 @@ import { resolveSessionUserId } from "@/lib/server/sessionUser";
 
 export const runtime = "nodejs";
 
+/**
+ * Handles GET requests for the /api/account/proctor-application/profile-image-file route.
+ *
+ * @param request - Input used by get.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {

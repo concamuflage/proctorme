@@ -9,7 +9,7 @@ import PageTitle from "@/components/layout/PageTitle";
 import Providers from "@/app/providers";
 import { SITE_NAME } from "@/lib/proctor";
 
-const GOOGLE_TAG_ID = "G-SBD4K910T7";
+const GOOGLE_ANALYTICS_ID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID?.trim();
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,6 +26,13 @@ export const metadata: Metadata = {
   description: "Book verified proctors for in-person interview sessions.",
 };
 
+/**
+ * Renders the root layout component.
+ *
+ * @param children, - Input used by root layout.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,18 +41,22 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_TAG_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${GOOGLE_TAG_ID}');
-          `}
-        </Script>
+        {GOOGLE_ANALYTICS_ID ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GOOGLE_ANALYTICS_ID}');
+              `}
+            </Script>
+          </>
+        ) : null}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>

@@ -19,12 +19,26 @@ type ProctorCardProps = {
   proctor: Proctor;
 };
 
+/**
+ * Runs the profile image src logic for this module.
+ *
+ * @param url - Input used by profile image src.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function profileImageSrc(url: string) {
   return url.startsWith("gcs://")
     ? `/api/proctor-files/profile-image?url=${encodeURIComponent(url)}`
     : url;
 }
 
+/**
+ * Renders the proctor card component.
+ *
+ * @param proctor - Input used by proctor card.
+ *
+ * @returns The rendered UI for this component.
+ */
 export default function ProctorCard({ proctor }: ProctorCardProps) {
   const priceText = formatUsd(proctor.price);
   const initials = proctorInitials(proctor.name);

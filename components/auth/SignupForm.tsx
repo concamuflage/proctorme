@@ -83,6 +83,11 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
     }
   };
 
+  /**
+   * Handles resend verification for this component.
+   *
+   * @returns The result used by the surrounding flow.
+   */
   const handleResendVerification = async () => {
     setResending(true);
     setError(null);
@@ -119,13 +124,16 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
         Create your account
       </h1>
       <p className="mt-2 text-sm text-zinc-600">Sign up with email</p>
+      <p className="mt-2 text-xs text-zinc-500">
+        Use your legal first and last name. This should match your verification documents.
+      </p>
 
       {/* Main form. autoComplete helps password managers. */}
       <form className="mt-6 space-y-4" onSubmit={handleSubmit} autoComplete="on">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-zinc-600" htmlFor="signup-first-name">
-              First name
+              Legal first name
             </label>
             <input
               id="signup-first-name"
@@ -141,7 +149,7 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
           </div>
           <div>
             <label className="text-xs font-medium text-zinc-600" htmlFor="signup-last-name">
-              Last name
+              Legal last name
             </label>
             <input
               id="signup-last-name"

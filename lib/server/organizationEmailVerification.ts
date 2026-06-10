@@ -5,27 +5,67 @@ import { SITE_NAME } from "@/lib/proctor";
 const DEFAULT_VERIFICATION_TTL_HOURS = 72;
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
+/**
+ * Runs the text logic for this module.
+ *
+ * @param value - Input used by text.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Normalizes organization email into the shape this flow expects.
+ *
+ * @param value - Input used by normalize organization email.
+ *
+ * @returns The normalized value.
+ */
 export function normalizeOrganizationEmail(value: unknown) {
   return text(value).toLowerCase();
 }
 
+/**
+ * Runs the verification ttl hours logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function verificationTtlHours() {
   const rawValue = Number(process.env.ORGANIZATION_EMAIL_VERIFICATION_TTL_HOURS || DEFAULT_VERIFICATION_TTL_HOURS);
   return Number.isFinite(rawValue) && rawValue > 0 ? rawValue : DEFAULT_VERIFICATION_TTL_HOURS;
 }
 
+/**
+ * Runs the hash token logic for this module.
+ *
+ * @param token - Input used by hash token.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
 
+/**
+ * Normalizes app base url into the shape this flow expects.
+ *
+ * @param value - Input used by normalize app base url.
+ *
+ * @returns The normalized value.
+ */
 function normalizeAppBaseUrl(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
 }
 
+/**
+ * Checks whether localhost url is true for this flow.
+ *
+ * @param value - Input used by is localhost url.
+ *
+ * @returns True when the value satisfies the check.
+ */
 function isLocalhostUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -35,6 +75,11 @@ function isLocalhostUrl(value: string) {
   }
 }
 
+/**
+ * Runs the app base url logic for this module.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function appBaseUrl() {
   const explicitEmailUrl = normalizeAppBaseUrl(process.env.ORGANIZATION_EMAIL_VERIFICATION_APP_URL);
   if (explicitEmailUrl) return explicitEmailUrl;
@@ -51,11 +96,27 @@ function appBaseUrl() {
   return fallbackUrls[0] || "http://localhost:3000";
 }
 
+/**
+ * Builds verification link for this flow.
+ *
+ * @param email, rawToken - Input used by build verification link.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function buildVerificationLink({ email, rawToken }: { email: string; rawToken: string }) {
   const params = new URLSearchParams({ email, token: rawToken });
   return `${appBaseUrl()}/verify-organization-email?${params.toString()}`;
 }
 
+/**
+ * Sends organization email verification email for this flow.
+ *
+ * @param to,
+  organizationName,
+  verificationLink, - Input used by send organization email verification email.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function sendOrganizationEmailVerificationEmail({
   to,
   organizationName,
@@ -106,6 +167,15 @@ async function sendOrganizationEmailVerificationEmail({
   }
 }
 
+/**
+ * Sends organization email verification for this flow.
+ *
+ * @param userId,
+  organizationEmail,
+  organizationName, - Input used by send organization email verification.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function sendOrganizationEmailVerification({
   userId,
   organizationEmail,
@@ -168,6 +238,13 @@ export async function sendOrganizationEmailVerification({
   return { status: "pending", sentAt: new Date().toISOString() };
 }
 
+/**
+ * Runs the verify organization email token logic for this module.
+ *
+ * @param email, token - Input used by verify organization email token.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function verifyOrganizationEmailToken({ email, token }: { email: string; token: string }) {
   const normalizedEmail = normalizeOrganizationEmail(email);
   if (!normalizedEmail || !token) return { ok: false, message: "This organization email verification link is incomplete." };
@@ -206,6 +283,14 @@ export async function verifyOrganizationEmailToken({ email, token }: { email: st
   return { ok: true, message: "Organization email verified successfully." };
 }
 
+/**
+ * Gets verified organization email status for this flow.
+ *
+ * @param userId - Input used by get verified organization email status.
+ * @param organizationEmail - Input used by get verified organization email status.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 export async function getVerifiedOrganizationEmailStatus(userId: number, organizationEmail: string) {
   const email = normalizeOrganizationEmail(organizationEmail);
   if (!email) return null;

@@ -4,10 +4,24 @@ import pool from "@/lib/server/database/pool";
 import { authOptions } from "@/lib/auth";
 import { getUserIdByEmail } from "@/lib/server/profileStore";
 
+/**
+ * Converts a value to number.
+ *
+ * @param value - Input used by to number.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Converts a value to iso string.
+ *
+ * @param value - Input used by to iso string.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function toIsoString(value: unknown) {
   if (value == null) {
     return null;
@@ -49,6 +63,11 @@ type ProfileOrderRow = {
   items: unknown;
 };
 
+/**
+ * Resolves session user id from the available session or request context.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 async function resolveSessionUserId() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -67,6 +86,11 @@ async function resolveSessionUserId() {
   return null;
 }
 
+/**
+ * Handles GET requests for the /api/profile/orders route.
+ *
+ * @returns A Next.js response for the request.
+ */
 export async function GET() {
   const userId = await resolveSessionUserId();
 

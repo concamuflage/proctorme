@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 
+/**
+ * Builds email for this flow.
+ *
+ * @returns The result used by the surrounding flow.
+ */
 function buildEmail() {
   return String.fromCharCode(
     105, 110, 102, 111, 64, 112, 114, 111, 99, 116, 111, 114, 109, 101,
@@ -9,6 +14,11 @@ function buildEmail() {
   );
 }
 
+/**
+ * Renders the /contact page.
+ *
+ * @returns The page UI.
+ */
 export default function ContactPage() {
   const [revealed, setRevealed] = useState(false);
 
