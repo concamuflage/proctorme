@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { deleteCurrentUserAccount } from "@/lib/server/accountStore";
-import { loginUser } from "@/lib/server/localAuthStore";
+import { checkCredentialsInDb } from "@/lib/server/localAuthStore";
 import { getUserIdByEmail } from "@/lib/server/profileStore";
 
 /**
@@ -25,7 +25,7 @@ function badRequest(message: string) {
  * @returns The result used by the surrounding flow.
  */
 async function confirmPassword(email: string, password: string) {
-  const response = await loginUser({ email, password });
+  const response = await checkCredentialsInDb({ email, password });
   return response.status >= 200 && response.status < 300;
 }
 
@@ -46,19 +46,26 @@ export async function DELETE(request: Request) {
   }
 
   const payload = await request.json().catch(() => null);
-  const password = typeof payload?.password === "string" ? payload.password : "";
+  const password =
+    typeof payload?.password === "string" ? payload.password : "";
   if (!password) {
     return badRequest("Password confirmation is required.");
   }
 
   const passwordConfirmed = await confirmPassword(email, password);
   if (!passwordConfirmed) {
-    return NextResponse.json({ error: "Password confirmation failed." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Password confirmation failed." },
+      { status: 403 },
+    );
   }
 
-  const userId = typeof sessionUserId === "number" && Number.isInteger(sessionUserId) && sessionUserId > 0
-    ? sessionUserId
-    : await getUserIdByEmail(email);
+  const userId =
+    typeof sessionUserId === "number" &&
+    Number.isInteger(sessionUserId) &&
+    sessionUserId > 0
+      ? sessionUserId
+      : await getUserIdByEmail(email);
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -72,6 +79,9 @@ export async function DELETE(request: Request) {
     });
   } catch (error) {
     console.error("account delete error:", error);
-    return NextResponse.json({ error: "Unable to delete account." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unable to delete account." },
+      { status: 500 },
+    );
   }
 }

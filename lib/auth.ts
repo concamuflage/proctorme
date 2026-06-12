@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from "next-auth"; // Type definitions for NextAuth configuration options.
 import CredentialsProvider from "next-auth/providers/credentials"; // Provider for username/password authentication.
-import { loginUser as checkCredentialsAgainstDatabase } from "@/lib/server/localAuthStore";
+import { checkCredentialsInDb } from "@/lib/server/localAuthStore";
 
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
 
@@ -59,7 +59,7 @@ export const authOptions: NextAuthOptions = {
         // Validate input early: check if email and password are provided.
         if (!credentials?.email || !credentials?.password) return null;
 
-        const result = await checkCredentialsAgainstDatabase({
+        const result = await checkCredentialsInDb({
           email: credentials.email,
           password: credentials.password,
         });

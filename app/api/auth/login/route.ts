@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loginUser } from "@/lib/server/localAuthStore";
+import { checkCredentialsInDb } from "@/lib/server/localAuthStore";
 
 /**
  * Handles POST requests for the /api/auth/login route.
@@ -10,10 +10,15 @@ import { loginUser } from "@/lib/server/localAuthStore";
  */
 export async function POST(request: Request) {
   try {
-    const result = await loginUser(await request.json().catch(() => null));
+    const result = await checkCredentialsInDb(
+      await request.json().catch(() => null),
+    );
     return NextResponse.json(result.body, { status: result.status });
   } catch (error) {
     console.error("login error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

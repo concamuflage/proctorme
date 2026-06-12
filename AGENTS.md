@@ -8,6 +8,9 @@ These rules apply to all code changes in this repository.
 - Add documentation comments for every new or modified function.
 - Add clear code comments for new or updated implementation code when the logic,
   data flow, side effects, or business rule would not be obvious to a reader.
+- For React components, explain each state value and setter introduced or
+  modified: the purpose of the state, where the setter is called, and why those
+  state transitions are needed.
 - For TypeScript and JavaScript, use JSDoc comments.
 
 ```ts
@@ -17,7 +20,7 @@ These rules apply to all code changes in this repository.
  * @param payload - Request body containing email and password.
  * @returns A response-like object with status and body.
  */
-export async function loginUser(payload: unknown) {
+export async function checkCredentialsInDb(payload: unknown) {
 }
 ```
 

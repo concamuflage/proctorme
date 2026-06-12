@@ -436,7 +436,7 @@ export async function signupUser(payload: unknown) {
  * - `403` when the account exists but email verification is still required.
  */
 
-export async function loginUser(payload: unknown) {
+export async function checkCredentialsInDb(payload: unknown) {
   const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
   const email = normalizeEmail(data.email);
   const password = typeof data.password === "string" ? data.password : "";

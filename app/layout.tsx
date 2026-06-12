@@ -9,18 +9,23 @@ import PageTitle from "@/components/layout/PageTitle";
 import Providers from "@/app/providers";
 import { SITE_NAME } from "@/lib/proctor";
 
+// Public Google Analytics measurement ID used to enable page tracking.
+// When undefined, Google Analytics scripts are not rendered.
 const GOOGLE_ANALYTICS_ID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID?.trim();
 
+// Configure the primary sans-serif font and expose its CSS variable.
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
+// Configure the monospace font used for code and technical content.
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
+// Default metadata applied to all pages unless overridden by a route.
 export const metadata: Metadata = {
   title: SITE_NAME,
   description: "Book verified proctors for in-person interview sessions.",
@@ -29,7 +34,10 @@ export const metadata: Metadata = {
 /**
  * Renders the root layout component.
  *
- * @param children, - Input used by root layout.
+ * @param children - The current route content that Next.js passes into this
+ * layout. For example, when the user visits `/login`, Next.js renders
+ * `app/login/page.tsx` and passes that page as `children`, conceptually like
+ * `<RootLayout><LoginPage /></RootLayout>`.
  *
  * @returns The rendered UI for this component.
  */
@@ -41,7 +49,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {GOOGLE_ANALYTICS_ID ? (
+        {/* Load Google Analytics only when a measurement ID is configured. */}
+        {GOOGLE_ANALYTICS_ID ? 
+        (
           <>
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}
@@ -59,11 +69,17 @@ export default function RootLayout({
         ) : null}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {/* Global application providers (e.g. NextAuth SessionProvider, cart state, etc.). */}
         <Providers>
+          {/* Synchronizes the browser tab title with the current route. */}
           <PageTitle />
+          {/* Site-wide navigation header displayed on every page. */}
           <Header />
+          {/* The active page content rendered by the current route segment. */}
           {children}
+          {/* Site-wide footer displayed on every page. */}
           <Footer />
+          {/* Global shopping cart drawer that can be opened from anywhere in the app. */}
           <CartDrawer />
         </Providers>
       </body>
