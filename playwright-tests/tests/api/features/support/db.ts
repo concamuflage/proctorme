@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import bcrypt from "bcryptjs";
-import { testDbPool } from "../../../support/databasePool";
+import { testDbPool } from "../../../support/database/databasePool";
 
 /**
  * Runs the with db logic for this module.

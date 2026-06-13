@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyEmailToken } from "@/lib/server/localAuthStore";
+import { verifyEmailToken } from "@/lib/server/auth/localAuthService";
 
 /**
  * Handles GET requests for the /api/auth/verify-email route.

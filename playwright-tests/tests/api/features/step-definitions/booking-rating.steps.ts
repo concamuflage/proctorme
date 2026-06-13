@@ -22,21 +22,10 @@ Given<ApiWorld>("the institution user has a completed booking and a normal booki
 });
 
 Given<ApiWorld>("the institution user is signed in", async function () {
-  assert.ok(this.api, "API request context was not created.");
-  const csrfResponse = await this.api.get("/api/auth/csrf");
-  assert.equal(csrfResponse.ok(), true);
-  const csrfPayload = await csrfResponse.json();
-
-  const loginResponse = await this.api.post("/api/auth/callback/credentials?json=true", {
-    form: {
-      csrfToken: csrfPayload.csrfToken,
-      email: this.email,
-      password: this.password,
-      redirect: "false",
-      callbackUrl: "/",
-    },
+  const loginResponse = await this.authApi.signInWithCredentials({
+    email: this.email,
+    password: this.password,
   });
-
   assert.equal(loginResponse.ok(), true);
 });
 

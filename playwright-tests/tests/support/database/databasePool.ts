@@ -1,13 +1,13 @@
 import { Pool, type PoolConfig } from "pg";
 
-import "../../../lib/server/config/env.js";
+import "../../../../lib/server/config/env.js";
 
 /**
- * Requires d env value before allowing this flow to continue.
+ * Requires an environment value before allowing this flow to continue.
  *
- * @param name - Input used by required env value.
+ * @param name - Environment variable name.
  *
- * @returns The result used by the surrounding flow.
+ * @returns The configured environment value.
  */
 function requiredEnvValue(name: string) {
   const value = process.env[name];
@@ -16,9 +16,9 @@ function requiredEnvValue(name: string) {
 }
 
 /**
- * Runs the database config logic for this module.
+ * Builds the database connection config used by API and UI tests.
  *
- * @returns The result used by the surrounding flow.
+ * @returns PostgreSQL pool configuration for the test database.
  */
 function databaseConfig(): PoolConfig {
   const connectionString = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
@@ -38,9 +38,9 @@ function databaseConfig(): PoolConfig {
 export const testDbPool = new Pool(databaseConfig());
 
 /**
- * Runs the end test db pool logic for this module.
+ * Closes the shared test database pool after a test run.
  *
- * @returns The result used by the surrounding flow.
+ * @returns Promise that resolves when the pool is closed.
  */
 export async function endTestDbPool() {
   await testDbPool.end();

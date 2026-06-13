@@ -65,11 +65,26 @@ function isOrganizationRole(roleName: string) {
 /**
  * Site header with auth actions and cart entry point.
  * Shows login/signup buttons when logged out, and sign-out when logged in.
+ * The header uses the browser-visible NextAuth session only to decide which UI
+ * controls to show; protected data is still loaded through server-verified API
+ * routes.
  */
 export default function Header() {
+  // useSession reads the SessionProvider state in the browser. When needed,
+  // SessionProvider gets the public session JSON from /api/auth/session.
   const { data: session } = useSession();
+
+  // Roles shown in the header role switcher. They are cleared when the browser
+  // session has no user and populated after /api/account/roles verifies the
+  // HttpOnly auth cookie on the server.
+  // AccountRole[] an array of of AccountRole objects
   const [roles, setRoles] = useState<AccountRole[]>([]);
+
+  // Currently selected role for UI routing/filtering. The setter is called
+  // after roles load and when the user switches roles, then the value is
+  // persisted in localStorage for the next browser visit.
   const [activeRole, setActiveRole] = useState("");
+
   const {
     authMode,
     isAuthOpen,
@@ -79,6 +94,7 @@ export default function Header() {
     switchToSignup,
     closeAuthModal,
   } = useAuthModal();
+
   const pathname = usePathname();
   const router = useRouter();
   const openedFromAuthPage = pathname === "/login" || pathname === "/signup";
@@ -86,29 +102,48 @@ export default function Header() {
     "Book verified proctors for interviews, assessments, and hiring events at the location you specify. Choose a proctor, select the session window, confirm the site address, and pay securely before the assignment is scheduled.";
 
   useEffect(() => {
+    // A missing session user means the user is logged out or the session has not
+    // resolved to an authenticated user, so role-specific header state must not
+    // remain visible from a previous login.
     if (!session?.user) {
       setRoles([]);
       setActiveRole("");
       return;
     }
+    //cancelled prevents the old async request from updating React state after it is no longer valid.
 
     let cancelled = false;
 
     /**
-     * Loads roles needed by this flow.
+     * Loads the signed-in user's account roles for the header role switcher.
      *
-     * @returns The result used by the surrounding flow.
+     * @returns A promise that resolves after role state and localStorage are synchronized.
      */
     async function loadRoles() {
+      // This client fetch does not trust the browser session object for
+      // authorization. The API route uses getServerSession(authOptions) on the
+      // server, reads the HttpOnly cookie, and returns only roles for that user.
       const response = await fetch("/api/account/roles", { cache: "no-store" });
       const payload = await response.json().catch(() => null);
+
+      //If this request is stale, or the API failed, or the response does not contain a roles array, do nothing.
+      
+      // cancelled = true;The effect is no longer current. Maybe the component unmounted, the user logged out, 
+      // or the session changed while the fetch was still running. So ignore this old response.
+      // why return?Because after this line, the code assumes roles are valid:
+      // return still returns Promise.resolve(undefined) to satisfy the async function signature, 
+      // but the main point is to exit the function early and not update React state with invalid data.
       if (cancelled || !response.ok || !Array.isArray(payload?.roles)) return;
 
+      // Normalize and sort roles before rendering so the role switcher has a
+      // stable order across refreshes and API responses.
       const loadedRoles = payload.roles
         .filter((role: Partial<AccountRole>) => Number.isInteger(Number(role.id)) && typeof role.name === "string")
         .map((role: AccountRole) => ({ id: Number(role.id), name: role.name }))
         .sort((a: AccountRole, b: AccountRole) => rolePriority(a.name) - rolePriority(b.name) || roleLabel(a.name).localeCompare(roleLabel(b.name)));
 
+      // Keep the previous role only if the current account still has it;
+      // otherwise fall back to the highest-priority role from the API response.
       const savedRole = window.localStorage.getItem(ACTIVE_ROLE_STORAGE_KEY) || "";
       const nextActiveRole = loadedRoles.some((role: AccountRole) => role.name === savedRole)
         ? savedRole
@@ -119,12 +154,22 @@ export default function Header() {
       if (nextActiveRole) window.localStorage.setItem(ACTIVE_ROLE_STORAGE_KEY, nextActiveRole);
     }
 
+    // only runs if loadRoles() throws an error or returns a rejected Promise.
+    // for example, const response = await fetch("/api/account/roles", { cache: "no-store" }); 
+    // can produce an error.
     loadRoles().catch(() => {
+      // Role loading is optional for rendering the header. On failure, clear role
+      // UI so stale or partial account-role state is not shown.
       if (!cancelled) {
         setRoles([]);
         setActiveRole("");
       }
     });
+
+    // return a function, it doesn't run immediately. React stores it as the cleanup function.
+    // React calls the cleanup function when:
+    // The component unmounts, or
+    // The dependency changes and React is about to re-run the effect
 
     return () => {
       cancelled = true;
@@ -145,10 +190,13 @@ export default function Header() {
     if (!roleName || roleName === activeRole) return;
     setActiveRole(roleName);
     window.localStorage.setItem(ACTIVE_ROLE_STORAGE_KEY, roleName);
+    // The profile route reads role-dependent data on page load, so reload it to
+    // avoid showing information for the previously selected role.
     if (pathname === "/profile") {
       window.location.reload();
       return;
     }
+    // Other routes can revalidate server components without a full page reload.
     router.refresh();
   };
 

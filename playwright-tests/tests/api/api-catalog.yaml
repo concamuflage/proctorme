@@ -25,14 +25,6 @@ next_api:
         email: jane@example.com
         password: ExamplePass123
 
-    - name: login
-      path: /api/auth/login
-      methods: [POST]
-      description: Validate credentials.
-      post_body_example:
-        email: jane@example.com
-        password: ExamplePass123
-
     - name: verify_email
       path: /api/auth/verify-email
       methods: [GET]

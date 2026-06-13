@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { deleteCurrentUserAccount } from "@/lib/server/accountStore";
-import { checkCredentialsInDb } from "@/lib/server/localAuthStore";
+import { checkCredentialsInDb } from "@/lib/server/auth/localAuthService";
 import { getUserIdByEmail } from "@/lib/server/profileStore";
 
 /**

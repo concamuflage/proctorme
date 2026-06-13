@@ -1,41 +1,16 @@
 import assert from "node:assert/strict";
 import { Given, Then, When } from "@cucumber/cucumber";
 import type { APIResponse } from "@playwright/test";
-import { LoginApi } from "../../apis/LoginApi";
-import { SignupApi, type SignupBody } from "../../apis/SignupApi";
+import type { SignupBody } from "../../apis/SignupApi";
 import { generateGmailAlias } from "../../../support/emailTestData";
 import {
   expectedResendFromEmail,
   findLatestVerificationEmail,
 } from "../../../support/gmailVerificationClient";
-import { userVerificationStatus } from "../support/authDb";
+import { findAuthUserByEmail } from "../../../support/database/get/authUsers";
 import type { ApiWorld } from "../support/world";
 
 const password = "TestPassword123!";
-
-/**
- * Runs the signup api logic for this module.
- *
- * @param world - Input used by signup api.
- *
- * @returns The result used by the surrounding flow.
- */
-function signupApi(world: ApiWorld) {
-  assert.ok(world.api, "API request context was not created.");
-  return new SignupApi(world.api);
-}
-
-/**
- * Runs the login api logic for this module.
- *
- * @param world - Input used by login api.
- *
- * @returns The result used by the surrounding flow.
- */
-function loginApi(world: ApiWorld) {
-  assert.ok(world.api, "API request context was not created.");
-  return new LoginApi(world.api);
-}
 
 /**
  * Runs the new signup user logic for this module.
@@ -72,21 +47,21 @@ Given<ApiWorld>(
   "I have already signed up through the signup API",
   async function () {
     this.signUpUser = newSignupUser();
-    this.signUpResponse = await signupApi(this).signup(this.signUpUser);
+    this.signUpResponse = await this.signupApi.signup(this.signUpUser);
     assert.equal(this.signUpResponse.status(), 201);
   },
 );
 
 When<ApiWorld>("I submit the signup API request", async function () {
   assert.ok(this.signUpUser, "Signup user was not prepared.");
-  this.signUpResponse = await signupApi(this).signup(this.signUpUser);
+  this.signUpResponse = await this.signupApi.signup(this.signUpUser);
 });
 
 When<ApiWorld>(
   "I submit the signup API request with a weak password",
   async function () {
     assert.ok(this.signUpUser, "Signup user was not prepared.");
-    this.signUpResponse = await signupApi(this).signup({
+    this.signUpResponse = await this.signupApi.signup({
       ...this.signUpUser,
       password: "weak",
     });
@@ -95,32 +70,39 @@ When<ApiWorld>(
 
 When<ApiWorld>("I submit the signup API request again", async function () {
   assert.ok(this.signUpUser, "Signup user was not prepared.");
-  this.signUpResponse = await signupApi(this).signup(this.signUpUser);
+  this.signUpResponse = await this.signupApi.signup(this.signUpUser);
 });
 
 Then<ApiWorld>(
-  "the signup API responds with created account details",
+  "the signup API responds with a verification message",
   async function () {
-    assert.ok(this.signUpUser, "Signup user was not prepared.");
     assert.ok(this.signUpResponse, "Signup response was not captured.");
     assert.equal(this.signUpResponse.status(), 201);
 
     const payload = await json(this.signUpResponse);
-    assert.equal(payload.email, this.signUpUser.email.toLowerCase());
-    assert.equal(payload.firstName, this.signUpUser.firstName);
-    assert.equal(payload.lastName, this.signUpUser.lastName);
     assert.equal(
       payload.message,
       "Check your email to verify your account before signing in.",
     );
+    assert.equal(payload.id, undefined);
+    assert.equal(payload.email, undefined);
+    assert.equal(payload.firstName, undefined);
+    assert.equal(payload.lastName, undefined);
   },
 );
 
 Then<ApiWorld>(
-  "the signup API user is stored as unverified",
+  "the signup API user is stored in the database",
   async function () {
     assert.ok(this.signUpUser, "Signup user was not prepared.");
-    assert.equal(await userVerificationStatus(this.signUpUser.email), false);
+    const user = await findAuthUserByEmail(this.signUpUser.email);
+
+    assert.ok(user, "Signup user was not stored.");
+    assert.equal(user.email, this.signUpUser.email.toLowerCase());
+    assert.equal(user.first_name, this.signUpUser.firstName);
+    assert.equal(user.last_name, this.signUpUser.lastName);
+    assert.equal(user.email_verified, false);
+    assert.equal(user.has_verification_token, true);
   },
 );
 
@@ -194,4 +176,3 @@ Then<ApiWorld>(
     assert.equal(this.verificationResponse.status(), 200);
   },
 );
-

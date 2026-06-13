@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from "next-auth"; // Type definitions for NextAuth configuration options.
 import CredentialsProvider from "next-auth/providers/credentials"; // Provider for username/password authentication.
-import { checkCredentialsInDb } from "@/lib/server/localAuthStore";
+import { checkCredentialsInDb } from "@/lib/server/auth/localAuthService";
 
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
 

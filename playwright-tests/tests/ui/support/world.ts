@@ -1,8 +1,8 @@
 import { After, AfterAll, Before, setDefaultTimeout, setWorldConstructor, Status } from "@cucumber/cucumber";
 import { type Page } from "@playwright/test";
-import { deleteUserByEmail } from "../../support/databaseCleanup";
+import { deleteUserByEmail } from "../../support/database/databaseCleanup";
 import type { VerificationEmail } from "../../support/gmailVerificationClient";
-import { endTestDbPool } from "../../support/databasePool";
+import { endTestDbPool } from "../../support/database/databasePool";
 import "../../../../lib/server/config/env.js";
 import { closeUiDriver, createUiDriver, saveUiFailureArtifacts, type UiDriver } from "./uiDriverFactory";
 

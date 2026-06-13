@@ -1,0 +1,7 @@
+process.sh started at Tue Jun  2 12:52:36 UTC 2026
+Completed 177 Bytes/177 Bytes (810 Bytes/s) with 1 file(s) remainingdownload: s3://fovus20260531/uploads/4dfef936-e673-4bb1-bb8c-e8f980a17264-list.txt to tmp/fovus-processing/input-file
+Completed 189 Bytes/189 Bytes (810 Bytes/s) with 1 file(s) remainingupload: tmp/fovus-processing/new time.output to s3://fovus20260531/new time.output
+process.sh finished at Tue Jun  2 12:52:42 UTC 2026
+Output uploaded to s3://fovus20260531/new time.output
+process.sh exiting with status 0
+Uploading process log to s3://fovus20260531/logs/44facace-2fa5-4730-b643-37e53f4e4a23/process-20260602T125242Z-exit-0.log

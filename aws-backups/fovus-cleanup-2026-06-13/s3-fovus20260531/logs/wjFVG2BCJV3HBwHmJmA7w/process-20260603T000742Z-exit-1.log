@@ -1,0 +1,5 @@
+process.sh started at Wed Jun  3 00:07:38 UTC 2026
+Could not find inputText or inputFilePath for id: wjFVG2BCJV3HBwHmJmA7w
+process.sh exiting with status 1
+Marking DynamoDB job wjFVG2BCJV3HBwHmJmA7w as FAILED
+Uploading process log to s3://fovus20260531/logs/wjFVG2BCJV3HBwHmJmA7w/process-20260603T000742Z-exit-1.log

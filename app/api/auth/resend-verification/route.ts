@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resendVerificationEmail } from "@/lib/server/localAuthStore";
+import { resendVerificationEmail } from "@/lib/server/auth/localAuthService";
 
 /**
  * Handles POST requests for the /api/auth/resend-verification route.

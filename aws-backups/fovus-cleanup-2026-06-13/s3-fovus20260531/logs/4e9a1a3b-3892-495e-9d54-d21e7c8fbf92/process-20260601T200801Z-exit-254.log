@@ -1,0 +1,5 @@
+process.sh started at Mon Jun  1 20:07:59 UTC 2026
+
+An error occurred (AccessDeniedException) when calling the GetItem operation: User: arn:aws:sts::456630344294:assumed-role/instanceRole/i-0efa52b750db7cee9 is not authorized to perform: dynamodb:GetItem on resource: arn:aws:dynamodb:us-west-2:456630344294:table/FileTables because no identity-based policy allows the dynamodb:GetItem action
+process.sh exiting with status 254
+Uploading process log to s3://fovus20260531/logs/4e9a1a3b-3892-495e-9d54-d21e7c8fbf92/process-20260601T200801Z-exit-254.log

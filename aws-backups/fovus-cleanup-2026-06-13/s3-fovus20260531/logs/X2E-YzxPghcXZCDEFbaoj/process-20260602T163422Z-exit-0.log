@@ -1,0 +1,7 @@
+process.sh started at Tue Jun  2 16:34:15 UTC 2026
+download: s3://fovus20260531/test.input to tmp/fovus-processing/input-file
+Completed 18 Bytes/18 Bytes (87 Bytes/s) with 1 file(s) remainingupload: tmp/fovus-processing/liangmi zhang.output to s3://fovus20260531/liangmi zhang.output
+process.sh finished at Tue Jun  2 16:34:22 UTC 2026
+Output uploaded to s3://fovus20260531/liangmi zhang.output
+process.sh exiting with status 0
+Uploading process log to s3://fovus20260531/logs/X2E-YzxPghcXZCDEFbaoj/process-20260602T163422Z-exit-0.log

@@ -1,10 +1,10 @@
 import type { APIRequestContext, APIResponse } from "@playwright/test";
 
-// BaseApi is the parent class for API helper classes like SignupApi and LoginApi.
+// BaseApi is the parent class for API helper classes like SignupApi and AuthApi.
 // It stores Playwright's API request context, which is the object that actually
 // sends HTTP requests to the app during API tests.
 /**
- * Represents the base api abstraction used by this project.
+ * Stores the shared Playwright request context for API helper classes.
  */
 export class BaseApi {
   protected readonly request: APIRequestContext;
@@ -15,25 +15,17 @@ export class BaseApi {
     this.request = request;
   }
 
-  // Send a JSON POST request.
-  //
-  // Example:
-  //   this.post("/api/auth/login", { email, password })
-  //
-  // `path` is the API route.
-  // `body` is the JSON payload sent to that route.
-  // The returned APIResponse lets the test check status code and response body.
   /**
-   * Runs the post logic for this module.
+   * Sends a JSON POST request using the shared Playwright request context.
    *
-   * @param path - Input used by post.
-   * @param body - Input used by post.
+   * @param path - API route path relative to the request context base URL.
+   * @param body - JSON payload sent to the route.
    *
-   * @returns The result used by the surrounding flow.
+   * @returns The API response so tests can assert status and payload.
    */
   protected post(path: string, body: unknown): Promise<APIResponse> {
     
-    // this.request.post() returns aPromise<APIResponse>
+    // this.request.post() returns a Promise<APIResponse>
     return this.request.post(path, {
       // Playwright serializes this object as the request JSON body.
       data: body,

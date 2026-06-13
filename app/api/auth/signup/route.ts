@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { signupUser } from "@/lib/server/localAuthStore";
+import { signupUser } from "@/lib/server/auth/localAuthService";
 
 /**
  * Handles POST requests for the /api/auth/signup route.

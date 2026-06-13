@@ -4,23 +4,23 @@ Feature: Signup API
   Scenario: With verification, a user can log in
     Given I have a new signup API user
     When I submit the signup API request
-    Then the signup API responds with created account details
-    And the signup API user is stored as unverified
+    Then the signup API responds with a verification message
+    And the signup API user is stored in the database
     When I log into the signup API user's email account through the API and find the verification email
     And the verification email sender should be correct
     And I click the link in the verification email without using a browser
     Then the verification link should respond with a success status
-    When I submit the login API request
-    Then the login API responds with the signed-in account
+    When I submit the NextAuth credentials sign-in request
+    Then the NextAuth session contains the signed-in account
     
 
   Scenario: Without verification, a user cannot log in
     Given I have a new signup API user
     When I submit the signup API request
-    Then the signup API responds with created account details
-    And the signup API user is stored as unverified
-    When I submit the login API request
-    Then the login API requires email verification
+    Then the signup API responds with a verification message
+    And the signup API user is stored in the database
+    When I submit the NextAuth credentials sign-in request
+    Then the NextAuth credentials sign-in requires email verification
 
 
   Scenario: Signup rejects a weak password

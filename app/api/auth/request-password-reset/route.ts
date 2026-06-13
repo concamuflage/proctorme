@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requestPasswordReset } from "@/lib/server/localAuthStore";
+import { requestPasswordReset } from "@/lib/server/auth/localAuthService";
 
 /**
  * Handles POST requests for the /api/auth/request-password-reset route.
