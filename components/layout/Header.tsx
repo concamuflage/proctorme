@@ -15,6 +15,12 @@ type AccountRole = {
   name: string;
 };
 
+type RoleSwitcherProps = {
+  roles: AccountRole[];
+  activeRole: string;
+  onRoleChange: (roleName: string) => void;
+};
+
 const ACTIVE_ROLE_STORAGE_KEY = "proctorme.activeRole";
 
 /**
@@ -59,7 +65,63 @@ function rolePriority(roleName: string) {
  * @returns True when the value satisfies the check.
  */
 function isOrganizationRole(roleName: string) {
-  return roleName === "corporate_user" || roleName === "cooporate_user" || roleName === "interviewee";
+  return roleName === "corporate_user" || roleName === "cooporate_user";
+}
+
+/**
+ * Renders the role switcher shown when a signed-in account has multiple roles.
+ *
+ * @param props - Roles to render, the selected role name, and the callback that
+ * handles user role changes.
+ *
+ * @returns The role switcher button group.
+ */
+function RoleSwitcher({ roles, activeRole, onRoleChange }: RoleSwitcherProps) {
+  return (
+    <div className="flex rounded-full border border-zinc-200 bg-white p-1" aria-label="Current role">
+      {roles.map((role) => {
+        const selected = role.name === activeRole;
+        return (
+          <button
+            key={role.id}
+            type="button"
+            onClick={() => onRoleChange(role.name)}
+            aria-pressed={selected}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              selected
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+            }`}
+          >
+            {roleLabel(role.name)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Renders the profile icon used by the header profile link.
+ *
+ * @returns The profile icon SVG.
+ */
+function UserIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="8" r="4" />
+    </svg>
+  );
 }
 
 /**
@@ -100,7 +162,8 @@ export default function Header() {
   const openedFromAuthPage = pathname === "/login" || pathname === "/signup";
   const trialBannerText =
     "Book verified proctors for interviews, assessments, and hiring events at the location you specify. Choose a proctor, select the session window, confirm the site address, and pay securely before the assignment is scheduled.";
-
+  // useEffect with a dependency on session?.user runs after the component mounts and whenever the session user changes.
+  // there is a diagram for the flow in the diagrams folder
   useEffect(() => {
     // A missing session user means the user is logged out or the session has not
     // resolved to an authenticated user, so role-specific header state must not
@@ -176,7 +239,10 @@ export default function Header() {
     };
   }, [session?.user]);
 
-  const activeRoleLabel = useMemo(() => activeRole ? roleLabel(activeRole) : "", [activeRole]);
+  const activeRoleLabel = useMemo(
+    () => activeRole ? roleLabel(activeRole) : "", 
+    [activeRole]
+  );
   const showFindProctors = session?.user ? isOrganizationRole(activeRole) : true;
 
   /**
@@ -247,29 +313,18 @@ export default function Header() {
               Find Proctors
             </Link>
           ) : null}
-          {session?.user ? (
+          {  /*  the following to conditional rendering the rest of the nav bar. if session user exists, show roleswitcher -if more than 2 roles,the profile icon and sign out buttons;
+          otherwise, show the login and signup buttons. */}
+          {session?.user ? 
+          (
             <div className="flex items-center gap-3">
+              {/* the following is a nested ternary expression */}
               {roles.length > 1 ? (
-                <div className="flex rounded-full border border-zinc-200 bg-white p-1" aria-label="Current role">
-                  {roles.map((role) => {
-                    const selected = role.name === activeRole;
-                    return (
-                      <button
-                        key={role.id}
-                        type="button"
-                        onClick={() => handleRoleChange(role.name)}
-                        aria-pressed={selected}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                          selected
-                            ? "bg-zinc-900 text-white"
-                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-                        }`}
-                      >
-                        {roleLabel(role.name)}
-                      </button>
-                    );
-                  })}
-                </div>
+                <RoleSwitcher
+                  roles={roles}
+                  activeRole={activeRole}
+                  onRoleChange={handleRoleChange}
+                />
               ) : activeRoleLabel ? (
                 <div className="rounded-full border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700">
                   {activeRoleLabel}
@@ -280,19 +335,7 @@ export default function Header() {
                 aria-label="Open profile"
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
               >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20 21a8 8 0 0 0-16 0" />
-                  <circle cx="12" cy="8" r="4" />
-                </svg>
+                <UserIcon />
               </Link>
               <button
                 type="button"
@@ -302,7 +345,9 @@ export default function Header() {
                 Sign out
               </button>
             </div>
-          ) : (
+          ) 
+          : 
+          (
             <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
@@ -320,6 +365,7 @@ export default function Header() {
               </button>
             </div>
           )}
+
           {session?.user ? <CartButton /> : null}
         </nav>
       </div>
