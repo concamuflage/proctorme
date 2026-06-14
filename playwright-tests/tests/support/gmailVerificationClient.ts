@@ -1,4 +1,4 @@
-import "../../../lib/server/config/env.js";
+import { optionalTestEnv, requiredTestEnv } from "./testEnv";
 
 type GmailHeader = {
   name: string;
@@ -37,25 +37,12 @@ type FindVerificationEmailOptions = {
 const verificationLinkPattern = /https?:\/\/[^\s"'<>]+\/verify-email\?[^\s"'<>]+/g;
 
 /**
- * Requires d env value before allowing this flow to continue.
- *
- * @param name - Input used by required env value.
- *
- * @returns The result used by the surrounding flow.
- */
-function requiredEnvValue(name: string) {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment value: ${name}`);
-  return value;
-}
-
-/**
  * Runs the expected resend from email logic for this module.
  *
  * @returns The result used by the surrounding flow.
  */
 export function expectedResendFromEmail() {
-  return requiredEnvValue("RESEND_FROM_EMAIL");
+  return requiredTestEnv("RESEND_FROM_EMAIL");
 }
 
 /**
@@ -154,21 +141,21 @@ function headerValue(message: GmailMessage, headerName: string) {
 }
 
 /**
- * Runs the access token logic for this module.
+ * Exchanges the configured Gmail refresh token for a short-lived access token.
  *
- * @returns The result used by the surrounding flow.
+ * @returns A Gmail API access token for the verification email lookup.
  */
 async function accessToken() {
-  const configuredAccessToken = process.env.GMAIL_ACCESS_TOKEN;
+  const configuredAccessToken = optionalTestEnv("GMAIL_ACCESS_TOKEN");
   if (configuredAccessToken) return configuredAccessToken;
 
-  const refreshToken = requiredEnvValue("GMAIL_REFRESH_TOKEN");
+  const refreshToken = requiredTestEnv("GMAIL_REFRESH_TOKEN");
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: requiredEnvValue("GOOGLE_CLIENT_ID"),
-      client_secret: requiredEnvValue("GOOGLE_CLIENT_SECRET"),
+      client_id: requiredTestEnv("GOOGLE_CLIENT_ID"),
+      client_secret: requiredTestEnv("GOOGLE_CLIENT_SECRET"),
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
@@ -176,7 +163,19 @@ async function accessToken() {
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(`Google token request failed with ${response.status}: ${JSON.stringify(payload)}`);
+    const tokenError = `Google token request failed with ${response.status}: ${JSON.stringify(payload)}`;
+    // invalid_grant is the common Google response when the saved refresh token
+    // has expired or has been revoked, so include the recovery action directly
+    // in the Cucumber failure output.
+    if (payload?.error === "invalid_grant") {
+      throw new Error(
+        `${tokenError}\n\n` +
+          "Gmail API auth reminder: obtain a new GMAIL_REFRESH_TOKEN through Google OAuth Playground. " +
+          "If the OAuth app is still in Testing/not published, Google refresh tokens for Gmail scopes can expire after 7 days."
+      );
+    }
+
+    throw new Error(tokenError);
   }
 
   if (!payload?.access_token) {

@@ -1,6 +1,11 @@
 import crypto from "crypto";
 import pool from "@/lib/server/database/pool";
 import { SITE_NAME } from "@/lib/proctor";
+import {
+  appBaseUrlFromServerEnv,
+  positiveNumberServerEnv,
+  resendConfig,
+} from "@/lib/server/serverEnv";
 
 const DEFAULT_VERIFICATION_TTL_HOURS = 72;
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
@@ -33,8 +38,7 @@ export function normalizeOrganizationEmail(value: unknown) {
  * @returns The result used by the surrounding flow.
  */
 function verificationTtlHours() {
-  const rawValue = Number(process.env.ORGANIZATION_EMAIL_VERIFICATION_TTL_HOURS || DEFAULT_VERIFICATION_TTL_HOURS);
-  return Number.isFinite(rawValue) && rawValue > 0 ? rawValue : DEFAULT_VERIFICATION_TTL_HOURS;
+  return positiveNumberServerEnv("ORGANIZATION_EMAIL_VERIFICATION_TTL_HOURS", DEFAULT_VERIFICATION_TTL_HOURS);
 }
 
 /**
@@ -55,45 +59,12 @@ function hashToken(token: string) {
  *
  * @returns The normalized value.
  */
-function normalizeAppBaseUrl(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
-}
-
-/**
- * Checks whether localhost url is true for this flow.
- *
- * @param value - Input used by is localhost url.
- *
- * @returns True when the value satisfies the check.
- */
-function isLocalhostUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Runs the app base url logic for this module.
- *
- * @returns The result used by the surrounding flow.
- */
 function appBaseUrl() {
-  const explicitEmailUrl = normalizeAppBaseUrl(process.env.ORGANIZATION_EMAIL_VERIFICATION_APP_URL);
-  if (explicitEmailUrl) return explicitEmailUrl;
-
-  const fallbackUrls = [
-    normalizeAppBaseUrl(process.env.CLIENT_ORIGIN),
-    normalizeAppBaseUrl(process.env.NEXTAUTH_URL),
-  ].filter(Boolean);
-
-  if (process.env.NODE_ENV === "production") {
-    return fallbackUrls.find((url) => !isLocalhostUrl(url)) || PRODUCTION_APP_BASE_URL;
-  }
-
-  return fallbackUrls[0] || "http://localhost:3000";
+  return appBaseUrlFromServerEnv({
+    explicitEnvName: "ORGANIZATION_EMAIL_VERIFICATION_APP_URL",
+    fallbackEnvNames: ["CLIENT_ORIGIN", "NEXTAUTH_URL"],
+    productionFallback: PRODUCTION_APP_BASE_URL,
+  });
 }
 
 /**
@@ -126,11 +97,7 @@ async function sendOrganizationEmailVerificationEmail({
   organizationName: string;
   verificationLink: string;
 }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL;
-  if (!apiKey || !from) {
-    throw new Error("Missing Resend configuration. Set RESEND_API_KEY and RESEND_FROM_EMAIL.");
-  }
+  const { apiKey, from } = resendConfig();
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",

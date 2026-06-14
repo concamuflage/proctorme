@@ -42,6 +42,20 @@ type EducationRow = {
   school_email_verification_status: unknown;
 };
 
+type ProfileRow = {
+  id: unknown;
+  email: unknown;
+  first_name: unknown;
+  last_name: unknown;
+  profession_name: unknown;
+  gender_name: unknown;
+  ethnicity_name: unknown;
+  timezone_name: unknown;
+  date_of_birth: unknown;
+  bio: unknown;
+  image_urls: unknown;
+};
+
 export type ProfileUpdateInput = {
   profession: string;
   gender: string;
@@ -195,7 +209,7 @@ async function getTimezoneId(name: string) {
  */
 export async function getProfile(userId: number): Promise<ProfileData> {
   const [userResult, educationResult] = await Promise.all([
-    pool.query<EducationRow>(
+    pool.query<ProfileRow>(
       `
         SELECT u.id, u.email, u.first_name, u.last_name, u.date_of_birth
              , p.name AS profession_name
@@ -239,7 +253,7 @@ export async function getProfile(userId: number): Promise<ProfileData> {
       `,
       [userId]
     ),
-    pool.query(
+    pool.query<EducationRow>(
       `
         SELECT d.name AS degree_name,
                sc.name AS school_name,

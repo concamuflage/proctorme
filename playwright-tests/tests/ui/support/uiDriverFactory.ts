@@ -3,7 +3,15 @@ import path from "node:path";
 import { chromium, devices, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from "@playwright/test";
 import type { ITestCaseHookParameter } from "@cucumber/cucumber";
 
-import "../../../../lib/server/config/env.js";
+import {
+  playwrightDevice,
+  playwrightHeadless,
+  playwrightScreenshotOnFailure,
+  playwrightStorageState,
+  playwrightTraceEnabled,
+  playwrightVideoEnabled,
+  playwrightViewport,
+} from "../../support/testEnv";
 
 // UiDriver is the browser/session/tab bundle used by one Cucumber UI scenario.
 // Keeping these together makes the World hook responsible for lifecycle, while
@@ -72,17 +80,14 @@ function parseViewport(value: string | undefined) {
  * @returns The result used by the surrounding flow.
  */
 function contextOptions(baseURL: string, artifactsDir: string): BrowserContextOptions {
-  const deviceName = process.env.PLAYWRIGHT_DEVICE;
-  const viewport = parseViewport(process.env.PLAYWRIGHT_VIEWPORT);
-  const storageState = process.env.PLAYWRIGHT_STORAGE_STATE;
-  const videoEnabled = (process.env.PLAYWRIGHT_VIDEO || "false") !== "false";
+  const viewport = parseViewport(playwrightViewport);
 
   return {
-    ...(deviceName ? devices[deviceName] : {}),
+    ...(playwrightDevice ? devices[playwrightDevice] : {}),
     baseURL,
     ...(viewport ? { viewport } : {}),
-    ...(storageState ? { storageState } : {}),
-    ...(videoEnabled ? { recordVideo: { dir: path.join(artifactsDir, "videos") } } : {}),
+    ...(playwrightStorageState ? { storageState: playwrightStorageState } : {}),
+    ...(playwrightVideoEnabled ? { recordVideo: { dir: path.join(artifactsDir, "videos") } } : {}),
   };
 }
 
@@ -97,21 +102,19 @@ function contextOptions(baseURL: string, artifactsDir: string): BrowserContextOp
  * @returns The result used by the surrounding flow.
  */
 export async function createUiDriver(options: CreateUiDriverOptions): Promise<UiDriver> {
-  const headless = (process.env.PLAYWRIGHT_HEADLESS || "true") !== "false";
-  const tracingEnabled = (process.env.PLAYWRIGHT_TRACE || "true") !== "false";
   const artifactsDir = path.join("test-results", "ui", scenarioSlug(options.scenarioName));
 
   await mkdir(artifactsDir, { recursive: true });
 
-  const browser = await chromium.launch({ headless });
+  const browser = await chromium.launch({ headless: playwrightHeadless });
   const context = await browser.newContext(contextOptions(options.baseURL, artifactsDir));
 
-  if (tracingEnabled) {
+  if (playwrightTraceEnabled) {
     await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
   }
 
   const page = await context.newPage();
-  return { browser, context, page, artifactsDir, traceActive: tracingEnabled };
+  return { browser, context, page, artifactsDir, traceActive: playwrightTraceEnabled };
 }
 
 // Save visual debugging artifacts only when the scenario fails. Screenshots give
@@ -126,7 +129,7 @@ export async function createUiDriver(options: CreateUiDriverOptions): Promise<Ui
  * @returns The result used by the surrounding flow.
  */
 export async function saveUiFailureArtifacts(driver: UiDriver, scenario: ITestCaseHookParameter) {
-  if ((process.env.PLAYWRIGHT_SCREENSHOT_ON_FAILURE || "true") !== "false") {
+  if (playwrightScreenshotOnFailure) {
     await driver.page.screenshot({
       fullPage: true,
       path: path.join(driver.artifactsDir, "failure.png"),

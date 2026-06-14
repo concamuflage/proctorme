@@ -1,32 +1,13 @@
 import assert from "node:assert/strict";
 import { Given, Then, When } from "@cucumber/cucumber";
 import type { APIResponse } from "@playwright/test";
-import type { SignupBody } from "../../apis/SignupApi";
-import { generateGmailAlias } from "../../../support/emailTestData";
+import { newSignupUser } from "../../../support/signupTestData";
 import {
   expectedResendFromEmail,
   findLatestVerificationEmail,
 } from "../../../support/gmailVerificationClient";
 import { findAuthUserByEmail } from "../../../support/database/get/authUsers";
 import type { ApiWorld } from "../support/world";
-
-const password = "TestPassword123!";
-
-/**
- * Runs the new signup user logic for this module.
- *
- * @returns The result used by the surrounding flow.
- */
-function newSignupUser(): SignupBody {
-  return {
-    firstName: "Api",
-    lastName: "Signup",
-    email: generateGmailAlias(
-      process.env.TEST_GMAIL_BASE_EMAIL || "concamuflage@gmail.com",
-    ),
-    password,
-  };
-}
 
 /**
  * Runs the json logic for this module.

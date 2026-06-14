@@ -1,70 +1,24 @@
 import { SITE_NAME } from "@/lib/proctor";
+import {
+  appBaseUrlFromServerEnv,
+  resendConfig,
+} from "@/lib/server/serverEnv";
 
 // Base URL used as fallback when no valid environment URL is provided in production
 const PRODUCTION_APP_BASE_URL = "https://proctorme.shop";
 // Store email that will also receive a copy of the invoice email
 const STORE_EMAIL = "unodostreszlm@gmail.com";
 
-// Normalizes a base URL by trimming whitespace and removing trailing slashes
-/**
- * Normalizes app base url into the shape this flow expects.
- *
- * @param value - Input used by normalize app base url.
- *
- * @returns The normalized value.
- */
-function normalizeAppBaseUrl(value: string | undefined) {
-  return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
-}
-
-/**
- * Runs the invoice email env logic for this module.
- *
- * @param key - Input used by invoice email env.
- *
- * @returns The result used by the surrounding flow.
- */
-function invoiceEmailEnv(key: "RESEND_API_KEY" | "RESEND_FROM_EMAIL") {
-  return process.env[key] || "";
-}
-
-// Checks whether a given URL points to a localhost environment
-/**
- * Checks whether localhost url is true for this flow.
- *
- * @param value - Input used by is localhost url.
- *
- * @returns True when the value satisfies the check.
- */
-function isLocalhostUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
-  } catch {
-    return false;
-  }
-}
-
-// Determines the base URL for invoice links based on environment variables
-// In production: prefers non-localhost URLs, falls back to a constant
-// In development: uses the first available URL or localhost
 /**
  * Gets invoice app base url for this flow.
  *
  * @returns The result used by the surrounding flow.
  */
 function getInvoiceAppBaseUrl() {
-  const fallbackUrls = [
-    normalizeAppBaseUrl(process.env.APP_URL),
-    normalizeAppBaseUrl(process.env.NEXTAUTH_URL),
-    normalizeAppBaseUrl(process.env.CLIENT_ORIGIN),
-  ].filter(Boolean);
-
-  if (process.env.NODE_ENV === "production") {
-    return fallbackUrls.find((url) => !isLocalhostUrl(url)) || PRODUCTION_APP_BASE_URL;
-  }
-
-  return fallbackUrls[0] || "http://localhost:3000";
+  return appBaseUrlFromServerEnv({
+    fallbackEnvNames: ["APP_URL", "NEXTAUTH_URL", "CLIENT_ORIGIN"],
+    productionFallback: PRODUCTION_APP_BASE_URL,
+  });
 }
 
 // Builds the full URL for downloading an invoice PDF for a given order
@@ -150,13 +104,7 @@ export async function sendInvoiceLinkEmail({
   invoiceNumber: string;
   paidAt: string;
 }) {
-  // Read required configuration from environment variables
-  const apiKey = invoiceEmailEnv("RESEND_API_KEY");
-  const from = invoiceEmailEnv("RESEND_FROM_EMAIL");
-
-  if (!apiKey || !from) {
-    throw new Error("Missing Resend configuration. Set RESEND_API_KEY and RESEND_FROM_EMAIL.");
-  }
+  const { apiKey, from } = resendConfig();
 
   // Generate invoice download link
   const invoiceLink = buildInvoicePdfLink(orderId);

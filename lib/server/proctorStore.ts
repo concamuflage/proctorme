@@ -1,4 +1,5 @@
 import pool from "@/lib/server/database/pool";
+import { googleMapsApiKey as serverGoogleMapsApiKey } from "@/lib/server/serverEnv";
 
 export type ProctorRecord = {
   id: number;
@@ -788,7 +789,7 @@ type GoogleTimeZoneResponse = {
  * @returns The result used by the surrounding flow.
  */
 function googleMapsApiKey() {
-  return process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY || "";
+  return serverGoogleMapsApiKey();
 }
 
 /**

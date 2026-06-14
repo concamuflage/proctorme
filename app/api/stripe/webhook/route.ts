@@ -30,6 +30,7 @@ import {
 import { sendInvoiceLinkEmail } from "@/lib/server/invoiceEmail";
 import { getInvoicePayloadForOrder } from "@/lib/server/orderInvoiceStore";
 import { getStripeServerClient } from "@/lib/server/stripe";
+import { stripeWebhookSecret } from "@/lib/server/serverEnv";
 
 // Ensure this route runs in Node.js runtime (required for Stripe SDK and raw body access)
 export const runtime = "nodejs";
@@ -40,12 +41,7 @@ export const runtime = "nodejs";
  * @returns The result used by the surrounding flow.
  */
 function getWebhookSecret() {
-  // Read webhook signing secret used to verify Stripe signatures
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    throw new Error("Missing STRIPE_WEBHOOK_SECRET.");
-  }
-  return webhookSecret;
+  return stripeWebhookSecret();
 }
 
 // Converts Unix timestamp (seconds) to JavaScript Date, returns null if invalid

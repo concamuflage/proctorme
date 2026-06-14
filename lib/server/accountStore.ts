@@ -1,4 +1,5 @@
 import pool from "@/lib/server/database/pool";
+import { serverEnvIsProduction } from "@/lib/server/serverEnv";
 
 type DeleteAccountMode = "hard" | "soft";
 type QueryableClient = {
@@ -114,7 +115,7 @@ export async function deleteCurrentUserAccount(userId: number): Promise<{ mode: 
     await client.query("BEGIN");
 
     const retainedRecords = await hasRetainedRecords(client, userId);
-    const mode: DeleteAccountMode = process.env.NODE_ENV === "production" || retainedRecords ? "soft" : "hard";
+    const mode: DeleteAccountMode = serverEnvIsProduction() || retainedRecords ? "soft" : "hard";
 
     await deleteEphemeralAccountData(client, userId);
 

@@ -14,6 +14,10 @@ import { cleanupRatingScenario } from "./db";
 import { endTestDbPool } from "../../../support/database/databasePool";
 import { deleteUserByEmail } from "../../../support/database/databaseCleanup";
 import type { VerificationEmail } from "../../../support/gmailVerificationClient";
+import {
+  generatedUserPassword,
+  playwrightBaseUrl,
+} from "../../../support/testEnv";
 import { AuthApi } from "../../apis/AuthApi";
 import { SignupApi, type SignupBody } from "../../apis/SignupApi";
 
@@ -27,11 +31,11 @@ import { SignupApi, type SignupBody } from "../../apis/SignupApi";
  * Stores per-scenario API test state, request context, and helper clients.
  */
 export class ApiWorld {
-  // Base URL for Playwright API requests. Tests default to the local Next app.
-  baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
+  // Base URL for Playwright API requests.
+  baseURL = playwrightBaseUrl;
 
   // Shared test data for the booking-rating API scenario.
-  password = "TestPassword123!";
+  password = generatedUserPassword;
   proctorUserId = 3;
   email = `institution-rating-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   institutionUserId: number | null = null;

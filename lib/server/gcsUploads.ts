@@ -1,7 +1,12 @@
 import { Storage } from "@google-cloud/storage";
+import {
+  allowedGcsUploadBuckets,
+  gcsUploadBucketName,
+  googleCloudProjectId,
+} from "@/lib/server/serverEnv";
 
 const storage = new Storage({
-  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || undefined,
+  projectId: googleCloudProjectId(),
 });
 
 /**
@@ -10,18 +15,7 @@ const storage = new Storage({
  * @returns The result used by the surrounding flow.
  */
 export function getUploadBucketName() {
-  const explicitBucket = process.env.GCS_UPLOAD_BUCKET;
-  if (explicitBucket?.trim()) return explicitBucket.trim();
-
-  const bucketName = process.env.NODE_ENV === "production"
-    ? process.env.GCS_UPLOAD_BUCKET_PROD
-    : process.env.GCS_UPLOAD_BUCKET_DEV;
-
-  if (!bucketName?.trim()) {
-    throw new Error("Missing GCS upload bucket configuration.");
-  }
-
-  return bucketName.trim();
+  return gcsUploadBucketName();
 }
 
 /**
@@ -30,15 +24,7 @@ export function getUploadBucketName() {
  * @returns The result used by the surrounding flow.
  */
 export function allowedUploadBuckets() {
-  return new Set(
-    [
-      process.env.GCS_UPLOAD_BUCKET,
-      process.env.GCS_UPLOAD_BUCKET_DEV,
-      process.env.GCS_UPLOAD_BUCKET_PROD,
-    ]
-      .map((value) => value?.trim())
-      .filter((value): value is string => Boolean(value))
-  );
+  return allowedGcsUploadBuckets();
 }
 
 /**

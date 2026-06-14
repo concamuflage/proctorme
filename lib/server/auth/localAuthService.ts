@@ -7,7 +7,7 @@ import {
   sendPasswordResetEmail,
 } from "@/lib/server/auth/authEmails";
 import { createToken, hashToken } from "@/lib/server/auth/authTokens";
-import { normalizeEmail, normalizeName, numericEnv, text } from "@/lib/server/auth/authUtils";
+import { normalizeEmail, normalizeName, text } from "@/lib/server/auth/authUtils";
 import {
   clearEmailVerificationToken,
   clearPasswordResetToken,
@@ -25,6 +25,10 @@ import {
   saveResetPassword,
   type UserRow,
 } from "@/lib/server/auth/authUsersStore";
+import {
+  positiveNumberServerEnv,
+  serverEnvIsProduction,
+} from "@/lib/server/serverEnv";
 
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
 const SIGNUP_SUCCESS_MESSAGE = "Check your email to verify your account before signing in.";
@@ -39,7 +43,7 @@ const DEFAULT_PASSWORD_RESET_TTL_MINUTES = 30;
  * @returns Promise that resolves when the token has been stored and email attempted.
  */
 async function issueEmailVerification(user: UserRow) {
-  const ttlHours = numericEnv("EMAIL_VERIFICATION_TTL_HOURS", DEFAULT_VERIFICATION_TTL_HOURS);
+  const ttlHours = positiveNumberServerEnv("EMAIL_VERIFICATION_TTL_HOURS", DEFAULT_VERIFICATION_TTL_HOURS);
   const { rawToken, hashedToken, expiresAt } = createToken(ttlHours * 60 * 60 * 1000);
   const userId = Number(user.id);
   const email = normalizeEmail(user.email);
@@ -52,7 +56,7 @@ async function issueEmailVerification(user: UserRow) {
     await sendEmailVerificationEmail({ email, firstName, verificationLink });
   } catch (error) {
     console.error("verification email error:", error);
-    if (process.env.NODE_ENV === "production") throw error;
+    if (serverEnvIsProduction()) throw error;
   }
 }
 
@@ -63,7 +67,7 @@ async function issueEmailVerification(user: UserRow) {
  * @returns Promise that resolves when the token has been stored and email attempted.
  */
 async function issuePasswordReset(user: UserRow) {
-  const ttlMinutes = numericEnv("PASSWORD_RESET_TTL_MINUTES", DEFAULT_PASSWORD_RESET_TTL_MINUTES);
+  const ttlMinutes = positiveNumberServerEnv("PASSWORD_RESET_TTL_MINUTES", DEFAULT_PASSWORD_RESET_TTL_MINUTES);
   const { rawToken, hashedToken, expiresAt } = createToken(ttlMinutes * 60 * 1000);
   const userId = Number(user.id);
   const email = normalizeEmail(user.email);
@@ -76,7 +80,7 @@ async function issuePasswordReset(user: UserRow) {
     await sendPasswordResetEmail({ email, firstName, resetLink, ttlMinutes });
   } catch (error) {
     console.error("password reset email error:", error);
-    if (process.env.NODE_ENV === "production") throw error;
+    if (serverEnvIsProduction()) throw error;
   }
 }
 

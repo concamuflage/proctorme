@@ -4,9 +4,11 @@ import type { APIResponse } from "@playwright/test";
 import { generateGmailAlias } from "../../../support/emailTestData";
 import { findAuthUserByEmail } from "../../../support/database/get/authUsers";
 import { markUserEmailVerified } from "../../../support/database/update/authUsers";
+import {
+  generatedUserPassword,
+  testGmailBaseEmail,
+} from "../../../support/testEnv";
 import type { ApiWorld } from "../support/world";
-
-const password = "TestPassword123!";
 
 /**
  * Runs the json logic for this module.
@@ -31,10 +33,8 @@ async function createApiUser(world: ApiWorld, verified: boolean) {
   world.signUpUser = {
     firstName: "Api",
     lastName: "Login",
-    email: generateGmailAlias(
-      process.env.TEST_GMAIL_BASE_EMAIL || "concamuflage@gmail.com",
-    ),
-    password,
+    email: generateGmailAlias(testGmailBaseEmail),
+    password: generatedUserPassword,
   };
 
   const response = await world.signupApi.signup(world.signUpUser);

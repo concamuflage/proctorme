@@ -1,4 +1,6 @@
-export const SITE_NAME = process.env.NEXT_PUBLIC_BRAND_NAME || "ProctorMe";
+import { publicBrandName } from "@/lib/publicEnv";
+
+export const SITE_NAME = publicBrandName;
 
 const PROCTOR_NAMES = [
   "Avery Chen",

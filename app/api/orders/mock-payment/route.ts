@@ -5,6 +5,7 @@ import {
   finalizePaidOrder,
   isValidCheckoutOrderPayload,
 } from "@/lib/server/orderPayments";
+import { serverEnvIsProduction } from "@/lib/server/serverEnv";
 
 /**
  * Runs the bad request logic for this module.
@@ -25,7 +26,7 @@ function badRequest(message: string) {
  * @returns A Next.js response for the request.
  */
 export async function POST(request: Request) {
-  if (process.env.NODE_ENV === "production") {
+  if (serverEnvIsProduction()) {
     return NextResponse.json({ error: "Mock payments are disabled." }, { status: 404 });
   }
 

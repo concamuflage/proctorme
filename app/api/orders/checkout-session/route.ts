@@ -8,6 +8,10 @@ import {
   saveStripeCheckoutSession,
   type CheckoutOrderPayload,
 } from "@/lib/server/orderPayments";
+import {
+  optionalServerEnv,
+  serverEnvIsProduction,
+} from "@/lib/server/serverEnv";
 
 type CheckoutSessionRequestItem = {
   cartItemId: string;
@@ -34,7 +38,7 @@ type CheckoutSessionSelectionPayload = {
  * @returns The result used by the surrounding flow.
  */
 function shouldShareCustomerEmailWithStripe() {
-  return process.env.NODE_ENV === "production";
+  return serverEnvIsProduction();
 }
 
 /**
@@ -45,11 +49,11 @@ function shouldShareCustomerEmailWithStripe() {
  * @returns The result used by the surrounding flow.
  */
 function getAppOrigin(request: Request) {
-  const configuredOrigin = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
-  if (!configuredOrigin?.trim() && process.env.NODE_ENV === "production") {
+  const configuredOrigin = optionalServerEnv("APP_URL") ?? optionalServerEnv("NEXT_PUBLIC_APP_URL");
+  if (!configuredOrigin && serverEnvIsProduction()) {
     throw new Error("Missing APP_URL for Stripe checkout redirects.");
   }
-  const origin = configuredOrigin?.trim() || new URL(request.url).origin;
+  const origin = configuredOrigin || new URL(request.url).origin;
   const parsedOrigin = new URL(origin);
   if (parsedOrigin.protocol !== "https:" && parsedOrigin.hostname !== "localhost") {
     throw new Error("APP_URL must use HTTPS outside localhost.");

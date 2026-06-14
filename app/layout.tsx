@@ -8,10 +8,11 @@ import CartDrawer from "@/components/cart/CartDrawer";
 import PageTitle from "@/components/layout/PageTitle";
 import Providers from "@/app/providers";
 import { SITE_NAME } from "@/lib/proctor";
+import { publicGoogleAnalyticsId } from "@/lib/publicEnv";
 
 // Public Google Analytics measurement ID used to enable page tracking.
 // When undefined, Google Analytics scripts are not rendered.
-const GOOGLE_ANALYTICS_ID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID?.trim();
+const GOOGLE_ANALYTICS_ID = publicGoogleAnalyticsId;
 
 // Configure the primary sans-serif font and expose its CSS variable.
 const geistSans = Geist({

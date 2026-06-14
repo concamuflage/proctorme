@@ -1,31 +1,10 @@
 import { SITE_NAME } from "@/lib/proctor";
+import {
+  appBaseUrlFromServerEnv,
+  resendConfig,
+} from "@/lib/server/serverEnv";
 
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
-
-/**
- * Normalizes an app base URL and removes trailing slashes.
- *
- * @param value - Runtime URL value to normalize.
- * @returns Normalized URL string, or an empty string when invalid.
- */
-function normalizeAppBaseUrl(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
-}
-
-/**
- * Checks whether a URL points to a local development host.
- *
- * @param value - URL string to inspect.
- * @returns True when the URL hostname is localhost, 127.0.0.1, or ::1.
- */
-function isLocalhostUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Chooses the public app URL used in email links.
@@ -34,19 +13,11 @@ function isLocalhostUrl(value: string) {
  * @returns Public app base URL.
  */
 function appBaseUrl(explicitEnvName: string) {
-  const explicitUrl = normalizeAppBaseUrl(process.env[explicitEnvName]);
-  if (explicitUrl) return explicitUrl;
-
-  const fallbackUrls = [
-    normalizeAppBaseUrl(process.env.CLIENT_ORIGIN),
-    normalizeAppBaseUrl(process.env.NEXTAUTH_URL),
-  ].filter(Boolean);
-
-  if (process.env.NODE_ENV === "production") {
-    return fallbackUrls.find((url) => !isLocalhostUrl(url)) || PRODUCTION_APP_BASE_URL;
-  }
-
-  return fallbackUrls[0] || "http://localhost:3000";
+  return appBaseUrlFromServerEnv({
+    explicitEnvName,
+    fallbackEnvNames: ["CLIENT_ORIGIN", "NEXTAUTH_URL"],
+    productionFallback: PRODUCTION_APP_BASE_URL,
+  });
 }
 
 /**
@@ -90,9 +61,7 @@ async function sendResendEmail({
   html: string;
   plainText: string;
 }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL;
-  if (!apiKey || !from) throw new Error("Missing Resend configuration. Set RESEND_API_KEY and RESEND_FROM_EMAIL.");
+  const { apiKey, from } = resendConfig();
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",

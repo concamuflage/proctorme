@@ -27,15 +27,3 @@ export function normalizeEmail(value: unknown) {
 export function normalizeName(value: unknown) {
   return text(value);
 }
-
-/**
- * Reads a positive numeric environment variable.
- *
- * @param name - Environment variable name.
- * @param fallback - Value to use when the environment variable is missing or invalid.
- * @returns The positive numeric environment value, or the fallback.
- */
-export function numericEnv(name: string, fallback: number) {
-  const value = Number(process.env[name] || fallback);
-  return Number.isFinite(value) && value > 0 ? value : fallback;
-}

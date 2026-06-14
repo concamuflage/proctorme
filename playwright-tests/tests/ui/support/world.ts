@@ -3,7 +3,7 @@ import { type Page } from "@playwright/test";
 import { deleteUserByEmail } from "../../support/database/databaseCleanup";
 import type { VerificationEmail } from "../../support/gmailVerificationClient";
 import { endTestDbPool } from "../../support/database/databasePool";
-import "../../../../lib/server/config/env.js";
+import { playwrightBaseUrl } from "../../support/testEnv";
 import { closeUiDriver, createUiDriver, saveUiFailureArtifacts, type UiDriver } from "./uiDriverFactory";
 
 // Cucumber creates one World object per scenario.
@@ -13,9 +13,8 @@ import { closeUiDriver, createUiDriver, saveUiFailureArtifacts, type UiDriver } 
  * Represents the ui world abstraction used by this project.
  */
 export class UiWorld {
-  // Base URL for relative page.goto calls. Override with PLAYWRIGHT_BASE_URL
-  // when running against staging or another local port.
-  baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
+  // Base URL for relative page.goto calls.
+  baseURL = playwrightBaseUrl;
 
   // Shared Playwright browser/session/tab bundle for the current scenario.
   uiDriver: UiDriver | null = null;

@@ -1,18 +1,19 @@
 import { Pool, type PoolConfig } from "pg";
 
-import "../../../../lib/server/config/env.js";
+import { optionalTestEnv, requiredTestEnv } from "../testEnv";
 
 /**
- * Requires an environment value before allowing this flow to continue.
+ * Reads the configured Postgres port.
  *
- * @param name - Environment variable name.
- *
- * @returns The configured environment value.
+ * @returns Numeric Postgres port from PGPORT.
  */
-function requiredEnvValue(name: string) {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment value: ${name}`);
-  return value;
+function postgresPort() {
+  const port = Number(requiredTestEnv("PGPORT"));
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new Error("PGPORT must be a positive integer.");
+  }
+
+  return port;
 }
 
 /**
@@ -21,17 +22,18 @@ function requiredEnvValue(name: string) {
  * @returns PostgreSQL pool configuration for the test database.
  */
 function databaseConfig(): PoolConfig {
-  const connectionString = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
+  const connectionString =
+    optionalTestEnv("TEST_DATABASE_URL") ?? optionalTestEnv("DATABASE_URL");
   if (connectionString) {
     return { connectionString };
   }
 
   return {
-    host: requiredEnvValue("PGHOST"),
-    port: Number(process.env.PGPORT || "5432"),
-    database: requiredEnvValue("PGDATABASE"),
-    user: requiredEnvValue("PGUSER"),
-    password: requiredEnvValue("PGPASSWORD"),
+    host: requiredTestEnv("PGHOST"),
+    port: postgresPort(),
+    database: requiredTestEnv("PGDATABASE"),
+    user: requiredTestEnv("PGUSER"),
+    password: requiredTestEnv("PGPASSWORD"),
   };
 }
 

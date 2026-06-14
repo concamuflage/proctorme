@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { stripeSecretKey } from "@/lib/server/serverEnv";
 
 let stripeClient: Stripe | null = null;
 
@@ -8,13 +9,8 @@ let stripeClient: Stripe | null = null;
  * @returns The result used by the surrounding flow.
  */
 export function getStripeServerClient() {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) {
-    throw new Error("Missing STRIPE_SECRET_KEY.");
-  }
-
   if (!stripeClient) {
-    stripeClient = new Stripe(secretKey);
+    stripeClient = new Stripe(stripeSecretKey());
   }
 
   return stripeClient;
