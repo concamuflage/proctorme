@@ -36,6 +36,15 @@ export async function checkCredentialsInDb(payload: unknown) {
 - Preserve existing project patterns.
 - Avoid unrelated refactors.
 
+## Git Workflow
+
+- After making code changes and running the relevant verification, create a git
+  commit automatically.
+- Commit only the files changed for the current request. Do not include unrelated
+  worktree changes.
+- Use a concise commit message that describes the user-visible change, for
+  example `Fix optional school email validation`.
+
 ## Response Requirements
 
 After making code changes, Codex must include:
