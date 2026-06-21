@@ -42,8 +42,7 @@ export async function checkCredentialsInDb(payload: unknown) {
   commit automatically.
 - Commit only the files changed for the current request. Do not include unrelated
   worktree changes.
-- Use a concise commit message that describes the user-visible change, for
-  example `Fix optional school email validation`.
+- Use a concise commit message that describes the change
 
 ## Response Requirements
 

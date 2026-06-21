@@ -1,35 +1,20 @@
-import crypto from "crypto";
-import path from "path";
 import { NextResponse } from "next/server";
 import { resolveSessionUserId } from "@/lib/server/sessionUser";
-import { uploadPrivateObject } from "@/lib/server/gcsUploads";
-
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_TYPES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-]);
+import { uploadMultipartFileToPrivateGcs } from "@/lib/server/privateUploadRoute";
+import { ALLOWED_DOCUMENT_FILE_TYPES } from "@/lib/uploadFileSpecs";
 
 export const runtime = "nodejs";
 
 /**
- * Runs the extension for logic for this module.
+ * Builds the private GCS object path for a diploma upload.
  *
- * @param file - Input used by extension for.
+ * @param userId - Signed-in applicant user ID, for example `206`.
+ * @param filename - Generated upload filename, for example `1718912345678-a3f91c2d88b4e901.pdf`.
  *
- * @returns The result used by the surrounding flow.
+ * @returns A private object path, for example `proctor-applications/206/diplomas/1718912345678-a3f91c2d88b4e901.pdf`.
  */
-function extensionFor(file: File) {
-  const nameExtension = path.extname(file.name || "").toLowerCase();
-  if ([".pdf", ".jpg", ".jpeg", ".png"].includes(nameExtension)) {
-    return nameExtension;
-  }
-
-  if (file.type === "application/pdf") return ".pdf";
-  if (file.type === "image/jpeg") return ".jpg";
-  if (file.type === "image/png") return ".png";
-  return "";
+function diplomaObjectName(userId: number, filename: string) {
+  return `proctor-applications/${userId}/diplomas/${filename}`;
 }
 
 /**
@@ -45,33 +30,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const formData = await request.formData().catch(() => null);
-  const file = formData?.get("file");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Diploma file is required." }, { status: 400 });
-  }
-
-  if (!ALLOWED_TYPES.has(file.type)) {
-    return NextResponse.json({ error: "Diploma must be a PDF, JPG, JPEG, or PNG file." }, { status: 400 });
-  }
-
-  if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
-    return NextResponse.json({ error: "Diploma file must be 5 MB or smaller." }, { status: 400 });
-  }
-
-  const extension = extensionFor(file);
-  if (!extension) {
-    return NextResponse.json({ error: "Unsupported diploma file type." }, { status: 400 });
-  }
-
-  const filename = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${extension}`;
-  const objectName = `proctor-applications/${userId}/diplomas/${filename}`;
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const url = await uploadPrivateObject({
-    objectName,
-    bytes,
-    contentType: file.type,
+  const upload = await uploadMultipartFileToPrivateGcs(request, {
+    allowedTypes: ALLOWED_DOCUMENT_FILE_TYPES,
+    allowedExtensions: [".pdf", ".jpg", ".jpeg", ".png"],
+    fileRequiredError: "Diploma file is required.",
+    mimeTypeExtensions: {
+      "application/pdf": ".pdf",
+      "image/jpeg": ".jpg",
+      "image/png": ".png",
+    },
+    objectNameFor: ({ filename }) => diplomaObjectName(userId, filename),
+    typeError: "Diploma must be a PDF, JPG, JPEG, or PNG file.",
+    sizeError: "Diploma file must be 5 MB or smaller.",
+    unsupportedFileTypeError: "Unsupported diploma file type.",
   });
+  if (!upload.ok) return upload.response;
 
-  return NextResponse.json({ url });
+  return NextResponse.json({ url: upload.url });
 }

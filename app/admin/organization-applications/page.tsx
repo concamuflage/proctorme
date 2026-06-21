@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 type OrganizationApplication = {
   id: number;
@@ -117,12 +118,12 @@ export default function AdminOrganizationApplicationsPage() {
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="text-2xl font-semibold">Organization user applications</h1>
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <AlertMessage className="mt-4 leading-6" role="status" tone="warning">
           Unknown organization-domain pairs require admin review. Once approved, the organization and email domain are mapped so future verified users from that domain can be approved automatically.
-        </div>
+        </AlertMessage>
 
         {loading ? <div className="mt-6 text-sm text-zinc-600">Loading organization applications...</div> : null}
-        {error ? <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div> : null}
+        {error ? <AlertMessage className="mt-6" role="alert" tone="error">{error}</AlertMessage> : null}
 
         <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-4">
           <label className="grid gap-2 text-sm font-medium text-zinc-700 sm:max-w-sm">
@@ -167,13 +168,13 @@ export default function AdminOrganizationApplicationsPage() {
                 {isExpanded ? (
                   <div className="border-t border-zinc-100 px-6 py-6">
                     {application.domainVerified ? (
-                      <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                      <AlertMessage className="mb-4" role="status" tone="success">
                         This domain is already verified to be associated with {application.organizationName}. New verified submissions for this pair are approved automatically.
-                      </div>
+                      </AlertMessage>
                     ) : (
-                      <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                      <AlertMessage className="mb-4" role="status" tone="warning">
                         No existing organization-domain mapping was found for {application.organizationName} and {application.organizationDomain}.
-                      </div>
+                      </AlertMessage>
                     )}
 
                     <dl className="grid gap-4 text-sm md:grid-cols-2">

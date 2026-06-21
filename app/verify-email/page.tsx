@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 type VerificationState = "loading" | "success" | "error";
 
@@ -76,7 +77,7 @@ function VerifyEmailPageContent() {
           <h1 className="text-2xl font-semibold">
             {state === "loading" ? "Verifying your email" : state === "success" ? "Email verified" : "Verification failed"}
           </h1>
-          <p className={`mt-4 text-sm ${state === "error" ? "text-red-600" : "text-zinc-600"}`}>{message}</p>
+          <AlertMessage className="mt-4" role={state === "error" ? "alert" : "status"} tone={state === "error" ? "error" : state === "success" ? "success" : "info"}>{message}</AlertMessage>
           <div className="mt-6">
             <Link
               className="inline-flex rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"

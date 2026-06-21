@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPrivateObjectReadUrl, parseGcsUri } from "@/lib/server/gcsUploads";
+import { getPrivateObjectReadUrl, isGcsUri, parseGcsUri } from "@/lib/server/gcsUploads";
 import { requireAdminUserId } from "@/lib/server/sessionUser";
 
 export const runtime = "nodejs";
@@ -17,8 +17,12 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const url = searchParams.get("url") || "";
+  if (!isGcsUri(url)) {
+    return NextResponse.json({ error: "Document file not found." }, { status: 404 });
+  }
+
   const parsed = parseGcsUri(url);
-  if (!parsed || !parsed.objectName.startsWith("organization-applications/")) {
+  if (!parsed.objectName.startsWith("organization-applications/")) {
     return NextResponse.json({ error: "Document file not found." }, { status: 404 });
   }
 

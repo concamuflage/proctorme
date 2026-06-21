@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 export type ProfileChangeRequestListItem = {
   id: number;
@@ -42,6 +43,22 @@ type ProfileChangeRequestListProps = {
 function valueText(values: Record<string, unknown>, key: string) {
   const value = values[key];
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
+/**
+ * Reads one diploma URL from current or legacy education change-request values.
+ *
+ * @param values - Education row values, for example `{ diplomaUrl: "gcs://bucket/path/diploma.pdf" }`.
+ *
+ * @returns The diploma URL, or `""` when no diploma exists.
+ */
+function diplomaUrlFromEducation(values: Record<string, unknown>) {
+  const currentUrl = valueText(values, "diplomaUrl");
+  if (currentUrl) return currentUrl;
+  const legacyUrls = values.diplomaUrls;
+  return Array.isArray(legacyUrls)
+    ? legacyUrls.find((url): url is string => typeof url === "string") ?? ""
+    : "";
 }
 
 /**
@@ -204,13 +221,11 @@ function EducationPanel({
               <div className="text-xs text-zinc-500">
                 {[valueText(education, "startMonth"), valueText(education, "endMonth")].filter(Boolean).join(" to ") || "Dates not provided"}
               </div>
-              {Array.isArray(education.diplomaUrls) && education.diplomaUrls.length > 0 ? (
+              {diplomaUrlFromEducation(education) ? (
                 <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                  {education.diplomaUrls.filter((url): url is string => typeof url === "string").map((url) => (
-                    <a key={url} href={`/api/admin/proctor-applications/diploma-file?url=${encodeURIComponent(url)}`} target="_blank" rel="noreferrer" className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-zinc-700 underline">
-                      Diploma
-                    </a>
-                  ))}
+                  <a href={`/api/admin/proctor-applications/diploma-file?url=${encodeURIComponent(diplomaUrlFromEducation(education))}`} target="_blank" rel="noreferrer" className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-zinc-700 underline">
+                    Diploma
+                  </a>
                 </div>
               ) : null}
             </div>
@@ -263,7 +278,7 @@ export default function ProfileChangeRequestList({
     <section className={withTopBorder ? "mt-2 border-t border-zinc-100 pt-5" : "mt-0"}>
       {title ? <h3 className="text-sm font-semibold text-zinc-950">{title}</h3> : null}
       {loading ? <div className="mt-3 text-sm text-zinc-500">Loading request history...</div> : null}
-      {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
+      {error ? <AlertMessage className="mt-3" role="alert" tone="error">{error}</AlertMessage> : null}
       {!loading && requests.length === 0 ? (
         <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
           {emptyMessage}
@@ -350,13 +365,9 @@ export default function ProfileChangeRequestList({
                           </button>
                         </div>
                       ) : (
-                        <div className={`rounded-2xl border p-4 text-sm ${
-                          request.status === "approved"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                            : "border-red-200 bg-red-50 text-red-700"
-                        }`}>
+                        <AlertMessage role={request.status === "approved" ? "status" : "alert"} tone={request.status === "approved" ? "success" : "error"}>
                           This request was {request.status}.
-                        </div>
+                        </AlertMessage>
                       )}
                     </div>
                   ) : null}

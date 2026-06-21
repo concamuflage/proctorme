@@ -21,6 +21,7 @@ import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import AlertMessage from "@/components/ui/AlertMessage";
 import PasswordInput from "@/components/ui/PasswordInput";
 
 type LoginFormProps = {
@@ -236,19 +237,13 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
           </div>
         </div>
 
-        {error ? (
-          <div id="login-error" className="text-xs text-red-600">
-            {error}
-          </div>
-        ) : null}
+        {error ? <AlertMessage id="login-error" role="alert" tone="error">{error}</AlertMessage> : null}
 
         
         {notice ? ( 
           // It is shown only after the user successfully resends a verification email.
           // handleResendVerification sets the notice state to a success message, which triggers this conditional rendering.
-          <div id="login-notice" className="text-xs text-emerald-700">
-            {notice} 
-          </div>
+          <AlertMessage id="login-notice" role="status" tone="success">{notice}</AlertMessage>
         ) : null}
 
         {error === EMAIL_NOT_VERIFIED_MESSAGE ? (

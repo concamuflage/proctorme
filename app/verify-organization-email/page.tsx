@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 type VerificationState = "loading" | "success" | "error";
 
@@ -62,7 +63,7 @@ function VerifyOrganizationEmailPageContent() {
           <h1 className="text-2xl font-semibold">
             {state === "loading" ? "Verifying organization email" : state === "success" ? "Organization email verified" : "Verification failed"}
           </h1>
-          <p className={`mt-4 text-sm ${state === "error" ? "text-red-600" : "text-zinc-600"}`}>{message}</p>
+          <AlertMessage className="mt-4" role={state === "error" ? "alert" : "status"} tone={state === "error" ? "error" : state === "success" ? "success" : "info"}>{message}</AlertMessage>
         </div>
       </main>
     </div>

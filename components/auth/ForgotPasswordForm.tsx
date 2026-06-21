@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 /**
  * Renders the forgot password form component.
@@ -69,8 +70,8 @@ export default function ForgotPasswordForm() {
           />
         </div>
 
-        {error ? <div className="text-xs text-red-600">{error}</div> : null}
-        {notice ? <div className="text-xs text-emerald-700">{notice}</div> : null}
+        {error ? <AlertMessage role="alert" tone="error">{error}</AlertMessage> : null}
+        {notice ? <AlertMessage role="status" tone="success">{notice}</AlertMessage> : null}
 
         <button
           type="submit"

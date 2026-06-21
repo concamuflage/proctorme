@@ -4,6 +4,7 @@ import { deleteUserByEmail } from "../../support/database/databaseCleanup";
 import type { VerificationEmail } from "../../support/gmailVerificationClient";
 import { endTestDbPool } from "../../support/database/databasePool";
 import { playwrightBaseUrl } from "../../support/testEnv";
+import type { SignupBody } from "../../api/apis/SignupApi";
 import { closeUiDriver, createUiDriver, saveUiFailureArtifacts, type UiDriver } from "./uiDriverFactory";
 
 // Cucumber creates one World object per scenario.
@@ -24,6 +25,7 @@ export class UiWorld {
 
   // Data created during signup/email-verification scenarios.
   generatedEmail: string | null = null;
+  signUpUser: SignupBody | null = null;
   verificationEmail: VerificationEmail | null = null;
 }
 

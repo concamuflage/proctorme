@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import AlertMessage from "@/components/ui/AlertMessage";
 import PasswordInput from "@/components/ui/PasswordInput";
 import { PASSWORD_REQUIREMENTS_MESSAGE } from "@/shared/passwordPolicy";
 
@@ -105,8 +106,8 @@ export default function ResetPasswordForm({ email, token }: ResetPasswordFormPro
 
         <p className="text-xs text-zinc-500">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
 
-        {error ? <div className="text-xs text-red-600">{error}</div> : null}
-        {notice ? <div className="text-xs text-emerald-700">{notice}</div> : null}
+        {error ? <AlertMessage role="alert" tone="error">{error}</AlertMessage> : null}
+        {notice ? <AlertMessage role="status" tone="success">{notice}</AlertMessage> : null}
 
         {!done ? (
           <button

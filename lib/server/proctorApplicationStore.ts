@@ -2,7 +2,6 @@ import pool from "@/lib/server/database/pool";
 import {
   buildSchoolEmailVerificationLink,
   createSchoolEmailVerificationToken,
-  normalizeVerificationEmail,
   sendSchoolEmailVerificationEmail,
 } from "@/lib/server/schoolEmailVerification";
 
@@ -14,7 +13,7 @@ export type ProctorApplicationEducation = {
   major: string;
   startMonth: string;
   endMonth: string;
-  diplomaUrls: string[];
+  diplomaUrl: string;
   schoolEmail: string;
   educationVerificationAuthorized: boolean;
   schoolEmailVerificationStatus: "not_provided" | "pending" | "verified";
@@ -75,6 +74,7 @@ type ApplicationRow = {
 
 /**
  * Runs the text logic for this module.
+ * Do we even need this text()?
  *
  * @param value - Input used by text.
  *
@@ -109,11 +109,17 @@ function positiveNumber(value: unknown, fallback: number) {
 }
 
 /**
- * Parses json array from an external value.
+ * Parses an external value into an array.
  *
- * @param value - Input used by parse json array.
+ * Before and after examples:
+ * - `[{ degree: "Bachelor's Degree" }]` returns `[{ degree: "Bachelor's Degree" }]`.
+ * - `"[{\"degree\":\"Bachelor's Degree\"}]"` returns `[{ degree: "Bachelor's Degree" }]`.
+ * - `"not-json"` returns `[]`.
+ * - `{ degree: "Bachelor's Degree" }` returns `[]` because the parsed value is not an array.
  *
- * @returns The parsed value, or null when parsing fails.
+ * @param value - Possible array or JSON string, for example the `education` jsonb value from `proctor_applications`.
+ *
+ * @returns The parsed array, or `[]` when the value is missing, invalid, or not an array.
  */
 function parseJsonArray(value: unknown) {
   if (Array.isArray(value)) return value;
@@ -127,25 +133,31 @@ function parseJsonArray(value: unknown) {
 }
 
 /**
- * Runs the text array logic for this module.
+ * Converts a possible JSON array into a cleaned string array.
  *
- * @param value - Input used by text array.
+ * Example: `[" diploma.pdf ", 123, "", null, "profile.png"]` returns `["diploma.pdf", "profile.png"]`.
  *
- * @returns The result used by the surrounding flow.
+ * @param value - Possible array or JSON string, for example `"[\" diploma.pdf \", \"profile.png\"]"`.
+ *
+ * @returns Trimmed non-empty string values.
  */
 function textArray(value: unknown) {
+  // text is the function
   return parseJsonArray(value).map(text).filter(Boolean);
 }
 
 /**
- * Normalizes email into the shape this flow expects.
+ * Reads one diploma URL from current or legacy education JSON.
  *
- * @param value - Input used by normalize email.
+ * Current payloads send `{ diplomaUrl: "gcs://bucket/path/diploma.pdf" }`.
+ * Legacy drafts may still contain `{ diplomaUrls: ["gcs://bucket/path/diploma.pdf"] }`.
  *
- * @returns The normalized value.
+ * @param item - Raw education object from stored JSON or request payload.
+ *
+ * @returns The single diploma URL, or `""` when no diploma exists.
  */
-function normalizeEmail(value: unknown) {
-  return text(value).toLowerCase();
+function singleDiplomaUrl(item: Record<string, unknown>) {
+  return text(item.diplomaUrl) || textArray(item.diplomaUrls)[0] || "";
 }
 
 /**
@@ -318,32 +330,64 @@ async function getExistingNamedId(client: typeof pool, table: "professions" | "g
 }
 
 /**
- * Runs the map application logic for this module.
+ * Converts a database row into the client/admin proctor application shape.
  *
- * @param row - Input used by map application.
+ * Before mapping, the database row uses SQL column names and JSON values, for example:
+ * {
+ *   id: 206,
+ *   user_id: 42,
+ *   timezone_name: "America/New_York",
+ *   education: "[{\"degree\":\"Bachelor's Degree\",\"diplomaUrl\":\"gcs://bucket/path/diploma.pdf\"}]",
+ *   image_urls: "[\"gcs://bucket/path/profile.png\"]"
+ * }
  *
- * @returns The result used by the surrounding flow.
+ * After mapping, the application uses browser-facing camelCase fields, for example:
+ * {
+ *   id: 206,
+ *   userId: 42,
+ *   timezone: "America/New_York",
+ *   education: [{ degree: "Bachelor's Degree", diplomaUrl: "gcs://bucket/path/diploma.pdf" }],
+ *   imageUrls: ["gcs://bucket/path/profile.png"]
+ * }
+ *
+ * @param row - Joined `proctor_applications` row, for example one row containing `education` JSON and `timezone_name`.
+ *
+ * @returns A normalized application object with parsed arrays, display names, and ISO-like dates.
  */
 function mapApplication(row: ApplicationRow) {
   const firstName = text(row.first_name);
   const lastName = text(row.last_name);
+  // `education` is stored as JSON data in the database; parse it into an array before normalizing each entry.
+  // education is an array of objects
   const education = parseJsonArray(row.education)
+    // Keep only object entries. If the JSON array somehow contains strings/numbers/null, skip them safely.
+
+    // Example: [{ degree: "Bachelor's Degree" }, null, "bad value", 123] 
+    // becomes [{ degree: "Bachelor's Degree" }, null, null, null] before the filter below removes nulls.
     .map((item) => (typeof item === "object" && item !== null ? item as Record<string, unknown> : null))
+    // type predicate
     .filter((item): item is Record<string, unknown> => item !== null)
+    // Convert each raw stored education object into the shape consumed by the account and admin UIs.
     .map((item) => ({
+      // text():Text fields are trimmed; missing or non-string values become "" instead of leaking raw database values.
       degree: text(item.degree),
       school: text(item.school),
       major: text(item.major),
       startMonth: text(item.startMonth),
       endMonth: text(item.endMonth),
-      diplomaUrls: textArray(item.diplomaUrls),
-      schoolEmail: normalizeEmail(item.schoolEmail),
+      // Each education row allows one diploma; old `diplomaUrls` arrays are collapsed to their first value.
+      diplomaUrl: singleDiplomaUrl(item),
+      // School emails are normalized before display/comparison so casing and whitespace stay consistent.
+      schoolEmail: text(item.schoolEmail).toLowerCase(),
+      // Only a real boolean true means the user authorized verification; every other value is treated as false.
       educationVerificationAuthorized: item.educationVerificationAuthorized === true,
+      // Only expose statuses the UI understands. Unknown or missing status values become "not_provided".
       schoolEmailVerificationStatus: text(item.schoolEmailVerificationStatus) === "verified"
         ? "verified" as const
-        : normalizeEmail(item.schoolEmail)
+        : text(item.schoolEmail).toLowerCase()
           ? "pending" as const
           : "not_provided" as const,
+      // Verification timestamps are optional display metadata; invalid or missing values become empty strings.
       schoolEmailVerificationSentAt: text(item.schoolEmailVerificationSentAt),
       schoolEmailVerifiedAt: text(item.schoolEmailVerifiedAt),
     }));
@@ -377,22 +421,39 @@ function mapApplication(row: ApplicationRow) {
 }
 
 /**
- * Sends school email verifications for this flow.
+ * Sends school email verification requests for unverified education entries.
  *
- * @param application - Input used by send school email verifications.
+ * @param application - Persisted proctor application with education property, which is an array of education objects, 
+ * for example an application whose first education object includes `{ school: "SFSU", schoolEmail: "student@sfsu.edu" }`.
  *
- * @returns The result used by the surrounding flow.
+ * @returns The application with updated education verification metadata, for example
+ * `{ schoolEmailVerificationStatus: "pending", schoolEmailVerificationSentAt: "2026-06-19T12:00:00.000Z" }`.
  */
 async function sendSchoolEmailVerifications(application: ReturnType<typeof mapApplication>) {
+  // `mapApplication()` returns education objects without token fields; those fields are optional and only needed while
+  // preparing a verification email. Clone each object before adding them so the incoming mapped application stays
+  // unchanged until the database update succeeds. Example mapped shape:
+  // [{ school: "SFSU", schoolEmail: "student@sfsu.edu", schoolEmailVerificationStatus: "pending" }]
+  // Example cloned working shape after token assignment:
+  // [{ school: "SFSU", schoolEmail: "student@sfsu.edu", schoolEmailVerificationStatus: "pending",
+  //    schoolEmailVerificationToken: "<hashed token>", schoolEmailVerificationExpiresAt: "2026-06-19T12:00:00.000Z" }]
+
+  // make a shallow copy of the education array and each education object so we can add verification fields without mutating the input
+
   const educationWithTokens: ProctorApplicationEducation[] = application.education.map((education) => ({ ...education }));
+
   const applicantName = application.applicantName || application.applicantEmail;
   const sendJobs: Array<Promise<void>> = [];
 
-  educationWithTokens.forEach((education, index) => {
-    const schoolEmail = normalizeVerificationEmail(education.schoolEmail);
+  educationWithTokens.forEach((education, index) =>{
+    const schoolEmail = text(education.schoolEmail).toLowerCase();
+    // Skip entries that cannot or should not receive a new email: no school email exists, the email is already
+    // verified, or a verification email was already sent. Example: `{ schoolEmailVerificationSentAt:
+    // "2026-06-19T12:00:00.000Z" }` keeps the existing pending token instead of sending a duplicate.
     if (!schoolEmail || education.schoolEmailVerificationStatus === "verified" || education.schoolEmailVerificationSentAt) return;
 
     const { rawToken, hashedToken, expiresAt } = createSchoolEmailVerificationToken();
+    
     education.schoolEmail = schoolEmail;
     education.schoolEmailVerificationStatus = "pending";
     education.schoolEmailVerificationToken = hashedToken;
@@ -433,7 +494,7 @@ async function sendSchoolEmailVerifications(application: ReturnType<typeof mapAp
       major: education.major,
       startMonth: education.startMonth,
       endMonth: education.endMonth,
-      diplomaUrls: education.diplomaUrls,
+      diplomaUrl: education.diplomaUrl,
       schoolEmail: education.schoolEmail,
       educationVerificationAuthorized: education.educationVerificationAuthorized,
       schoolEmailVerificationStatus: education.schoolEmailVerificationStatus,
@@ -441,6 +502,150 @@ async function sendSchoolEmailVerifications(application: ReturnType<typeof mapAp
       schoolEmailVerifiedAt: education.schoolEmailVerifiedAt,
     })),
   };
+}
+
+/**
+ * Gets the school email verification state for one education entry owned by a user.
+ *
+ * @param userId - Authenticated applicant user id, for example `42`.
+ * @param educationIndex - Education entry index in the application JSON, for example `0`.
+ * @param schoolEmail - School email address expected for that entry, for example `student@school.edu`.
+ *
+ * @returns The current verification status for that school email.
+ */
+export async function getSchoolEmailVerificationStatusForUser(userId: number, educationIndex: number, schoolEmail: string) {
+  const normalizedEmail = text(schoolEmail).toLowerCase();
+  if (!normalizedEmail || educationIndex < 0) return { status: "not_provided" as const };
+
+  const result = await pool.query<{ education: unknown }>(
+    "SELECT education FROM proctor_applications WHERE user_id = $1 LIMIT 1",
+    [userId]
+  );
+  const education = parseJsonArray(result.rows[0]?.education).map((item) =>
+    typeof item === "object" && item !== null ? item as ProctorApplicationEducation : null
+  );
+  const target = education[educationIndex];
+  if (!target || text(target.schoolEmail).toLowerCase() !== normalizedEmail) {
+    return { status: "not_provided" as const };
+  }
+
+  return {
+    status: target.schoolEmailVerificationStatus === "verified" || target.schoolEmailVerificationStatus === "pending"
+      ? target.schoolEmailVerificationStatus
+      : "not_provided",
+    sentAt: target.schoolEmailVerificationSentAt || "",
+    verifiedAt: target.schoolEmailVerifiedAt || "",
+  };
+}
+
+/**
+ * Sends a school email verification link for one education entry owned by a user.
+ *
+ * @param userId - Authenticated applicant user id, for example `42`.
+ * @param educationIndex - Education entry index in the application JSON, for example `0`.
+ * @param schoolEmail - School email address to verify, for example `student@school.edu`.
+ *
+ * @returns The pending verification state after the email is queued.
+ */
+export async function sendSchoolEmailVerificationForUser({
+  userId,
+  educationIndex,
+  schoolEmail,
+}: {
+  userId: number;
+  educationIndex: number;
+  schoolEmail: string;
+}) {
+  const normalizedEmail = text(schoolEmail).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new Error("A valid school email is required.");
+  }
+  if (educationIndex < 0) throw new Error("A valid education entry is required.");
+
+  const { rawToken, hashedToken, expiresAt } = createSchoolEmailVerificationToken();
+  const sentAt = new Date().toISOString();
+  let emailPayload: {
+    applicationId: number;
+    applicantName: string;
+    school: string;
+    verificationLink: string;
+  } | null = null;
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query<ApplicationRow>(
+      `
+        SELECT pa.*, u.email, u.first_name, u.last_name, u.date_of_birth, tz.name AS timezone_name, e.name AS ethnicity_name
+        FROM proctor_applications pa
+        JOIN users u ON u.id = pa.user_id
+        LEFT JOIN timezones tz ON tz.id = pa.timezone_id
+        LEFT JOIN ethnicities e ON e.id = pa.ethnicity_id
+        WHERE pa.user_id = $1
+        FOR UPDATE OF pa
+      `,
+      [userId]
+    );
+    const row = result.rows[0];
+    if (!row) throw new Error("Save this application section before sending school email verification.");
+
+    const application = mapApplication(row);
+    const education = parseJsonArray(row.education).map((item) =>
+      typeof item === "object" && item !== null ? { ...(item as ProctorApplicationEducation) } : {} as ProctorApplicationEducation
+    );
+    const target = education[educationIndex];
+    if (!target) throw new Error("A valid education entry is required.");
+    if (text(target.schoolEmail).toLowerCase() !== normalizedEmail) {
+      throw new Error("Save the school email before sending verification.");
+    }
+    if (target.schoolEmailVerificationStatus === "verified") {
+      await client.query("COMMIT");
+      return {
+        status: "verified" as const,
+        sentAt: target.schoolEmailVerificationSentAt || "",
+        verifiedAt: target.schoolEmailVerifiedAt || "",
+      };
+    }
+
+    target.schoolEmail = normalizedEmail;
+    target.schoolEmailVerificationStatus = "pending";
+    target.schoolEmailVerificationToken = hashedToken;
+    target.schoolEmailVerificationExpiresAt = expiresAt.toISOString();
+    target.schoolEmailVerificationSentAt = sentAt;
+    target.schoolEmailVerifiedAt = "";
+
+    await client.query(
+      "UPDATE proctor_applications SET education = $2::jsonb, updated_at = NOW() WHERE id = $1",
+      [application.id, JSON.stringify(education)]
+    );
+    await client.query("COMMIT");
+
+    emailPayload = {
+      applicationId: application.id,
+      applicantName: application.applicantName || application.applicantEmail,
+      school: target.school,
+      verificationLink: buildSchoolEmailVerificationLink({
+        applicationId: application.id,
+        educationIndex,
+        email: normalizedEmail,
+        rawToken,
+      }),
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  await sendSchoolEmailVerificationEmail({
+    to: normalizedEmail,
+    applicantName: emailPayload?.applicantName || "",
+    school: emailPayload?.school || "",
+    verificationLink: emailPayload?.verificationLink || "",
+  });
+
+  return { status: "pending" as const, sentAt };
 }
 
 /**
@@ -461,12 +666,19 @@ export function normalizeProctorApplicationInput(payload: unknown): ProctorAppli
       major: text(item.major),
       startMonth: text(item.startMonth),
       endMonth: text(item.endMonth),
-      diplomaUrls: textArray(item.diplomaUrls),
-      schoolEmail: normalizeEmail(item.schoolEmail),
+      diplomaUrl: singleDiplomaUrl(item),
+      schoolEmail: text(item.schoolEmail).toLowerCase(),
       educationVerificationAuthorized: item.educationVerificationAuthorized === true,
+      // Keep verified status only when the caller provides it; 
+      // otherwise a provided school email must be verified later, so mark it pending.
+      // If no school email is provided, the status is not_provided because school email verification is optional.
+      // `as const` keeps each string as its exact literal type instead of widening it to plain string.
+      // If item.schoolEmailVerificationStatus is "verified", keep it as "verified".
+      // Otherwise, if item.schoolEmail exists, mark it "pending".
+      // Otherwise, mark it "not_provided".
       schoolEmailVerificationStatus: text(item.schoolEmailVerificationStatus) === "verified"
         ? "verified" as const
-        : normalizeEmail(item.schoolEmail)
+        : text(item.schoolEmail).toLowerCase()
           ? "pending" as const
           : "not_provided" as const,
     }))
@@ -518,21 +730,27 @@ export function validateProctorApplicationInput(input: ProctorApplicationInput) 
   if (!Number.isInteger(input.hourlyRate)) return "Hourly rate must be a whole dollar amount.";
   if (!Number.isFinite(input.minimumHours) || !Number.isFinite(input.maximumHours) || input.maximumHours < input.minimumHours) return "Session hours are invalid.";
   if (input.education.length === 0) return "At least one education entry is required.";
-  if (input.education.some((education) => education.diplomaUrls.length === 0)) return "A diploma upload is required for each education entry.";
-  if (input.education.some((education) => !education.educationVerificationAuthorized)) return "Education verification authorization is required for each education entry.";
+  if (input.education.some((education) => !education.diplomaUrl)) return "A diploma upload is required for each education entry.";
+  if (input.education.some((education) => !education.educationVerificationAuthorized)) return "Check the education verification authorization box for each education entry before continuing.";
+  if (input.education.some((education) => education.schoolEmail && education.schoolEmailVerificationStatus !== "verified")) return "Verify each provided school email before submitting.";
   if (input.imageUrls.length === 0) return "At least one profile image URL is required.";
   if (input.governmentIdUrls.length === 0) return "A government-issued ID upload is required.";
   return null;
 }
 
 /**
- * Gets proctor application for user for this flow.
+ * Loads the authenticated user's proctor application for the account form.
  *
- * @param userId - Input used by get proctor application for user.
+ * The returned application is already normalized for the browser: JSON columns such as
+ * `education`, `image_urls`, and `government_id_urls` are parsed into arrays, lookup ids are
+ * converted into display names, and missing rows return `null`.
  *
- * @returns The result used by the surrounding flow.
+ * @param userId - Authenticated applicant user id, for example `42`.
+ *
+ * @returns The user's application, for example `{ status: "draft", education: [{ degree: "Bachelor's Degree", diplomaUrl: "gcs://bucket/path/diploma.pdf" }] }`, or `null` when no application exists.
  */
 export async function getProctorApplicationForUser(userId: number) {
+  // Join lookup tables here so the client receives display values like timezone name instead of internal ids.
   const result = await pool.query<ApplicationRow>(
     `
       SELECT pa.*, u.email, u.first_name, u.last_name, tz.name AS timezone_name, e.name AS ethnicity_name
@@ -546,7 +764,9 @@ export async function getProctorApplicationForUser(userId: number) {
     `,
     [userId]
   );
+  
   const application = result.rows[0] ? mapApplication(result.rows[0]) : null;
+  // Pending applications trigger any missing school-email verification sends before the browser receives the latest status.
   if (application?.status === "pending") {
     return sendSchoolEmailVerifications(application);
   }

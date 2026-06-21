@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 type RoleVerificationClientProps = {
   role: "corporate" | "proctor";
@@ -203,9 +204,9 @@ export default function RoleVerificationClient({ role }: RoleVerificationClientP
           <h1 className="text-2xl font-semibold">{ROLE_COPY[role].title}</h1>
           <p className="mt-2 text-sm leading-6 text-zinc-600">{ROLE_COPY[role].body}</p>
 
-          <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+          <AlertMessage className="mt-6" role={error ? "alert" : "status"} tone={error ? "error" : "info"}>
             {error ?? message}
-          </div>
+          </AlertMessage>
 
           {role === "corporate" && formOpen && !submitted ? (
             <form onSubmit={submitCorporateApplication} className="mt-6 grid gap-4">

@@ -13,6 +13,7 @@
 
 import React, { useState } from "react";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import AlertMessage from "@/components/ui/AlertMessage";
 import PasswordInput from "@/components/ui/PasswordInput";
 import { PASSWORD_REQUIREMENTS_MESSAGE, isStrongPassword } from "@/shared/passwordPolicy";
 
@@ -178,6 +179,8 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
             className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             placeholder="you@example.com"
             autoComplete="username"
+            // Keep resend verification tied to the account that was just created.
+            disabled={Boolean(successMessage)}
             required
           />
         </div>
@@ -188,12 +191,14 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
           </label>
           <PasswordInput
             id="signup-password"
-            name="password"
+            name="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             placeholder="••••••••"
             autoComplete="new-password"
+            minLength={12}
+            pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{12,}"
             required
           />
           <p className="mt-2 text-xs text-zinc-500">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
@@ -211,20 +216,14 @@ export default function SignupForm({ compact = false }: SignupFormProps) {
             className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm"
             placeholder="••••••••"
             autoComplete="new-password"
+            minLength={12}
+            pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{12,}"
             required
           />
         </div>
 
-        {error ? (
-          <div id="signup-error" className="text-xs text-red-600">
-            {error}
-          </div>
-        ) : null}
-        {successMessage ? (
-          <div id="signup-success" className="text-xs text-emerald-700">
-            {successMessage}
-          </div>
-        ) : null}
+        {error ? <AlertMessage id="signup-error" role="alert" tone="error">{error}</AlertMessage> : null}
+        {successMessage ? <AlertMessage id="signup-success" role="status" tone="success">{successMessage}</AlertMessage> : null}
 
         {successMessage ? (
           <button

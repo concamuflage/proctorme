@@ -1,13 +1,6 @@
 import "server-only";
 import "@/lib/server/config/env.js";
 
-type AppBaseUrlOptions = {
-  explicitEnvName?: string;
-  fallbackEnvNames: string[];
-  productionFallback: string;
-  localFallback?: string;
-};
-
 /**
  * Reads a required server-only environment variable.
  *
@@ -111,41 +104,13 @@ export function normalizeServerAppBaseUrl(value: unknown) {
 }
 
 /**
- * Checks whether a URL points to a local development host.
+ * Reads and normalizes a required app base URL environment variable.
  *
- * @param value - URL to inspect. Example: `http://localhost:3000`.
- * @returns True for `localhost`, `127.0.0.1`, or `::1`; otherwise false.
- */
-export function isLocalhostServerUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Chooses an app base URL from explicit and fallback environment variables.
- *
- * @param options - Env names and fallback URLs. Example: explicit `EMAIL_VERIFICATION_APP_URL`, then `CLIENT_ORIGIN`.
+ * @param envName - Environment variable containing the public app base URL. Example: `APP_BASE_URL`.
  * @returns A normalized base URL. Example: `https://outlierfit.shop`.
  */
-export function appBaseUrlFromServerEnv(options: AppBaseUrlOptions) {
-  const explicitUrl = options.explicitEnvName
-    ? normalizeServerAppBaseUrl(optionalServerEnv(options.explicitEnvName))
-    : "";
-  if (explicitUrl) return explicitUrl;
-
-  const fallbackUrls = options.fallbackEnvNames
-    .map((name) => normalizeServerAppBaseUrl(optionalServerEnv(name)))
-    .filter(Boolean);
-
-  if (serverEnvIsProduction()) {
-    return fallbackUrls.find((url) => !isLocalhostServerUrl(url)) || options.productionFallback;
-  }
-
-  return fallbackUrls[0] || options.localFallback || "http://localhost:3000";
+export function appBaseUrlFromServerEnv(envName: string) {
+  return normalizeServerAppBaseUrl(requiredServerEnv(envName));
 }
 
 /**
@@ -172,12 +137,9 @@ export function googleCloudProjectId() {
  * @returns Configured GCS bucket name. Example: `proctorme-dev-user-uploads-project-123`.
  */
 export function gcsUploadBucketName() {
-  const explicitBucket = optionalServerEnv("GCS_UPLOAD_BUCKET");
-  if (explicitBucket) return explicitBucket;
-
   const bucketName = serverEnvIsProduction()
-    ? optionalServerEnv("GCS_UPLOAD_BUCKET_PROD")
-    : optionalServerEnv("GCS_UPLOAD_BUCKET_DEV");
+    ? requiredServerEnv("GCS_UPLOAD_BUCKET_PROD")
+    : requiredServerEnv("GCS_UPLOAD_BUCKET_DEV");
 
   if (!bucketName) {
     throw new Error("Missing GCS upload bucket configuration.");
@@ -194,10 +156,9 @@ export function gcsUploadBucketName() {
 export function allowedGcsUploadBuckets() {
   return new Set(
     [
-      optionalServerEnv("GCS_UPLOAD_BUCKET"),
       optionalServerEnv("GCS_UPLOAD_BUCKET_DEV"),
       optionalServerEnv("GCS_UPLOAD_BUCKET_PROD"),
-    ].filter((value): value is string => Boolean(value))
+    ]
   );
 }
 

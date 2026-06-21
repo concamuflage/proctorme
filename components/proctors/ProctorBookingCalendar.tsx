@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 export type BookingSlot = {
   id: string;
@@ -307,7 +308,7 @@ export default function ProctorBookingCalendar({
       </div>
 
       {loading ? <div className="mt-3 text-xs text-zinc-500">Loading availability...</div> : null}
-      {error ? <div className="mt-3 text-xs text-red-600">{error}</div> : null}
+      {error ? <AlertMessage className="mt-3" role="alert" tone="error">{error}</AlertMessage> : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
         <span className="inline-flex items-center gap-1.5">

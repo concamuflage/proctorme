@@ -4,8 +4,6 @@ import {
   resendConfig,
 } from "@/lib/server/serverEnv";
 
-// Base URL used as fallback when no valid environment URL is provided in production
-const PRODUCTION_APP_BASE_URL = "https://proctorme.shop";
 // Store email that will also receive a copy of the invoice email
 const STORE_EMAIL = "unodostreszlm@gmail.com";
 
@@ -15,10 +13,7 @@ const STORE_EMAIL = "unodostreszlm@gmail.com";
  * @returns The result used by the surrounding flow.
  */
 function getInvoiceAppBaseUrl() {
-  return appBaseUrlFromServerEnv({
-    fallbackEnvNames: ["APP_URL", "NEXTAUTH_URL", "CLIENT_ORIGIN"],
-    productionFallback: PRODUCTION_APP_BASE_URL,
-  });
+  return appBaseUrlFromServerEnv("APP_BASE_URL");
 }
 
 // Builds the full URL for downloading an invoice PDF for a given order

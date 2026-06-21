@@ -47,7 +47,7 @@ type EducationValues = {
   major: string;
   startMonth: string;
   endMonth: string;
-  diplomaUrls: string[];
+  diplomaUrl: string;
   schoolEmail: string;
   educationVerificationAuthorized: boolean;
   schoolEmailVerificationStatus: string;
@@ -123,6 +123,17 @@ function textArray(value: unknown) {
 }
 
 /**
+ * Reads one diploma URL from current or legacy education change-request values.
+ *
+ * @param item - Raw education value, for example `{ diplomaUrl: "gcs://bucket/path/diploma.pdf" }`.
+ *
+ * @returns The single diploma URL, or `""` when no diploma exists.
+ */
+function singleDiplomaUrl(item: Record<string, unknown>) {
+  return text(item.diplomaUrl) || textArray(item.diplomaUrls)[0] || "";
+}
+
+/**
  * Normalizes address values into the shape this flow expects.
  *
  * @param value - Input used by normalize address values.
@@ -169,9 +180,11 @@ function normalizeEducationValues(value: unknown): EducationValues[] {
       major: text(item.major),
       startMonth: text(item.startMonth),
       endMonth: text(item.endMonth),
-      diplomaUrls: textArray(item.diplomaUrls),
+      diplomaUrl: singleDiplomaUrl(item),
       schoolEmail: text(item.schoolEmail).toLowerCase(),
       educationVerificationAuthorized: item.educationVerificationAuthorized === true,
+      // Keep verified status only when the caller provides it; otherwise a provided school email still needs verification.
+      // If no school email is provided, the status is not_provided because school email verification is optional.
       schoolEmailVerificationStatus: text(item.schoolEmailVerificationStatus) === "verified"
         ? "verified"
         : text(item.schoolEmail)
@@ -285,7 +298,7 @@ export async function getCurrentProctorEducations(userId: number): Promise<Educa
     major: text(row.major),
     startMonth: row.start_month instanceof Date ? row.start_month.toISOString().slice(0, 7) : text(row.start_month).slice(0, 7),
     endMonth: row.end_month instanceof Date ? row.end_month.toISOString().slice(0, 7) : text(row.end_month).slice(0, 7),
-    diplomaUrls: [],
+    diplomaUrl: "",
     schoolEmail: "",
     educationVerificationAuthorized: true,
     schoolEmailVerificationStatus: "not_provided",
@@ -493,7 +506,7 @@ async function applyEducationRequest(client: typeof pool, userId: number, values
 
   for (const education of educations) {
     if (!education.degree || !education.school || !education.major) throw new Error("Education request is incomplete.");
-    if (education.diplomaUrls.length === 0) throw new Error("Diploma upload is required.");
+    if (!education.diplomaUrl) throw new Error("Diploma upload is required.");
     if (!education.educationVerificationAuthorized) throw new Error("Education verification authorization is required.");
 
     const degreeId = await getExistingDegreeId(client, education.degree);

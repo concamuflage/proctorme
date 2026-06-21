@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "gmail:verify-email": "node scripts/gmail-verify-email.js",
+    "user:create-verified": "node scripts/create-verified-user.js",
     "migrate": "node-pg-migrate -m migrations",
     "migrate:up": "node-pg-migrate -m migrations up",
     "migrate:down": "node-pg-migrate -m migrations down",
@@ -25,6 +26,7 @@
     "pg": "^8.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-hook-form": "^7.80.0",
     "stripe": "^18.5.0"
   },
   "devDependencies": {

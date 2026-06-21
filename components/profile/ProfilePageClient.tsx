@@ -4,10 +4,13 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import EducationFields, { EMPTY_EDUCATION, type EducationInput } from "@/components/account/EducationFields";
 import ProfileChangeRequestList from "@/components/profile/ProfileChangeRequestList";
+import UploadField from "@/components/account/UploadField";
 import UsAddressFields from "@/components/account/UsAddressFields";
 import { useCart } from "@/components/cart/CartContext";
+import AlertMessage from "@/components/ui/AlertMessage";
 import { formatUsd } from "@/lib/formatters";
 import { SITE_NAME } from "@/lib/proctor";
+import { ALLOWED_DOCUMENT_FILE_TYPES, ALLOWED_PROFILE_IMAGE_FILE_TYPES, MAX_UPLOAD_FILE_BYTES } from "@/lib/uploadFileSpecs";
 
 type ProfileData = {
   user: {
@@ -91,7 +94,7 @@ type ProctorApplication = {
     major: string;
     startMonth?: string;
     endMonth?: string;
-    diplomaUrls?: string[];
+    diplomaUrl?: string;
     schoolEmail?: string;
     schoolEmailVerificationStatus?: string;
   }>;
@@ -105,7 +108,7 @@ type SubmittedEducation = {
   major: string;
   startMonth: string;
   endMonth: string;
-  diplomaUrls: string[];
+  diplomaUrl: string;
   schoolEmail: string;
   educationVerificationAuthorized: boolean;
   schoolEmailVerificationStatus: string;
@@ -182,8 +185,6 @@ type ProfileSection =
 
 const ACTIVE_ROLE_STORAGE_KEY = "proctorme.activeRole";
 const PROFILE_INPUT_CLASS = "w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-400";
-const MAX_DIPLOMA_FILE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_DIPLOMA_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const WEEK_DAYS = [
   { dayOfWeek: 0, label: "Sunday", shortLabel: "Sun" },
   { dayOfWeek: 1, label: "Monday", shortLabel: "Mon" },
@@ -542,26 +543,12 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
    * Updates education draft while preserving the surrounding form state.
    *
    * @param index - Input used by update education draft.
-   * @param field - Input used by update education draft.
-   * @param value - Input used by update education draft.
+   * @param field - Education field name, for example `degree` or `educationVerificationAuthorized`.
+   * @param value - New education field value, for example `"Bachelor's Degree"` or `true`.
    *
    * @returns The result used by the surrounding flow.
    */
-  function updateEducationDraft(index: number, field: keyof EducationInput, value: string) {
-    setSubmittedEducation(null);
-    setEducationDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
-  }
-
-  /**
-   * Updates education draft boolean while preserving the surrounding form state.
-   *
-   * @param index - Input used by update education draft boolean.
-   * @param field - Input used by update education draft boolean.
-   * @param value - Input used by update education draft boolean.
-   *
-   * @returns The result used by the surrounding flow.
-   */
-  function updateEducationDraftBoolean(index: number, field: "educationVerificationAuthorized", value: boolean) {
+  function updateEducationDraft<Field extends keyof EducationInput>(index: number, field: Field, value: EducationInput[Field]) {
     setSubmittedEducation(null);
     setEducationDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
   }
@@ -577,11 +564,11 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
   async function uploadEducationDiploma(index: number, file: File | null) {
     if (!file) return;
     setEducationError(null);
-    if (!ALLOWED_DIPLOMA_FILE_TYPES.has(file.type)) {
+    if (!ALLOWED_DOCUMENT_FILE_TYPES.has(file.type)) {
       setEducationError("Diploma must be a PDF, JPG, JPEG, or PNG file.");
       return;
     }
-    if (file.size <= 0 || file.size > MAX_DIPLOMA_FILE_BYTES) {
+    if (file.size <= 0 || file.size > MAX_UPLOAD_FILE_BYTES) {
       setEducationError("Diploma file must be 5 MB or smaller.");
       return;
     }
@@ -599,7 +586,7 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
       return;
     }
     setEducationDraft((current) => current.map((item, itemIndex) =>
-      itemIndex === index ? { ...item, diplomaUrls: [...item.diplomaUrls, payload.url] } : item
+      itemIndex === index ? { ...item, diplomaUrl: payload.url } : item
     ));
     setSubmittedEducation(null);
   }
@@ -616,7 +603,7 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
       major: item.major === "Other" ? item.customMajor.trim() : item.major,
       startMonth: item.startMonth,
       endMonth: item.endMonth,
-      diplomaUrls: item.diplomaUrls,
+      diplomaUrl: item.diplomaUrl,
       schoolEmail: item.schoolEmail.trim(),
       educationVerificationAuthorized: item.educationVerificationAuthorized,
       schoolEmailVerificationStatus: item.schoolEmailVerificationStatus,
@@ -637,12 +624,12 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
         setEducationError("Degree, school, and major are required for each education entry.");
         return;
       }
-      if (item.diplomaUrls.length === 0) {
+      if (!item.diplomaUrl) {
         setEducationError("A diploma upload is required for each education entry.");
         return;
       }
       if (!item.educationVerificationAuthorized) {
-        setEducationError("Education verification authorization is required for each education entry.");
+        setEducationError("Check the education verification authorization box for each education entry before continuing.");
         return;
       }
     }
@@ -956,7 +943,8 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
         customMajor: typeof item.major === "string" && !profileOptions.majors.includes(item.major) ? item.major : "",
         startMonth: typeof item.startMonth === "string" ? item.startMonth : "",
         endMonth: typeof item.endMonth === "string" ? item.endMonth : "",
-        diplomaUrls: Array.isArray(item.diplomaUrls) ? item.diplomaUrls.filter((url): url is string => typeof url === "string") : [],
+        // Read old pending requests with `diplomaUrls`, but edit using one `diplomaUrl`.
+        diplomaUrl: typeof item.diplomaUrl === "string" ? item.diplomaUrl : Array.isArray(item.diplomaUrls) ? item.diplomaUrls.find((url): url is string => typeof url === "string") ?? "" : "",
         schoolEmail: typeof item.schoolEmail === "string" ? item.schoolEmail : "",
         educationVerificationAuthorized: item.educationVerificationAuthorized === true,
         schoolEmailVerificationStatus: typeof item.schoolEmailVerificationStatus === "string" ? item.schoolEmailVerificationStatus : "not_provided",
@@ -1068,11 +1056,7 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
           </div>
         ) : null}
 
-        {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-            {error}
-          </div>
-        ) : null}
+        {error ? <AlertMessage role="alert" tone="error">{error}</AlertMessage> : null}
 
         {profile && !loading ? (
           <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -1172,9 +1156,9 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
                 <SectionCard title="Education">
                   <div className="grid gap-5">
                     <VerifiedEducationList educations={profile?.educations ?? []} />
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+                    <AlertMessage className="leading-6" role="status" tone="warning">
                       New education records require admin review before they appear on your public proctor profile.
-                    </div>
+                    </AlertMessage>
                     {submittedEducation ? (
                       <SubmittedEducationSummary education={submittedEducation} />
                     ) : !educationFormOpen ? (
@@ -1199,7 +1183,6 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
                         inputClassName={PROFILE_INPUT_CLASS}
                         majorOptions={profileOptions.majors}
                         onAddEducation={() => setEducationDraft((current) => [...current, { ...EMPTY_EDUCATION }])}
-                        onBooleanChange={updateEducationDraftBoolean}
                         onChange={updateEducationDraft}
                         onDiplomaUpload={(index, file) => void uploadEducationDiploma(index, file)}
                         onRemoveEducation={(index) => setEducationDraft((current) => current.filter((_, itemIndex) => itemIndex !== index))}
@@ -1208,8 +1191,8 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
                         uploadingEducationIndex={uploadingEducationIndex}
                       />
                     )}
-                    {educationError ? <div className="text-sm text-red-600">{educationError}</div> : null}
-                    {educationMessage ? <div className="text-sm text-emerald-700">{educationMessage}</div> : null}
+                    {educationError ? <AlertMessage role="alert" tone="error">{educationError}</AlertMessage> : null}
+                    {educationMessage ? <AlertMessage role="status" tone="success">{educationMessage}</AlertMessage> : null}
                     {educationFormOpen && !submittedEducation ? (
                       <div className="flex justify-end">
                         <button
@@ -1355,7 +1338,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
  */
 function OrganizationVerificationPrompt() {
   return (
-    <div className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900 shadow-sm">
+    <AlertMessage className="mb-6 leading-6 shadow-sm" role="status" tone="warning">
       <div className="font-semibold text-amber-950">Organization verification needed</div>
       <div className="mt-1">
         You already indicated that you want to book proctors as an organization user. Verify your organization before using organization booking features.
@@ -1363,7 +1346,7 @@ function OrganizationVerificationPrompt() {
       <Link href="/account/corporate-verification" className="mt-3 inline-flex rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white">
         Verify organization
       </Link>
-    </div>
+    </AlertMessage>
   );
 }
 
@@ -1437,16 +1420,24 @@ function ProfileOverview({
   }, [profile, options.professions]);
 
   /**
-   * Runs the upload profile image logic for this module.
+   * Uploads a replacement profile image after checking the shared image type list and 5 MB upload limit.
    *
-   * @param file - Input used by upload profile image.
+   * @param file - Selected image file, for example `headshot.png`.
    *
-   * @returns The result used by the surrounding flow.
+   * @returns Nothing. On success, replaces the draft `imageUrls` array with the uploaded GCS URL.
    */
   async function uploadProfileImage(file: File | null) {
     if (!file) return;
-    setUploadingImage(true);
     setLocalError(null);
+    if (!ALLOWED_PROFILE_IMAGE_FILE_TYPES.has(file.type)) {
+      setLocalError("Profile image must be a JPG, PNG, or WebP file.");
+      return;
+    }
+    if (file.size <= 0 || file.size > MAX_UPLOAD_FILE_BYTES) {
+      setLocalError("Profile image must be 5 MB or smaller.");
+      return;
+    }
+    setUploadingImage(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -1576,25 +1567,25 @@ function ProfileOverview({
           <div className="text-xs leading-5 text-zinc-500">
             Uploading a new photo will replace the current profile photo after you save.
           </div>
-          <label className="grid cursor-pointer gap-2 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-center hover:border-zinc-500 hover:bg-white">
-            <span className="text-sm font-medium text-zinc-900">
-              {uploadingImage ? "Uploading..." : imageUrls[0] ? "Upload replacement photo" : "Upload profile photo"}
-            </span>
-            <span className="text-xs text-zinc-500">
-              JPG, PNG, or WebP. The new photo replaces the current one after you save.
-            </span>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(event) => void uploadProfileImage(event.target.files?.[0] ?? null)}
-              className="sr-only"
-            />
-          </label>
-          {uploadingImage ? <div className="text-sm text-zinc-500">Uploading profile image...</div> : null}
+          <UploadField
+            accept="image/jpeg,image/png,image/webp"
+            helperLines={["Accepted formats: JPG, JPEG, PNG, WebP.", "The new photo replaces the current one after you save."]}
+            inputClassName={PROFILE_INPUT_CLASS}
+            label="Profile image upload"
+            onFileSelect={(file) => void uploadProfileImage(file)}
+            uploadedFiles={imageUrls[0]
+              ? [{
+                href: profileImageHref(imageUrls[0]),
+                label: "Profile image",
+                title: `${formatName(user)} profile image`,
+              }]
+              : []}
+            uploadingLabel={uploadingImage ? "Uploading profile image..." : null}
+          />
         </div>
 
-        {localError || error ? <div className="text-sm text-red-600">{localError || error}</div> : null}
-        {message ? <div className="text-sm text-emerald-700">{message}</div> : null}
+        {localError || error ? <AlertMessage role="alert" tone="error">{localError || error}</AlertMessage> : null}
+        {message ? <AlertMessage role="status" tone="success">{message}</AlertMessage> : null}
 
         <div className="flex justify-end">
           <button type="submit" disabled={saving || uploadingImage} className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-50">
@@ -1672,14 +1663,14 @@ function CorporateProfileOverview({ profile }: { profile: ProfileData }) {
             </dl>
           </div>
         ) : (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+          <AlertMessage className="leading-6" role="status" tone="warning">
             Your organization profile is not verified yet. Submit an organization application before using corporate booking features.
             <div className="mt-3">
               <Link href="/account/corporate-verification" className="inline-flex rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white">
                 Submit organization application
               </Link>
             </div>
-          </div>
+          </AlertMessage>
         )}
       </div>
     </SectionCard>
@@ -1699,9 +1690,9 @@ function ChangeOrganizationSection({ profile }: { profile: ProfileData }) {
   return (
     <SectionCard title="Change Organization">
       <div className="grid gap-5 text-sm">
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 leading-6 text-amber-900">
+        <AlertMessage className="leading-6" role="status" tone="warning">
           If you changed jobs, submit a new organization application. Your current organization access stays unchanged until an admin reviews and approves the new organization.
-        </div>
+        </AlertMessage>
 
         {organizationProfile ? (
           <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
@@ -1819,9 +1810,9 @@ function BookingsSection({
   return (
     <SectionCard title="Bookings">
       {orders.length === 0 ? (
-        <div className={`rounded-2xl border p-4 text-sm ${ordersError ? "border-red-200 bg-red-50 text-red-700" : "border-zinc-200 bg-zinc-50 text-zinc-600"}`}>
+        <AlertMessage role={ordersError ? "alert" : "status"} tone={ordersError ? "error" : "info"}>
           {ordersError ?? "No bookings yet."}
-        </div>
+        </AlertMessage>
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
@@ -1972,9 +1963,9 @@ function SessionEditor({
           </div>
 
           {hasInvalidValues ? (
-            <div className="text-sm text-red-600">
+            <AlertMessage role="alert" tone="error">
               Hourly rate and session hours must be whole numbers, and maximum hours must be at least minimum hours.
-            </div>
+            </AlertMessage>
           ) : null}
 
           <div className="flex justify-end">
@@ -1990,8 +1981,8 @@ function SessionEditor({
         </>
       )}
 
-      {sessionError ? <div className="text-sm text-red-600">{sessionError}</div> : null}
-      {sessionMessage ? <div className="text-sm text-emerald-700">{sessionMessage}</div> : null}
+      {sessionError ? <AlertMessage role="alert" tone="error">{sessionError}</AlertMessage> : null}
+      {sessionMessage ? <AlertMessage role="status" tone="success">{sessionMessage}</AlertMessage> : null}
     </div>
   );
 }
@@ -2221,9 +2212,9 @@ function AddressEditor({
           </div>
 
           {hasInvalidValues ? (
-            <div className="text-sm text-red-600">
+            <AlertMessage role="alert" tone="error">
               Current address is required.
-            </div>
+            </AlertMessage>
           ) : null}
 
           <div className="flex justify-end">
@@ -2239,8 +2230,8 @@ function AddressEditor({
         </>
       )}
 
-      {sessionError ? <div className="text-sm text-red-600">{sessionError}</div> : null}
-      {sessionMessage ? <div className="text-sm text-emerald-700">{sessionMessage}</div> : null}
+      {sessionError ? <AlertMessage role="alert" tone="error">{sessionError}</AlertMessage> : null}
+      {sessionMessage ? <AlertMessage role="status" tone="success">{sessionMessage}</AlertMessage> : null}
       <ProfileChangeRequestList
         error={requestsError}
         loading={requestsLoading}
@@ -2341,7 +2332,7 @@ function VerificationRequestsSection({
           <div className="mt-3 text-sm text-zinc-500">Loading organization verification requests...</div>
         ) : null}
         {organizationApplicationsError ? (
-          <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{organizationApplicationsError}</div>
+          <AlertMessage className="mt-3" role="alert" tone="error">{organizationApplicationsError}</AlertMessage>
         ) : null}
         {!organizationApplicationsLoading && !organizationApplicationsError && organizationApplications.length === 0 ? (
           <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
@@ -2437,11 +2428,11 @@ function SubmittedEducationSummary({ education }: { education: SubmittedEducatio
             <DetailRow label="School email" value={item.schoolEmail || "Not provided"} />
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {item.diplomaUrls.length > 0 ? item.diplomaUrls.map((url, urlIndex) => (
-              <a key={url} href={diplomaHref(url)} target="_blank" rel="noreferrer" className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 underline">
-                Diploma {item.diplomaUrls.length > 1 ? urlIndex + 1 : ""}
+            {item.diplomaUrl ? (
+              <a href={diplomaHref(item.diplomaUrl)} target="_blank" rel="noreferrer" className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 underline">
+                Diploma
               </a>
-            )) : (
+            ) : (
               <span className="text-xs text-zinc-500">No diploma uploaded.</span>
             )}
             <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700">
@@ -2703,8 +2694,8 @@ function AvailabilityEditor({
         </div>
       )}
 
-      {availabilityError ? <div className="mt-3 text-sm text-red-600">{availabilityError}</div> : null}
-      {availabilityMessage ? <div className="mt-3 text-sm text-emerald-700">{availabilityMessage}</div> : null}
+      {availabilityError ? <AlertMessage className="mt-3" role="alert" tone="error">{availabilityError}</AlertMessage> : null}
+      {availabilityMessage ? <AlertMessage className="mt-3" role="status" tone="success">{availabilityMessage}</AlertMessage> : null}
     </div>
   );
 }

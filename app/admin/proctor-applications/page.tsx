@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 type ProctorApplication = {
   id: number;
@@ -27,6 +28,7 @@ type ProctorApplication = {
     major: string;
     startMonth?: string;
     endMonth?: string;
+    diplomaUrl?: string;
     diplomaUrls?: string[];
     schoolEmail?: string;
     educationVerificationAuthorized?: boolean;
@@ -60,6 +62,17 @@ function diplomaHref(url: string) {
   return url.startsWith("gcs://")
     ? `/api/admin/proctor-applications/diploma-file?url=${encodeURIComponent(url)}`
     : url;
+}
+
+/**
+ * Reads one diploma URL from current or legacy education values.
+ *
+ * @param education - Education row from a proctor application, for example `{ diplomaUrl: "gcs://bucket/path/diploma.pdf" }`.
+ *
+ * @returns The diploma URL, or `""` when no diploma exists.
+ */
+function diplomaUrlForEducation(education: ProctorApplication["education"][number]) {
+  return education.diplomaUrl || (education.diplomaUrls ?? [])[0] || "";
 }
 
 /**
@@ -265,11 +278,11 @@ export default function AdminProctorApplicationsPage() {
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="text-2xl font-semibold">Proctor applications</h1>
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <AlertMessage className="mt-4 leading-6" role="status" tone="warning">
           Highlighted fields are custom values submitted through an "Other" choice. Review these carefully before approval; if approved, the value can become a standard lookup entry.
-        </div>
+        </AlertMessage>
         {loading ? <div className="mt-6 text-sm text-zinc-600">Loading applications...</div> : null}
-        {error ? <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div> : null}
+        {error ? <AlertMessage className="mt-6" role="alert" tone="error">{error}</AlertMessage> : null}
         <div className="mt-8 grid gap-5">
           {applications.map((application) => {
             const draft = drafts[application.id] ?? application;
@@ -436,14 +449,10 @@ export default function AdminProctorApplicationsPage() {
                           <div className="grid w-fit content-start gap-1 text-sm font-medium text-zinc-700">
                             Diploma
                             <div className="flex h-10 items-center text-sm text-zinc-600">
-                              {(education.diplomaUrls ?? []).length > 0 ? (
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                  {(education.diplomaUrls ?? []).map((url) => (
-                                    <a key={url} href={diplomaHref(url)} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-3 text-zinc-700 underline">
-                                      Diploma
-                                    </a>
-                                  ))}
-                                </div>
+                              {diplomaUrlForEducation(education) ? (
+                                <a href={diplomaHref(diplomaUrlForEducation(education))} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-700 underline">
+                                  Diploma
+                                </a>
                               ) : (
                                 "No diploma uploaded"
                               )}

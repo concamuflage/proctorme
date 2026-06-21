@@ -41,7 +41,7 @@ function signupPage(world: UiWorld) {
  *
  * @returns The result used by the surrounding flow.
  */
-function loginPage(world: UiWorld) {
+export function loginPage(world: UiWorld) {
   assert.ok(world.page, "Page was not created.");
   let page = loginPages.get(world);
   if (!page) {

@@ -8,7 +8,6 @@ import {
 } from "@/lib/server/serverEnv";
 
 const DEFAULT_VERIFICATION_TTL_HOURS = 72;
-const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
 /**
  * Runs the text logic for this module.
@@ -53,21 +52,6 @@ function hashToken(token: string) {
 }
 
 /**
- * Normalizes app base url into the shape this flow expects.
- *
- * @param value - Input used by normalize app base url.
- *
- * @returns The normalized value.
- */
-function appBaseUrl() {
-  return appBaseUrlFromServerEnv({
-    explicitEnvName: "ORGANIZATION_EMAIL_VERIFICATION_APP_URL",
-    fallbackEnvNames: ["CLIENT_ORIGIN", "NEXTAUTH_URL"],
-    productionFallback: PRODUCTION_APP_BASE_URL,
-  });
-}
-
-/**
  * Builds verification link for this flow.
  *
  * @param email, rawToken - Input used by build verification link.
@@ -76,7 +60,7 @@ function appBaseUrl() {
  */
 function buildVerificationLink({ email, rawToken }: { email: string; rawToken: string }) {
   const params = new URLSearchParams({ email, token: rawToken });
-  return `${appBaseUrl()}/verify-organization-email?${params.toString()}`;
+  return `${appBaseUrlFromServerEnv("APP_BASE_URL")}/verify-organization-email?${params.toString()}`;
 }
 
 /**

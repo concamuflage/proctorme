@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPrivateObjectReadUrl, parseGcsUri } from "@/lib/server/gcsUploads";
+import { getPrivateObjectReadUrl, isGcsUri, parseGcsUri } from "@/lib/server/gcsUploads";
 import { resolveSessionUserId } from "@/lib/server/sessionUser";
 
 export const runtime = "nodejs";
@@ -23,8 +23,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(url, request.url));
   }
 
+  if (!isGcsUri(url)) {
+    return NextResponse.json({ error: "Profile image not found." }, { status: 404 });
+  }
+
   const parsed = parseGcsUri(url);
-  if (!parsed || !parsed.objectName.startsWith(`proctor-applications/${userId}/profile-images/`)) {
+  if (!parsed.objectName.startsWith(`proctor-applications/${userId}/profile-images/`)) {
     return NextResponse.json({ error: "Profile image not found." }, { status: 404 });
   }
 

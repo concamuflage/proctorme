@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/components/cart/CartContext";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 const FINALIZE_REQUEST_TIMEOUT_MS = 5000;
 
@@ -186,9 +187,7 @@ function CheckoutSuccessPageContent() {
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
         <section className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
           {loading ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-              Confirming payment
-            </div>
+            <AlertMessage role="status" tone="success">Confirming payment</AlertMessage>
           ) : null}
 
           <h1 className="mt-6 text-3xl font-semibold tracking-tight">
@@ -202,16 +201,12 @@ function CheckoutSuccessPageContent() {
                 : "Your payment was recorded successfully. We saved your order and your invoice is ready to download."}
           </p>
 
-          {error ? (
-            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          ) : null}
+          {error ? <AlertMessage className="mt-6" role="alert" tone="error">{error}</AlertMessage> : null}
 
           {pendingWebhook ? (
-            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <AlertMessage className="mt-6" role="status" tone="warning">
               Payment was submitted. Stripe has not finished sending the order confirmation to this app yet. Refresh this page in a moment to load your invoice.
-            </div>
+            </AlertMessage>
           ) : null}
 
           <div className="mt-8 flex flex-wrap items-center gap-3">

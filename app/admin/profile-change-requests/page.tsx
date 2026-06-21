@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import ProfileChangeRequestList from "@/components/profile/ProfileChangeRequestList";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 type ProfileChangeRequest = {
   id: number;
@@ -107,12 +108,12 @@ export default function AdminProfileChangeRequestsPage() {
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="text-2xl font-semibold">Profile change requests</h1>
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <AlertMessage className="mt-4 leading-6" role="status" tone="warning">
           Review profile changes that cannot be applied immediately. Custom cities should be checked before approval because approval adds the city to lookup data and updates the proctor's public profile address.
-        </div>
+        </AlertMessage>
 
         {loading ? <div className="mt-6 text-sm text-zinc-600">Loading profile change requests...</div> : null}
-        {error ? <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div> : null}
+        {error ? <AlertMessage className="mt-6" role="alert" tone="error">{error}</AlertMessage> : null}
 
         <div className="mt-6 grid gap-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium text-zinc-700">

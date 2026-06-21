@@ -3,6 +3,7 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import ProctorGrid from "@/components/proctors/ProctorGrid";
 import { type Proctor } from "@/components/proctors/ProctorCard";
+import AlertMessage from "@/components/ui/AlertMessage";
 type ProctorApiItem = {
   id: number;
   name?: string | null;
@@ -582,7 +583,7 @@ function ProctorsPageContent() {
                 {loading ? "Loading..." : `${proctors.length} ${proctors.length === 1 ? "proctor" : "proctors"}`}
               </div>
             </div>
-            {error ? <div className="mb-4 text-sm text-red-600">{error}</div> : null}
+            {error ? <AlertMessage className="mb-4" role="alert" tone="error">{error}</AlertMessage> : null}
 
             <ProctorGrid proctors={proctors} />
           </section>

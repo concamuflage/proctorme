@@ -8,6 +8,7 @@ import { useAuthModal } from "@/components/auth/AuthModalContext";
 import ItemsPanel from "@/components/cart/ItemsPanel";
 import OrderSummary from "@/components/cart/OrderSummary";
 import { useCart } from "@/components/cart/CartContext";
+import AlertMessage from "@/components/ui/AlertMessage";
 
 /**
  * Renders the cart page content component.
@@ -148,11 +149,7 @@ function CartPageContent() {
                   </button>
                 </div>
 
-                {stripeCheckoutError ? (
-                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {stripeCheckoutError}
-                  </div>
-                ) : null}
+                {stripeCheckoutError ? <AlertMessage className="mt-4" role="alert" tone="error">{stripeCheckoutError}</AlertMessage> : null}
               </section>
             ) : null}
           </>

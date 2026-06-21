@@ -42,17 +42,32 @@ export function gcsUri(bucketName: string, objectName: string) {
 /**
  * Parses gcs uri from an external value.
  *
- * @param value - Input used by parse gcs uri.
+ * @param value - Valid GCS URI, for example `gcs://proctorme-uploads/proctor-applications/206/diplomas/file.pdf`.
  *
- * @returns The parsed value, or null when parsing fails.
+ * @returns The parsed bucket and object, for example `{ bucketName: "proctorme-uploads", objectName: "proctor-applications/206/diplomas/file.pdf" }`.
  */
 export function parseGcsUri(value: string) {
-  const match = value.match(/^gcs:\/\/([^/]+)\/(.+)$/);
-  if (!match) return null;
+  
+  const uriBody = value.slice("gcs://".length);
+  const firstSlashIndex = uriBody.indexOf("/");
   return {
-    bucketName: match[1],
-    objectName: match[2],
+    bucketName: uriBody.slice(0, firstSlashIndex),
+    objectName: uriBody.slice(firstSlashIndex + 1),
   };
+}
+
+/**
+ * Checks whether a value has the expected GCS URI shape before parsing external input.
+ *
+ * @param value - External value, for example a `url` search parameter.
+ *
+ * @returns True for values like `gcs://proctorme-uploads/proctor-applications/206/diplomas/file.pdf`.
+ */
+export function isGcsUri(value: string) {
+  if (!value.startsWith("gcs://")) return false;
+  const uriBody = value.slice("gcs://".length);
+  const firstSlashIndex = uriBody.indexOf("/");
+  return firstSlashIndex > 0 && firstSlashIndex < uriBody.length - 1;
 }
 
 /**
@@ -77,6 +92,11 @@ export async function uploadPrivateObject({
   await storage.bucket(bucketName).file(objectName).save(bytes, {
     contentType,
     resumable: false,
+    // That cacheControl is not for the upload request from Next.js to GCS.
+    //  It is metadata stored on the GCS object, and GCS can use it later when serving the object.
+    // It makes private uploaded files non-cacheable even when GCS serves them directly.
+    // Example routes call getPrivateObjectReadUrl(...), then redirect the browser to GCS to fetch the file.
+
     metadata: {
       cacheControl: "private, max-age=0, no-store",
     },
@@ -88,17 +108,19 @@ export async function uploadPrivateObject({
 /**
  * Gets private object read url for this flow.
  *
- * @param gcsObjectUri - Input used by get private object read url.
- * @param expiresInMs - Input used by get private object read url.
+ * @param gcsObjectUri - Private GCS URI, for example `gcs://proctorme-dev-user-uploads-project-6345bbfe/proctor-applications/206/government-ids/id.pdf`.
+ * @param expiresInMs - Signed URL lifetime in milliseconds, for example `600000` for 10 minutes.
  *
- * @returns The result used by the surrounding flow.
+ * @returns A temporary signed URL, for example `https://storage.googleapis.com/proctorme-dev-user-uploads-project-6345bbfe/proctor-applications/206/government-ids/id.pdf?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=600...`, or null when the URI is not allowed.
  */
 export async function getPrivateObjectReadUrl(gcsObjectUri: string, expiresInMs = 10 * 60 * 1000) {
+  if (!isGcsUri(gcsObjectUri)) return null;
   const parsed = parseGcsUri(gcsObjectUri);
-  if (!parsed || !allowedUploadBuckets().has(parsed.bucketName)) {
+  // if the bucket is not in the list of allowed buckets, return null
+  if (!allowedUploadBuckets().has(parsed.bucketName)) {
     return null;
   }
-
+  // A signed URL is a temporary URL that allows someone to access a private GCS file without making the file public.
   const [url] = await storage
     .bucket(parsed.bucketName)
     .file(parsed.objectName)
@@ -119,8 +141,9 @@ export async function getPrivateObjectReadUrl(gcsObjectUri: string, expiresInMs 
  * @returns The result used by the surrounding flow.
  */
 export async function downloadPrivateObject(gcsObjectUri: string) {
+  if (!isGcsUri(gcsObjectUri)) return null;
   const parsed = parseGcsUri(gcsObjectUri);
-  if (!parsed || !allowedUploadBuckets().has(parsed.bucketName)) {
+  if (!allowedUploadBuckets().has(parsed.bucketName)) {
     return null;
   }
 

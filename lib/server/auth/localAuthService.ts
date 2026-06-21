@@ -27,7 +27,6 @@ import {
 } from "@/lib/server/auth/authUsersStore";
 import {
   positiveNumberServerEnv,
-  serverEnvIsProduction,
 } from "@/lib/server/serverEnv";
 
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
@@ -56,7 +55,7 @@ async function issueEmailVerification(user: UserRow) {
     await sendEmailVerificationEmail({ email, firstName, verificationLink });
   } catch (error) {
     console.error("verification email error:", error);
-    if (serverEnvIsProduction()) throw error;
+    throw error;
   }
 }
 
@@ -80,7 +79,7 @@ async function issuePasswordReset(user: UserRow) {
     await sendPasswordResetEmail({ email, firstName, resetLink, ttlMinutes });
   } catch (error) {
     console.error("password reset email error:", error);
-    if (serverEnvIsProduction()) throw error;
+    throw error;
   }
 }
 

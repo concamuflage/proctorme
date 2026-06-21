@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPrivateObjectReadUrl, parseGcsUri } from "@/lib/server/gcsUploads";
+import { getPrivateObjectReadUrl, isGcsUri, parseGcsUri } from "@/lib/server/gcsUploads";
 import { requireAdminUserId } from "@/lib/server/sessionUser";
 
 export const runtime = "nodejs";
@@ -23,8 +23,18 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(url, request.url));
   }
 
+  if (!isGcsUri(url)) {
+    return NextResponse.json({ error: "Government ID file not found." }, { status: 404 });
+  }
+
   const parsed = parseGcsUri(url);
-  if (!parsed || !/^proctor-applications\/[^/]+\/government-ids\//.test(parsed.objectName)) {
+  const objectPathParts = parsed.objectName.split("/");
+  if (
+    objectPathParts.length < 4 ||
+    objectPathParts[0] !== "proctor-applications" ||
+    objectPathParts[1] === "" ||
+    objectPathParts[2] !== "government-ids"
+  ) {
     return NextResponse.json({ error: "Government ID file not found." }, { status: 404 });
   }
 

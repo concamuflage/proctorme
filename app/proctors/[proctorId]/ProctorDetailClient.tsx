@@ -9,6 +9,7 @@ import ProctorInfoPanel, {
 import ProctorBookingCalendar, { type BookingSelection } from "@/components/proctors/ProctorBookingCalendar";
 import { useCart } from "@/components/cart/CartContext";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
+import AlertMessage from "@/components/ui/AlertMessage";
 import { SITE_NAME } from "@/lib/proctor";
 
 type ProctorDetail = {
@@ -218,8 +219,8 @@ export default function ProctorDetailClient({ proctorIdParam }: { proctorIdParam
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-red-600">
-        {error}
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <AlertMessage role="alert" tone="error">{error}</AlertMessage>
       </div>
     );
   }
@@ -346,9 +347,9 @@ export default function ProctorDetailClient({ proctorIdParam }: { proctorIdParam
                     </div>
                   </div>
                   {!bookingCityMatches || !bookingStateMatches ? (
-                    <p className="mt-3 text-sm text-red-600">
+                    <AlertMessage className="mt-3" role="alert" tone="error">
                       The booking address must be in {proctor.city}, {proctor.state}.
-                    </p>
+                    </AlertMessage>
                   ) : null}
                 </section>
                 <button

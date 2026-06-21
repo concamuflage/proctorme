@@ -12,6 +12,10 @@ import {
 /**
  * Handles GET requests for the /api/account/proctor-application route.
  *
+ * A successful response has the shape:
+ * `{ application: ProctorApplication | null, dateOfBirth: "1990-01-01" | null }`.
+ * For example, a new applicant with no saved draft receives `{ application: null, dateOfBirth: "1990-01-01" }`.
+ *
  * @returns A Next.js response for the request.
  */
 export async function GET() {

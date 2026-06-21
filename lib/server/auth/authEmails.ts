@@ -4,22 +4,6 @@ import {
   resendConfig,
 } from "@/lib/server/serverEnv";
 
-const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
-
-/**
- * Chooses the public app URL used in email links.
- *
- * @param explicitEnvName - Environment variable that can explicitly set this link base.
- * @returns Public app base URL.
- */
-function appBaseUrl(explicitEnvName: string) {
-  return appBaseUrlFromServerEnv({
-    explicitEnvName,
-    fallbackEnvNames: ["CLIENT_ORIGIN", "NEXTAUTH_URL"],
-    productionFallback: PRODUCTION_APP_BASE_URL,
-  });
-}
-
 /**
  * Builds the email verification URL sent after signup or resend requests.
  *
@@ -29,7 +13,7 @@ function appBaseUrl(explicitEnvName: string) {
  */
 export function buildEmailVerificationLink(email: string, token: string) {
   const params = new URLSearchParams({ email, token });
-  return `${appBaseUrl("EMAIL_VERIFICATION_APP_URL")}/verify-email?${params.toString()}`;
+  return `${appBaseUrlFromServerEnv("APP_BASE_URL")}/verify-email?${params.toString()}`;
 }
 
 /**
@@ -41,14 +25,14 @@ export function buildEmailVerificationLink(email: string, token: string) {
  */
 export function buildPasswordResetLink(email: string, token: string) {
   const params = new URLSearchParams({ email, token });
-  return `${appBaseUrl("PASSWORD_RESET_APP_URL")}/reset-password?${params.toString()}`;
+  return `${appBaseUrlFromServerEnv("APP_BASE_URL")}/reset-password?${params.toString()}`;
 }
 
 /**
  * Sends an email through Resend using both HTML and plain-text bodies.
  *
  * @param message - Email destination, subject, HTML body, and plain text body.
- * @returns Promise that resolves when Resend accepts the email.
+ * @returns Resend's accepted email id, when provided.
  */
 async function sendResendEmail({
   to,
@@ -83,6 +67,16 @@ async function sendResendEmail({
     const payload = await response.text().catch(() => "");
     throw new Error(`Resend request failed with status ${response.status}. ${payload}`.trim());
   }
+
+  const payload = await response.json().catch(() => null);
+  const emailId = typeof payload?.id === "string" ? payload.id : "";
+  console.info("Resend accepted email", {
+    id: emailId || "(missing id)",
+    to,
+    subject,
+  });
+
+  return emailId;
 }
 
 /**

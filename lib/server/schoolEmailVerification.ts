@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import pool from "@/lib/server/database/pool";
 import { SITE_NAME } from "@/lib/proctor";
 import {
@@ -6,20 +5,9 @@ import {
   positiveNumberServerEnv,
   resendConfig,
 } from "@/lib/server/serverEnv";
+import { createToken, hashToken } from "@/lib/server/auth/authTokens";
 
 const DEFAULT_VERIFICATION_TTL_HOURS = 72;
-const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
-
-/**
- * Normalizes verification email into the shape this flow expects.
- *
- * @param value - Input used by normalize verification email.
- *
- * @returns The normalized value.
- */
-export function normalizeVerificationEmail(value: unknown) {
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
 
 /**
  * Runs the verification ttl hours logic for this module.
@@ -31,43 +19,19 @@ function verificationTtlHours() {
 }
 
 /**
- * Runs the hash school email verification token logic for this module.
+ * Creates a one-time school email verification token pair and expiration time.
  *
- * @param token - Input used by hash school email verification token.
+ * The raw token is sent in the email link, while only the hashed token is stored on the education entry.
+ * 
+ * Example return shape:
+ * `{ rawToken: "abc123...", hashedToken: "64-char-sha256-hex...", expiresAt: Date("2026-06-22T12:00:00.000Z") }`.
  *
- * @returns The result used by the surrounding flow.
- */
-export function hashSchoolEmailVerificationToken(token: string) {
-  return crypto.createHash("sha256").update(String(token)).digest("hex");
-}
-
-/**
- * Creates school email verification token for this flow.
- *
- * @returns The result used by the surrounding flow.
+ * @returns Token values used to build the verification link and persist a safe comparison value.
  */
 export function createSchoolEmailVerificationToken() {
-  const rawToken = crypto.randomBytes(32).toString("hex");
-  return {
-    rawToken,
-    hashedToken: hashSchoolEmailVerificationToken(rawToken),
-    expiresAt: new Date(Date.now() + verificationTtlHours() * 60 * 60 * 1000),
-  };
-}
-
-/**
- * Normalizes app base url into the shape this flow expects.
- *
- * @param value - Input used by normalize app base url.
- *
- * @returns The normalized value.
- */
-function appBaseUrl() {
-  return appBaseUrlFromServerEnv({
-    explicitEnvName: "SCHOOL_EMAIL_VERIFICATION_APP_URL",
-    fallbackEnvNames: ["CLIENT_ORIGIN", "NEXTAUTH_URL"],
-    productionFallback: PRODUCTION_APP_BASE_URL,
-  });
+  // Reuse the shared auth token primitive for raw token generation, SHA-256 hashing, and expiry math; this wrapper
+  // only applies the school-email-specific TTL. Example: 72 hours becomes `createToken(72 * 60 * 60 * 1000)`.
+  return createToken(verificationTtlHours() * 60 * 60 * 1000);
 }
 
 /**
@@ -98,7 +62,7 @@ export function buildSchoolEmailVerificationLink({
     token: rawToken,
   });
 
-  return `${appBaseUrl()}/verify-school-email?${params.toString()}`;
+  return `${appBaseUrlFromServerEnv("APP_BASE_URL")}/verify-school-email?${params.toString()}`;
 }
 
 /**
@@ -203,7 +167,7 @@ export async function verifySchoolEmailToken({
   email: string;
   token: string;
 }) {
-  const normalizedEmail = normalizeVerificationEmail(email);
+  const normalizedEmail = email.trim().toLowerCase();
   if (!applicationId || educationIndex < 0 || !normalizedEmail || !token) {
     return { ok: false, message: "This school email verification link is incomplete." };
   }
@@ -230,14 +194,14 @@ export async function verifySchoolEmailToken({
       return { ok: false, message: "This school email verification link is invalid." };
     }
 
-    const targetEmail = normalizeVerificationEmail(target.schoolEmail);
+    const targetEmail = typeof target.schoolEmail === "string" ? target.schoolEmail.trim().toLowerCase() : "";
     const hashedToken = typeof target.schoolEmailVerificationToken === "string" ? target.schoolEmailVerificationToken : "";
     const expiresAt = typeof target.schoolEmailVerificationExpiresAt === "string"
       ? new Date(target.schoolEmailVerificationExpiresAt)
       : null;
     const isExpired = !expiresAt || expiresAt.getTime() < Date.now();
 
-    if (targetEmail !== normalizedEmail || hashedToken !== hashSchoolEmailVerificationToken(token) || isExpired) {
+    if (targetEmail !== normalizedEmail || hashedToken !== hashToken(token) || isExpired) {
       await client.query("ROLLBACK");
       return { ok: false, message: "This school email verification link is invalid or expired." };
     }
