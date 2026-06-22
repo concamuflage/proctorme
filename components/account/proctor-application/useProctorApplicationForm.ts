@@ -203,8 +203,10 @@ export function useProctorApplicationForm() {
   const currency = COUNTRY_CURRENCY["United States"];
   const currentStepTitle = FORM_STEPS[activeStep];
   const isLastStep = activeStep === FORM_STEPS.length - 1;
-  // Hide the wizard controls only after this browser session receives the successful submit notice.
-  // Example: a previously pending application loaded without a new notice still shows status context instead of the final success-only view.
+  // `applicationStatus === "pending"` means the submit API returned an application waiting for admin review.
+  // `Boolean(notice)` makes this true only after handleSubmit() sets the success message in this browser session.
+  // Example: after POST /api/account/proctor-application succeeds, status is "pending" and notice is
+  // "Application submitted...", so the wizard controls are hidden.
   const isSubmitted = applicationStatus === "pending" && Boolean(notice);
   const {
     bio,
