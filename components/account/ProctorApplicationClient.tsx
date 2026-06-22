@@ -77,11 +77,11 @@ export default function ProctorApplicationClient() {
                 gender={form.gender}
                 genderOptions={form.genderOptions}
                 inputClassName={INPUT_CLASS}
-                onBioChange={form.setBio}
-                onDateOfBirthChange={form.setDateOfBirth}
-                onEthnicityChange={form.setEthnicity}
-                onGenderChange={form.setGender}
-                onProfessionChange={form.setProfession}
+                onBioChange={(value) => form.setFormValue("bio", value)}
+                onDateOfBirthChange={(value) => form.setFormValue("dateOfBirth", value)}
+                onEthnicityChange={(value) => form.setFormValue("ethnicity", value)}
+                onGenderChange={(value) => form.setFormValue("gender", value)}
+                onProfessionChange={(value) => form.setFormValue("profession", value)}
                 profession={form.profession}
                 professionOptions={form.professionOptions}
               />
@@ -93,12 +93,12 @@ export default function ProctorApplicationClient() {
                 cityOptions={form.cityOptions}
                 customCity={form.customCity}
                 inputClassName={INPUT_CLASS}
-                onCityChange={form.setCity}
-                onCustomCityChange={form.setCustomCity}
+                onCityChange={(value) => form.setFormValue("city", value)}
+                onCustomCityChange={(value) => form.setFormValue("customCity", value)}
                 onStateChange={form.updateAddressState}
-                onStreetChange={form.setStreet}
-                onTimezoneChange={form.setTimezone}
-                onZipCodeChange={form.setZipCode}
+                onStreetChange={(value) => form.setFormValue("street", value)}
+                onTimezoneChange={(value) => form.setFormValue("timezone", value)}
+                onZipCodeChange={(value) => form.setFormValue("zipCode", value)}
                 state={form.stateValue}
                 stateOptions={form.stateOptions}
                 street={form.street}
@@ -115,9 +115,9 @@ export default function ProctorApplicationClient() {
                 inputClassName={INPUT_CLASS}
                 maximumHours={form.maximumHours}
                 minimumHours={form.minimumHours}
-                onHourlyRateChange={form.setHourlyRate}
-                onMaximumHoursChange={form.setMaximumHours}
-                onMinimumHoursChange={form.setMinimumHours}
+                onHourlyRateChange={(value) => form.setFormValue("hourlyRate", value)}
+                onMaximumHoursChange={(value) => form.setFormValue("maximumHours", value)}
+                onMinimumHoursChange={(value) => form.setFormValue("minimumHours", value)}
               />
             ) : null}
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+// Question:how to understand the FieldPath and FieldPathValue signatures in React Hook Form?
 import { useFieldArray, useForm, type FieldPath, type FieldPathValue } from "react-hook-form";
 import { EMPTY_EDUCATION, type EducationInput } from "@/components/account/EducationFields";
 import { ALLOWED_DOCUMENT_FILE_TYPES, ALLOWED_PROFILE_IMAGE_FILE_TYPES, MAX_UPLOAD_FILE_BYTES } from "@/lib/uploadFileSpecs";
@@ -152,13 +153,20 @@ async function uploadApplicationFile({
 export function useProctorApplicationForm() {
   const router = useRouter();
   const { status } = useSession();
+
   const form = useForm<ProctorApplicationFormValues>({
     defaultValues: DEFAULT_FORM_VALUES,
   });
+
   const { append: appendEducation, remove: removeEducationField } = useFieldArray<ProctorApplicationFormValues, "education">({
+    // control: form.control passes React Hook Form’s internal form controller into useFieldArray.
+    // Without control, useFieldArray would not know which form it belongs to.
+    // control: form.control = which form this field array belongs to
+    // name: "education" = which field inside that form is the array
     control: form.control,
     name: "education",
   });
+
   const formValues = form.watch();
 
   // Profession select choices from /api/account/proctor-application/options. setProfessionOptions runs after options load; example values include ["Accountant", "Teacher"].
@@ -206,8 +214,10 @@ export function useProctorApplicationForm() {
   // `applicationStatus === "pending"` means the submit API returned an application waiting for admin review.
   // `Boolean(notice)` makes this true only after handleSubmit() sets the success message in this browser session.
   // Example: after POST /api/account/proctor-application succeeds, status is "pending" and notice is
-  // "Application submitted...", so the wizard controls are hidden.
+  // "Application submitted...", so the Back/Continue/Submit button area is hidden.
   const isSubmitted = applicationStatus === "pending" && Boolean(notice);
+
+
   const {
     bio,
     city,
@@ -229,8 +239,10 @@ export function useProctorApplicationForm() {
   } = formValues;
 
   /**
-   * Updates one React Hook Form field and clears stale cross-step messages.
-   *
+   * This function is a typed helper around React Hook Form’s form.setValue. It just clears error and notice messages before setting the new value.
+   * Field is a generic type parameter.
+   * FieldPath<ProctorApplicationFormValues> constrains the Field type to a valid path/property in the ProctorApplicationFormValues type.
+   * FieldPathValue <ProctorApplicationFormValues, Field> is a type that represents the value type of a field/property in the ProctorApplicationFormValues type.
    * @param field - Form field name, for example `profession` or `zipCode`.
    * @param value - New field value, for example `"Teacher"` or `"94103"`.
    * @returns Nothing; React Hook Form stores the new value and triggers subscribers.
@@ -240,110 +252,6 @@ export function useProctorApplicationForm() {
     setNotice(null);
     form.setValue(field, value, { shouldDirty: true });
   }
-
-  /**
-   * Stores the selected profession in React Hook Form.
-   *
-   * @param value - Profession option, for example `"Accountant"`.
-   * @returns Nothing; Step 1 rerenders with the selected value.
-   */
-  const setProfession = (value: string) => setFormValue("profession", value);
-
-  /**
-   * Stores the selected gender in React Hook Form.
-   *
-   * @param value - Gender option, for example `"Female"`.
-   * @returns Nothing; Step 1 rerenders with the selected value.
-   */
-  const setGender = (value: string) => setFormValue("gender", value);
-
-  /**
-   * Stores the selected ethnicity in React Hook Form.
-   *
-   * @param value - Ethnicity option, for example `"Asian"`.
-   * @returns Nothing; Step 1 rerenders with the selected value.
-   */
-  const setEthnicity = (value: string) => setFormValue("ethnicity", value);
-
-  /**
-   * Stores the date of birth in React Hook Form.
-   *
-   * @param value - ISO date from the browser date input, for example `"2000-06-20"`.
-   * @returns Nothing; age validation reads this value before continuing or submitting.
-   */
-  const setDateOfBirth = (value: string) => setFormValue("dateOfBirth", value);
-
-  /**
-   * Stores the self-introduction text in React Hook Form.
-   *
-   * @param value - Bio text, for example `"I have proctored certification exams..."`.
-   * @returns Nothing; Step 1 validation later checks the 40-character minimum.
-   */
-  const setBio = (value: string) => setFormValue("bio", value);
-
-  /**
-   * Stores the street address in React Hook Form.
-   *
-   * @param value - Street address, for example `"1 Market St"`.
-   * @returns Nothing; draft saves include the updated address.
-   */
-  const setStreet = (value: string) => setFormValue("street", value);
-
-  /**
-   * Stores the selected city in React Hook Form.
-   *
-   * @param value - City option, for example `"San Francisco"` or `"Other"`.
-   * @returns Nothing; when `"Other"` is selected, `customCity` supplies the saved city.
-   */
-  const setCity = (value: string) => setFormValue("city", value);
-
-  /**
-   * Stores the custom city text in React Hook Form.
-   *
-   * @param value - Custom city name, for example `"Daly City"`.
-   * @returns Nothing; payload building uses this value when `city` is `"Other"`.
-   */
-  const setCustomCity = (value: string) => setFormValue("customCity", value);
-
-  /**
-   * Stores the ZIP code in React Hook Form.
-   *
-   * @param value - Postal code, for example `"94103"`.
-   * @returns Nothing; draft saves include the updated ZIP code.
-   */
-  const setZipCode = (value: string) => setFormValue("zipCode", value);
-
-  /**
-   * Stores the selected timezone in React Hook Form.
-   *
-   * @param value - IANA timezone, for example `"America/Los_Angeles"`.
-   * @returns Nothing; Step 2 validation requires this before continuing.
-   */
-  const setTimezone = (value: string) => setFormValue("timezone", value);
-
-  /**
-   * Stores the hourly rate input in React Hook Form.
-   *
-   * @param value - Whole-dollar rate string, for example `"35"`.
-   * @returns Nothing; payload building converts this string to a number.
-   */
-  const setHourlyRate = (value: string) => setFormValue("hourlyRate", value);
-
-  /**
-   * Stores the minimum session length in React Hook Form.
-   *
-   * @param value - Hour count string, for example `"1"`.
-   * @returns Nothing; validation compares it with `maximumHours`.
-   */
-  const setMinimumHours = (value: string) => setFormValue("minimumHours", value);
-
-  /**
-   * Stores the maximum session length in React Hook Form.
-   *
-   * @param value - Hour count string, for example `"2"`.
-   * @returns Nothing; validation requires this to be greater than or equal to `minimumHours`.
-   */
-  const setMaximumHours = (value: string) => setFormValue("maximumHours", value);
 
   /**
    * Updates the React Hook Form education array from its latest stored value.
@@ -478,8 +386,8 @@ export function useProctorApplicationForm() {
   useEffect(() => {
     if (!city || city === "Other" || cityOptions.length === 0) return;
     if (!cityOptions.includes(city)) {
-      setCustomCity(city);
-      setCity("Other");
+      setFormValue("customCity", city);
+      setFormValue("city", "Other");
     }
   }, [city, cityOptions]);
 
@@ -992,19 +900,7 @@ export function useProctorApplicationForm() {
     schoolOptions,
     sendSchoolEmailVerification,
     sendingSchoolEmailIndex,
-    setBio,
-    setCity,
-    setCustomCity,
-    setDateOfBirth,
-    setEthnicity,
-    setGender,
-    setHourlyRate,
-    setMaximumHours,
-    setMinimumHours,
-    setProfession,
-    setStreet,
-    setTimezone,
-    setZipCode,
+    setFormValue,
     stateOptions,
     stateValue,
     street,
