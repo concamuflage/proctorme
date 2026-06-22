@@ -303,6 +303,9 @@ export function useProctorApplicationForm() {
         setMajorOptions(Array.isArray(optionsPayload?.majors) ? optionsPayload.majors : []);
       }
       const accountDateOfBirth = typeof payload?.dateOfBirth === "string" ? payload.dateOfBirth : "";
+      // If the application request failed or the user has not started a proctor application yet, use a clean form.
+      // Keep the account-level date of birth because it may already exist on the user profile.
+      // Example: `{ application: null, dateOfBirth: "1999-04-12" }` resets every field except `dateOfBirth`.
       if (!applicationResponse.ok || !payload?.application) {
         form.reset({ ...DEFAULT_FORM_VALUES, dateOfBirth: accountDateOfBirth });
         return;
