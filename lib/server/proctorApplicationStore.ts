@@ -7,6 +7,8 @@ import {
 
 export type ProctorApplicationStatus = "draft" | "pending" | "approved" | "rejected";
 
+export const LOCKED_PROCTOR_APPLICATION_MESSAGE = "This proctor application is already pending or approved and cannot be edited.";
+
 export type ProctorApplicationEducation = {
   degree: string;
   school: string;
@@ -651,6 +653,9 @@ export async function sendSchoolEmailVerificationForUser({
 /**
  * Normalizes proctor application input into the shape this flow expects.
  *
+ * Example: `{ state: "ca", country: "", education: [{ degree: "BS", school: "UCLA", major: "Math", schoolEmail: "Student@UCLA.edu" }] }`
+ * becomes `{ state: "CA", country: "United States", education: [{ degree: "BS", school: "UCLA", major: "Math", schoolEmail: "student@ucla.edu", schoolEmailVerificationStatus: "pending" }] }`.
+ *
  * @param payload - Input used by normalize proctor application input.
  *
  * @returns The normalized value.
@@ -805,23 +810,53 @@ export async function userHasProctorApplication(userId: number) {
 }
 
 /**
- * Runs the save proctor application logic for this module.
+ * Checks whether an existing proctor application status blocks applicant edits.
  *
- * @param userId - Input used by save proctor application.
- * @param input - Input used by save proctor application.
+ * @param status - Persisted application status, for example `pending`.
+ * @returns True for `pending` and `approved`; false for `draft`, `rejected`, or missing status.
+ */
+function proctorApplicationStatusBlocksApplicantEdits(status: unknown) {
+  return status === "pending" || status === "approved";
+}
+
+/**
+ * Rejects applicant edits when an existing proctor application is already pending or approved.
  *
- * @returns The result used by the surrounding flow.
+ * @param userId - Applicant user id, for example `206`.
+ * @returns Nothing when no blocking application exists.
+ */
+async function assertProctorApplicationEditableForApplicant(userId: number) {
+  const result = await pool.query<{ status: unknown }>(
+    "SELECT status FROM proctor_applications WHERE user_id = $1 LIMIT 1",
+    [userId]
+  );
+  const status = result.rows[0]?.status;
+  // Pending applications are waiting for admin review, and approved applications are already live.
+  // Example: status `rejected` can be edited and resubmitted, but status `pending` cannot.
+  if (proctorApplicationStatusBlocksApplicantEdits(status)) {
+    throw new Error(LOCKED_PROCTOR_APPLICATION_MESSAGE);
+  }
+}
+
+/**
+ * Saves a proctor application submission when the applicant is allowed to edit it.
+ *
+ * @param userId - Applicant user id, for example `206`.
+ * @param input - Validated proctor application values, for example `status` will become `pending` after this save.
+ *
+ * @returns The submitted application with status `pending`.
  */
 export async function saveProctorApplication(userId: number, input: ProctorApplicationInput) {
+  await assertProctorApplicationEditableForApplicant(userId);
   const result = await pool.query<ApplicationRow>(
+    // why do we need the ON CONFLICT clause?
+    // used to handle the case where a draft is already saved and needs to be updated.
+    // User was rejected, then he edit and resubmits.
+    // the following query looks a lot like the one in saveProctorApplicationDraft, but they are different.
+    // if we try to convalesce the two queries, the query becomes more complex and harder to understand.
+    // gpt can tell you the differences between the two queries.
     `
-      WITH updated_user AS (
-        UPDATE users
-        SET date_of_birth = $2::date
-        WHERE id = $1
-        RETURNING id, email, first_name, last_name, date_of_birth
-      ),
-      saved_application AS (
+      WITH saved_application AS (
         INSERT INTO proctor_applications (
           user_id, status, profession, gender, bio, street, city, state, country, zip_code,
           hourly_rate, minimum_hours, maximum_hours, education, image_urls, timezone_id, ethnicity_id, government_id_urls, submitted_at, updated_at,
@@ -852,7 +887,18 @@ export async function saveProctorApplication(userId: number, input: ProctorAppli
           reviewed_by = NULL,
           reviewed_at = NULL,
           review_note = NULL
+        WHERE proctor_applications.status NOT IN ('pending', 'approved')
         RETURNING *
+      ),
+      updated_user AS (
+        UPDATE users
+        SET date_of_birth = $2::date
+        WHERE id = $1
+          -- Only update DOB when the application upsert returned a row; 
+          -- if the upsert didn't return a row, it means the application was already submitted or approved;
+          -- so we don't want to update the user's DOB in that case;
+          AND EXISTS (SELECT 1 FROM saved_application)
+        RETURNING id, email, first_name, last_name, date_of_birth
       )
       SELECT saved_application.*, updated_user.email, updated_user.first_name, updated_user.last_name, updated_user.date_of_birth, tz.name AS timezone_name, e.name AS ethnicity_name
       FROM saved_application
@@ -884,27 +930,33 @@ export async function saveProctorApplication(userId: number, input: ProctorAppli
       JSON.stringify(input.governmentIdUrls),
     ]
   );
-  return sendSchoolEmailVerifications(mapApplication(result.rows[0]));
+  const row = result.rows[0];
+  // The conditional upsert can return no row when a concurrent request changed the application to pending/approved.
+  // Example: two POSTs race; the first stores `pending`, and the second reaches this branch instead of overwriting it.
+  if (!row) {
+    throw new Error(LOCKED_PROCTOR_APPLICATION_MESSAGE);
+  }
+  return sendSchoolEmailVerifications(mapApplication(row));
 }
 
 /**
- * Runs the save proctor application draft logic for this module.
+ * Saves a proctor application draft when the applicant is allowed to edit it.
+ * eg: the application is not submitted or approved.
  *
- * @param userId - Input used by save proctor application draft.
- * @param input - Input used by save proctor application draft.
+ * @param userId - Applicant user id, for example `206`.
+ * @param input - Draft proctor application values, for example a partially completed education list.
  *
- * @returns The result used by the surrounding flow.
+ * @returns The saved draft application.
  */
 export async function saveProctorApplicationDraft(userId: number, input: ProctorApplicationInput) {
+  // If assertProctorApplicationEditableForApplicant(userId) throws, execution stops here.
+  // The thrown error bubbles back to the route handler.
+  // The route catches it in POST or PATCH.
+  await assertProctorApplicationEditableForApplicant(userId);
+  // if no error is thrown, continue with the rest of the function
   const result = await pool.query<ApplicationRow>(
     `
-      WITH updated_user AS (
-        UPDATE users
-        SET date_of_birth = COALESCE(NULLIF($2, '')::date, date_of_birth)
-        WHERE id = $1
-        RETURNING id, email, first_name, last_name, date_of_birth
-      ),
-      saved_application AS (
+      WITH saved_application AS (
         INSERT INTO proctor_applications (
           user_id, status, profession, gender, bio, street, city, state, country, zip_code,
           hourly_rate, minimum_hours, maximum_hours, education, image_urls, timezone_id, ethnicity_id, government_id_urls, submitted_at, updated_at,
@@ -937,7 +989,7 @@ export async function saveProctorApplicationDraft(userId: number, input: Proctor
         )
         ON CONFLICT (user_id)
         DO UPDATE SET
-          status = CASE WHEN proctor_applications.status = 'pending' THEN proctor_applications.status ELSE 'draft' END,
+          status = 'draft',
           profession = EXCLUDED.profession,
           gender = EXCLUDED.gender,
           bio = EXCLUDED.bio,
@@ -955,7 +1007,16 @@ export async function saveProctorApplicationDraft(userId: number, input: Proctor
           ethnicity_id = EXCLUDED.ethnicity_id,
           government_id_urls = EXCLUDED.government_id_urls,
           updated_at = NOW()
+        WHERE proctor_applications.status NOT IN ('pending', 'approved')
         RETURNING *
+      ),
+      updated_user AS (
+        UPDATE users
+        SET date_of_birth = COALESCE(NULLIF($2, '')::date, date_of_birth)
+        WHERE id = $1
+          -- Only update DOB when the draft upsert returned a row; for example, a PATCH racing behind a pending submit leaves users.date_of_birth unchanged.
+          AND EXISTS (SELECT 1 FROM saved_application)
+        RETURNING id, email, first_name, last_name, date_of_birth
       )
       SELECT saved_application.*, updated_user.email, updated_user.first_name, updated_user.last_name, updated_user.date_of_birth, tz.name AS timezone_name, e.name AS ethnicity_name
       FROM saved_application
@@ -987,7 +1048,13 @@ export async function saveProctorApplicationDraft(userId: number, input: Proctor
       JSON.stringify(input.governmentIdUrls),
     ]
   );
-  return mapApplication(result.rows[0]);
+  const row = result.rows[0];
+  // The conditional upsert can return no row when a concurrent submit has already locked the application.
+  // Example: a PATCH racing behind a POST sees the row as `pending` and returns 409 instead of saving a stale draft.
+  if (!row) {
+    throw new Error(LOCKED_PROCTOR_APPLICATION_MESSAGE);
+  }
+  return mapApplication(row);
 }
 
 /**

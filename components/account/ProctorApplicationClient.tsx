@@ -67,93 +67,121 @@ export default function ProctorApplicationClient() {
           <form className="mt-8 grid gap-6" onSubmit={form.handleSubmit}>
             {/* Keep step validation in one shared location. Example: an under-18 date of birth and a short bio both render here, not under individual fields. */}
             {form.error ? <AlertMessage role="alert" tone="error">{form.error}</AlertMessage> : null}
-
-            {form.activeStep === 0 ? (
-              <ProfileBasicsStep
-                bio={form.bio}
-                dateOfBirth={form.dateOfBirth}
-                ethnicity={form.ethnicity}
-                ethnicityOptions={form.ethnicityOptions}
-                gender={form.gender}
-                genderOptions={form.genderOptions}
-                inputClassName={INPUT_CLASS}
-                onBioChange={(value) => form.setFormValue("bio", value)}
-                onDateOfBirthChange={(value) => form.setFormValue("dateOfBirth", value)}
-                onEthnicityChange={(value) => form.setFormValue("ethnicity", value)}
-                onGenderChange={(value) => form.setFormValue("gender", value)}
-                onProfessionChange={(value) => form.setFormValue("profession", value)}
-                profession={form.profession}
-                professionOptions={form.professionOptions}
-              />
+            {form.isReadOnlyApplication ? (
+              <AlertMessage role="status" tone="warning">
+                This proctor application is {form.applicationStatus}. Edits are locked while it is pending review or already approved.
+              </AlertMessage>
             ) : null}
 
-            {form.activeStep === 1 ? (
-              <CurrentAddressStep
-                city={form.city}
-                cityOptions={form.cityOptions}
-                customCity={form.customCity}
-                inputClassName={INPUT_CLASS}
-                onCityChange={(value) => form.setFormValue("city", value)}
-                onCustomCityChange={(value) => form.setFormValue("customCity", value)}
-                onStateChange={form.updateAddressState}
-                onStreetChange={(value) => form.setFormValue("street", value)}
-                onTimezoneChange={(value) => form.setFormValue("timezone", value)}
-                onZipCodeChange={(value) => form.setFormValue("zipCode", value)}
-                state={form.stateValue}
-                stateOptions={form.stateOptions}
-                street={form.street}
-                timezone={form.timezone}
-                timezoneOptions={form.timezoneOptions}
-                zipCode={form.zipCode}
-              />
-            ) : null}
+            {/* Disable every form control in the active step when the application is pending or approved.
+                Example: a pending application still displays Step 1 values, but the inputs and upload controls cannot change them. */}
+            <fieldset disabled={form.isReadOnlyApplication} className="contents">
+              {form.activeStep === 0 ? (
+                <ProfileBasicsStep
+                  bio={form.bio}
+                  dateOfBirth={form.dateOfBirth}
+                  ethnicity={form.ethnicity}
+                  ethnicityOptions={form.ethnicityOptions}
+                  gender={form.gender}
+                  genderOptions={form.genderOptions}
+                  inputClassName={INPUT_CLASS}
+                  onBioChange={(value) => form.setFormValue("bio", value)}
+                  onDateOfBirthChange={(value) => form.setFormValue("dateOfBirth", value)}
+                  onEthnicityChange={(value) => form.setFormValue("ethnicity", value)}
+                  onGenderChange={(value) => form.setFormValue("gender", value)}
+                  onProfessionChange={(value) => form.setFormValue("profession", value)}
+                  profession={form.profession}
+                  professionOptions={form.professionOptions}
+                />
+              ) : null}
 
-            {form.activeStep === 2 ? (
-              <RatesAndSessionLengthStep
-                currency={form.currency}
-                hourlyRate={form.hourlyRate}
-                inputClassName={INPUT_CLASS}
-                maximumHours={form.maximumHours}
-                minimumHours={form.minimumHours}
-                onHourlyRateChange={(value) => form.setFormValue("hourlyRate", value)}
-                onMaximumHoursChange={(value) => form.setFormValue("maximumHours", value)}
-                onMinimumHoursChange={(value) => form.setFormValue("minimumHours", value)}
-              />
-            ) : null}
+              {form.activeStep === 1 ? (
+                <CurrentAddressStep
+                  city={form.city}
+                  cityOptions={form.cityOptions}
+                  customCity={form.customCity}
+                  inputClassName={INPUT_CLASS}
+                  onCityChange={(value) => form.setFormValue("city", value)}
+                  onCustomCityChange={(value) => form.setFormValue("customCity", value)}
+                  onStateChange={form.updateAddressState}
+                  onStreetChange={(value) => form.setFormValue("street", value)}
+                  onTimezoneChange={(value) => form.setFormValue("timezone", value)}
+                  onZipCodeChange={(value) => form.setFormValue("zipCode", value)}
+                  state={form.stateValue}
+                  stateOptions={form.stateOptions}
+                  street={form.street}
+                  timezone={form.timezone}
+                  timezoneOptions={form.timezoneOptions}
+                  zipCode={form.zipCode}
+                />
+              ) : null}
 
-            {form.activeStep === 3 ? (
-              <EducationStep
-                degreeOptions={form.degreeOptions}
-                education={form.education}
-                inputClassName={INPUT_CLASS}
-                majorOptions={form.majorOptions}
-                onAddEducation={form.addEducation}
-                onChange={form.updateEducation}
-                onDiplomaUpload={(index, file) => void form.uploadDiploma(index, file)}
-                onRemoveEducation={form.removeEducation}
-                onSendSchoolEmailVerification={(index) => void form.sendSchoolEmailVerification(index)}
-                schoolOptions={form.schoolOptions}
-                sendingSchoolEmailIndex={form.sendingSchoolEmailIndex}
-                siteName={SITE_NAME}
-                uploadingEducationIndex={form.uploadingEducationIndex}
-              />
-            ) : null}
+              {form.activeStep === 2 ? (
+                <RatesAndSessionLengthStep
+                  currency={form.currency}
+                  hourlyRate={form.hourlyRate}
+                  inputClassName={INPUT_CLASS}
+                  maximumHours={form.maximumHours}
+                  minimumHours={form.minimumHours}
+                  onHourlyRateChange={(value) => form.setFormValue("hourlyRate", value)}
+                  onMaximumHoursChange={(value) => form.setFormValue("maximumHours", value)}
+                  onMinimumHoursChange={(value) => form.setFormValue("minimumHours", value)}
+                />
+              ) : null}
 
-            {form.activeStep === 4 ? (
-              <IdentityAndProfileMediaStep
-                governmentIdUrls={form.governmentIdUrls}
-                imageUrls={form.imageUrls}
-                inputClassName={INPUT_CLASS}
-                onGovernmentIdUpload={(file) => void form.uploadGovernmentId(file)}
-                onProfileImageUpload={(file) => void form.uploadProfileImage(file)}
-                uploadingGovernmentId={form.uploadingGovernmentId}
-                uploadingProfileImage={form.uploadingProfileImage}
-              />
-            ) : null}
+              {form.activeStep === 3 ? (
+                <EducationStep
+                  degreeOptions={form.degreeOptions}
+                  education={form.education}
+                  inputClassName={INPUT_CLASS}
+                  majorOptions={form.majorOptions}
+                  onAddEducation={form.addEducation}
+                  onChange={form.updateEducation}
+                  onDiplomaUpload={(index, file) => void form.uploadDiploma(index, file)}
+                  onRemoveEducation={form.removeEducation}
+                  onSendSchoolEmailVerification={(index) => void form.sendSchoolEmailVerification(index)}
+                  schoolOptions={form.schoolOptions}
+                  sendingSchoolEmailIndex={form.sendingSchoolEmailIndex}
+                  siteName={SITE_NAME}
+                  uploadingEducationIndex={form.uploadingEducationIndex}
+                />
+              ) : null}
+
+              {form.activeStep === 4 ? (
+                <IdentityAndProfileMediaStep
+                  governmentIdUrls={form.governmentIdUrls}
+                  imageUrls={form.imageUrls}
+                  inputClassName={INPUT_CLASS}
+                  onGovernmentIdUpload={(file) => void form.uploadGovernmentId(file)}
+                  onProfileImageUpload={(file) => void form.uploadProfileImage(file)}
+                  uploadingGovernmentId={form.uploadingGovernmentId}
+                  uploadingProfileImage={form.uploadingProfileImage}
+                />
+              ) : null}
+            </fieldset>
 
             {form.notice ? <AlertMessage role="status" tone="success">{form.notice}</AlertMessage> : null}
 
-            {!form.isSubmitted ? (
+            {form.isReadOnlyApplication ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-5">
+                <button
+                  type="button"
+                  onClick={form.goToPreviousStep}
+                  disabled={form.activeStep === 0}
+                  className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-800 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={form.goToNextReadOnlyStep}
+                  disabled={form.isLastStep}
+                  className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-800 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            ) : !form.isSubmitted ? (
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-5">
                 <button
                   type="button"

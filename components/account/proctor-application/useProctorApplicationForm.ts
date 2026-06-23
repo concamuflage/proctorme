@@ -211,6 +211,9 @@ export function useProctorApplicationForm() {
   const currency = COUNTRY_CURRENCY["United States"];
   const currentStepTitle = FORM_STEPS[activeStep];
   const isLastStep = activeStep === FORM_STEPS.length - 1;
+  // Pending applications are waiting for admin review, and approved applications already have a live proctor profile.
+  // Example: status `rejected` remains editable so the applicant can fix and resubmit, but status `pending` is locked.
+  const isReadOnlyApplication = applicationStatus === "pending" || applicationStatus === "approved";
   // `applicationStatus === "pending"` means the submit API returned an application waiting for admin review.
   // `Boolean(notice)` makes this true only after handleSubmit() sets the success message in this browser session.
   // Example: after POST /api/account/proctor-application succeeds, status is "pending" and notice is
@@ -255,7 +258,7 @@ export function useProctorApplicationForm() {
 
   /**
    * Updates the React Hook Form education array from its latest stored value.
-   *
+   * updater: (current: EducationInput[]) => EducationInput[] defines the type of the function that updates the education array.
    * @param updater - Function that receives current rows and returns the next rows, for example replacing row `0` after a diploma upload.
    * @returns Nothing; `education` watchers receive the updated array.
    */
@@ -263,8 +266,15 @@ export function useProctorApplicationForm() {
     form.setValue("education", updater(form.getValues("education") ?? []), { shouldDirty: true });
   }
 
+
+
+// Fetch dropdown options like professions, genders, schools, majors.
+// Hydrate React Hook Form with form.reset(...).
+
   useEffect(() => {
+    // if the status is loading, do nothing
     if (status === "loading") return;
+    // If not logged in, redirect to login.
     if (status !== "authenticated") {
       router.replace(`/login?callbackUrl=${encodeURIComponent("/account/proctor-verification")}`);
       return;
@@ -273,19 +283,20 @@ export function useProctorApplicationForm() {
     let cancelled = false;
 
     /**
-     * Loads the saved application draft and option lists needed by the wizard.
+     * Loads the saved application draft and option lists needed by the component.
      *
      * @returns Nothing; state setters hydrate the current browser form from API responses.
      */
     async function loadApplication() {
       // The saved application draft and selectable option lists are independent, so load both at the same time.
+      // cache: "no-store" tells fetch to bypass the browser's cache and always fetch from the server.
       const [applicationResponse, optionsResponse] = await Promise.all([
         fetch("/api/account/proctor-application", { cache: "no-store" }),
         fetch("/api/account/proctor-application/options", { cache: "no-store" }),
       ]);
 
       // Parse both responses after both requests finish; each payload hydrates a different part of the form.
-      const [payload, optionsPayload] = await Promise.all([
+      const [applicationPayload, optionsPayload] = await Promise.all([
         applicationResponse.json().catch(() => null),
         optionsResponse.json().catch(() => null),
       ]);
@@ -302,15 +313,26 @@ export function useProctorApplicationForm() {
         setSchoolOptions(Array.isArray(optionsPayload?.schools) ? optionsPayload.schools : []);
         setMajorOptions(Array.isArray(optionsPayload?.majors) ? optionsPayload.majors : []);
       }
-      const accountDateOfBirth = typeof payload?.dateOfBirth === "string" ? payload.dateOfBirth : "";
+
+      // applicationPayload has two properties: `application` and `dateOfBirth`.
+      // even though the application is null, the dateOfBirth might still be available.
+      // because "/api/account/proctor-application" retrieves the user's date of birth from their profile.
+      // not from the application data itself.
+      // we user might not have a saved application yet, but they might have a date of birth on their profile.
+      // the following is to handle this scenario.
+      const accountDateOfBirth = typeof applicationPayload?.dateOfBirth === "string" ? applicationPayload.dateOfBirth : "";
       // If the application request failed or the user has not started a proctor application yet, use a clean form.
-      // Keep the account-level date of birth because it may already exist on the user profile.
-      // Example: `{ application: null, dateOfBirth: "1999-04-12" }` resets every field except `dateOfBirth`.
-      if (!applicationResponse.ok || !payload?.application) {
-        form.reset({ ...DEFAULT_FORM_VALUES, dateOfBirth: accountDateOfBirth });
+
+      if (!applicationResponse.ok || !applicationPayload?.application) {
+        // even though the form is clean, we want the form to show the user's date of birth if it exists.
+        form.reset({ ...DEFAULT_FORM_VALUES, dateOfBirth: accountDateOfBirth }); // update the form with the user's date of birth
         return;
       }
-      const app = payload.application;
+
+      const app = applicationPayload.application;
+      // if the application is a draft, we want to show a null status.
+      // else, we want to show the actual status. if the actual status is undefined, we want to show null.
+
       setApplicationStatus(app.status === "draft" ? null : app.status ?? null);
       const savedProfession = typeof app.profession === "string" ? app.profession : "";
       const professionChoices = Array.isArray(optionsPayload?.professions) ? optionsPayload.professions : [];
@@ -701,6 +723,9 @@ export function useProctorApplicationForm() {
    * @returns The draft save API payload, for example `{ application: { status: "draft" } }`.
    */
   async function saveApplicationDraft() {
+    if (isReadOnlyApplication) {
+      throw new Error("This proctor application is already pending or approved and cannot be edited.");
+    }
     setDraftSaving(true);
     try {
       const response = await fetch("/api/account/proctor-application", {
@@ -837,6 +862,23 @@ export function useProctorApplicationForm() {
   const handleSubmit = form.handleSubmit(async () => {
     setError(null);
     setNotice(null);
+    // why do we need this? when the application is already submitted, the submit button is disabled.
+    // nobody can call handleSubmit if the submit button is disabled? no
+    // the button can still be clicked programmatically.
+    // this also cannot protect against double submissions. why?
+    // because the button can still be clicked programmatically, and the handleSubmit function can still be called.
+    // this cannot be relied upon to prevent double submissions. 
+    // when double click happens, the handleSubmit function can be called twice.
+    // isReadOnlyApplication is false for both handleSubmit
+    // both will send the same request.
+    // however, by the time the second call is made, the first one has already been processed and the application status will be updated to "pending" or "approved".
+    // the second request will produce an error because the application is no longer in a state where it can be submitted.
+    // the double submission is mainly prevented by the backend logic, which checks the application status before trying to write data into the database.
+    
+    if (isReadOnlyApplication) {
+      setError("This proctor application is already pending or approved and cannot be edited.");
+      return;
+    }
     const validationError = validateActiveStep();
     if (validationError) {
       setError(validationError);
@@ -891,6 +933,7 @@ export function useProctorApplicationForm() {
     hourlyRate,
     imageUrls,
     isLastStep,
+    isReadOnlyApplication,
     isSubmitted,
     loading,
     majorOptions,
