@@ -6,30 +6,8 @@ import { useSession } from "next-auth/react";
 // Question:how to understand the FieldPath and FieldPathValue signatures in React Hook Form?
 import { useFieldArray, useForm, type FieldPath, type FieldPathValue } from "react-hook-form";
 import { EMPTY_EDUCATION } from "@/components/account/EducationFields";
-import type { EducationInput, ProctorApplicationFormValues } from "@/components/account/proctor-application/formTypes";
+import type { ApplicationFileUploadOptions, CityOptionsResponse, EducationInput, ProctorApplicationFormValues, StateOption } from "@/components/account/proctor-application/formTypes";
 import { ALLOWED_DOCUMENT_FILE_TYPES, ALLOWED_PROFILE_IMAGE_FILE_TYPES, MAX_UPLOAD_FILE_BYTES } from "@/lib/uploadFileSpecs";
-
-type StateOption = {
-  name: string;
-  code: string;
-};
-
-type ApplicationFileUploadOptions = {
-  /** Allowed MIME types for this upload. Example: `ALLOWED_DOCUMENT_FILE_TYPES` accepts PDF, JPG, and PNG. */
-  allowedTypes: ReadonlySet<string>;
-  /** API route that accepts multipart form data. Example: `/api/account/proctor-application/government-id-upload`. */
-  endpoint: string;
-  /** Fallback error when the API does not return a URL. Example: `Unable to upload government ID.` */
-  fallbackError: string;
-  /** Selected browser file. Example: `passport.pdf` with type `application/pdf`. */
-  file: File;
-  /** Callback that marks the upload as in flight after validation passes and before the request starts. */
-  onRequestStart: () => void;
-  /** Error used when the selected file is too large or empty. Example: `Government ID file must be 5 MB or smaller.` */
-  sizeError: string;
-  /** Error used when the selected file MIME type is not allowed. Example: `Profile image must be a JPG, PNG, or WebP file.` */
-  typeError: string;
-};
 
 export const FORM_STEPS = [
   "Profile basics",
@@ -255,17 +233,17 @@ export function useProctorApplicationForm() {
   useEffect(() => {
     // if the status is loading, do nothing
     if (status === "loading") return;
-    // If not logged in, redirect to login.
-    if (status !== "authenticated") {
+    // If the status is unauthenticated, redirect to login.
+    if (status === "unauthenticated") {
       router.replace(`/login?callbackUrl=${encodeURIComponent("/account/proctor-verification")}`);
       return;
     }
-
+    // if the status is authenticated, load the application data and option lists.
     let cancelled = false;
 
     /**
      * Loads the saved application draft and option lists needed by the component.
-     *
+     * and updates the form with the loaded data.
      * @returns Nothing; state setters hydrate the current browser form from API responses.
      */
     async function loadApplication() {
@@ -381,8 +359,11 @@ export function useProctorApplicationForm() {
         
       // Hydrate React Hook Form in one reset so watched values and the education field array update together.
       // Example: a saved draft with `profession: "Accountant"` and one education row becomes the new form defaults.
+
       form.reset({
+
         ...DEFAULT_FORM_VALUES,
+        // Hydrate the form with saved application data.
         profession: savedProfession && professionChoices.includes(savedProfession) ? savedProfession : "",
         // Custom gender entry is disabled, so saved custom values cannot be edited through this select.
         // Example: saved `gender: "Prefer to self-describe"` renders as blank unless that exact option exists.
@@ -403,14 +384,20 @@ export function useProctorApplicationForm() {
         education: hydratedEducation,
       });
     }
-
+    // loadApplication returns a Promise
+    // if the Promise is returned, there will be an error 
+    // because useEffect expects a cleanup function or void, not a Promise.
+    // void can be used to ignore Promise.
     void loadApplication();
+
     return () => {
       cancelled = true;
     };
   }, [router, status]);
-
+// Load city options when the state value changes.
   useEffect(() => {
+    // if status is loading or unauthenticated 
+    // or if there is no state value, clear the city options.
     if (status !== "authenticated" || !stateValue) {
       setCityOptions([]);
       return;
@@ -424,10 +411,11 @@ export function useProctorApplicationForm() {
      * @returns Nothing; `setCityOptions` hydrates values such as `["San Francisco", "San Jose", "Other"]`.
      */
     async function loadCities() {
+      
       const response = await fetch(`/api/account/proctor-application/options?state=${encodeURIComponent(stateValue)}`, { cache: "no-store" });
-      const payload = await response.json().catch(() => null);
+      const payload = (await response.json().catch(() => null)) as CityOptionsResponse | null;
       if (cancelled || !response.ok) return;
-      setCityOptions(Array.isArray(payload?.cities) ? payload.cities : []);
+      setCityOptions(payload?.cities ?? []);
     }
 
     void loadCities();

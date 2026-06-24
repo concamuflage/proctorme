@@ -51,8 +51,32 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     // the api does send a state parameter
     const stateCode = searchParams.get("state")?.trim().toUpperCase() || "";
+    if (stateCode) {
+      // A state-specific request is only used to refresh the city dropdown after Step 2 state changes.
+      // Example: `/api/account/proctor-application/options?state=CA` returns `{ cities: ["Los Angeles", "Other"] }`
+      // without rerunning the profession, degree, school, major, or timezone queries.
+      const cityResult = await pool.query<CityOptionRow>(
+        `
+          SELECT ci.name
+          FROM cities ci
+          JOIN states s
+            ON s.id = ci.state_id
+          JOIN countries c
+            ON c.id = s.country_id
+          WHERE c.country = 'United States'
+            AND s.code = $1
+          ORDER BY ci.name ASC
+        `,
+        [stateCode]
+      );
+
+      return NextResponse.json({
+        cities: otherLast(cityResult.rows.map((row: CityOptionRow) => row.name)),
+      });
+    }
+
     // can expand each variable to see the shape 
-    const [professionResult, genderResult, ethnicityResult, stateResult, cityResult, degreeResult, schoolResult, majorResult, timezoneResult] = await Promise.all([
+    const [professionResult, genderResult, ethnicityResult, stateResult, degreeResult, schoolResult, majorResult, timezoneResult] = await Promise.all([
       pool.query<ProfessionOptionRow>(
       `
         SELECT name
@@ -73,28 +97,6 @@ export async function GET(request: Request) {
           ORDER BY s.name ASC
         `
       ),
-      stateCode
-        ? pool.query<CityOptionRow>(
-          `
-            SELECT ci.name
-            FROM cities ci
-            JOIN states s
-              ON s.id = ci.state_id
-            JOIN countries c
-              ON c.id = s.country_id
-            WHERE c.country = 'United States'
-              AND s.code = $1
-            ORDER BY ci.name ASC
-          `,
-          [stateCode]
-        )
-        // If no state is provided, return an empty array of cities.
-        // query must return a Promise
-        //“Return a successful Promise whose value is { rows: [] }.”
-        // as CityOptionRow[] is type assertion. without it, 
-        // the type might be inferred as { rows: never[] }
-
-        : Promise.resolve({ rows: [] as CityOptionRow[] }),
       pool.query<NamedOptionRow>("SELECT name FROM degrees ORDER BY name ASC"),
       pool.query<NamedOptionRow>("SELECT name FROM schools ORDER BY name ASC"),
       pool.query<NamedOptionRow>("SELECT name FROM majors ORDER BY name ASC"),
@@ -116,7 +118,7 @@ export async function GET(request: Request) {
         name: row.name,
         code: row.code,
       })),
-      cities: otherLast(cityResult.rows.map((row: CityOptionRow) => row.name)),
+      cities: [],
       degrees: degreeResult.rows.map((row: NamedOptionRow) => row.name),
       schools: otherLast(schoolResult.rows.map((row: NamedOptionRow) => row.name)),
       majors: otherLast(majorResult.rows.map((row: NamedOptionRow) => row.name)),

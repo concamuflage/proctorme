@@ -1,6 +1,6 @@
 /**
  * This is shape for one education experience within the proctor application.
- * the education in the ProctorApplicationFormValues uses EducationInput[]
+ * the education in the ProctorApplicationFormValues uses EducationInput
  */
 export type EducationInput = {
   degree: string;
@@ -39,4 +39,42 @@ export type ProctorApplicationFormValues = {
   imageUrls: string[];
   governmentIdUrls: string[];
   education: EducationInput[];
+};
+
+/**
+ * State dropdown option returned by the proctor application options API.
+ *
+ * Example: `{ name: "California", code: "CA" }`.
+ */
+export type StateOption = {
+  name: string;
+  code: string;
+};
+
+
+/**
+ * Configuration for uploading a selected file from the proctor application form.
+ *
+ * Example: a government ID upload uses endpoint
+ * `/api/account/proctor-application/government-id-upload` and an allowed-type set
+ * containing PDF, JPG, and PNG MIME types.
+ */
+export type ApplicationFileUploadOptions = {
+  allowedTypes: ReadonlySet<string>;
+  endpoint: string;
+  fallbackError: string;
+  file: File;
+  onRequestStart: () => void;
+  sizeError: string;
+  typeError: string;
+};
+
+/**
+ * City-only response returned when the options API receives a state code.
+ *
+ * Example: `/api/account/proctor-application/options?state=CA` returns
+ * `{ cities: ["Los Angeles", "Other"] }`.
+ */
+export type CityOptionsResponse = {
+  cities: string[];
 };
