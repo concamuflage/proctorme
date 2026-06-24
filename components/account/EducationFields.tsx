@@ -2,42 +2,7 @@
 
 import React from "react";
 import UploadField from "@/components/account/UploadField";
-
-/**
- * Editable education row stored in form state before the proctor application is submitted.
- *
- * Example:
- * {
- *   degree: "Bachelor's Degree",
- *   school: "Other",
- *   customSchool: "Boston University",
- *   major: "Computer Science",
- *   customMajor: "",
- *   startMonth: "2015-09",
- *   endMonth: "2019-05",
- *   diplomaUrl: "gcs://bucket/proctor-applications/206/diplomas/diploma.pdf",
- *   schoolEmail: "student@bu.edu",
- *   educationVerificationAuthorized: true,
- *   schoolEmailVerificationStatus: "pending",
- *   schoolEmailVerificationSentAt: "2026-06-16T15:30:00.000Z",
- *   schoolEmailVerifiedAt: undefined
- * }
- */
-export type EducationInput = {
-  degree: string;
-  school: string;
-  customSchool: string;
-  major: string;
-  customMajor: string;
-  startMonth: string;
-  endMonth: string;
-  diplomaUrl: string;
-  schoolEmail: string;
-  educationVerificationAuthorized: boolean;
-  schoolEmailVerificationStatus: string;
-  schoolEmailVerificationSentAt?: string;
-  schoolEmailVerifiedAt?: string;
-};
+import type { EducationInput } from "@/components/account/proctor-application/formTypes";
 
 /**
  * Empty education row used when a user starts the form or clicks "Add education".

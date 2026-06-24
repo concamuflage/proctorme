@@ -20,15 +20,17 @@ type NamedOptionRow = {
 };
 
 /**
- * Runs the other last logic for this module.
- *
+ * Put the "Other" option at the end of the array, so it's always the last option in the list.
+ * 
  * @param values - Input used by other last.
  *
  * @returns The result used by the surrounding flow.
  */
 function otherLast(values: string[]) {
   return values
+    // Remove "Other" from the array
     .filter((value) => value !== "Other")
+    // if values includes "Other", add it to the end
     .concat(values.includes("Other") ? ["Other"] : []);
 }
 
@@ -47,7 +49,9 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
+    // the api does send a state parameter
     const stateCode = searchParams.get("state")?.trim().toUpperCase() || "";
+    // can expand each variable to see the shape 
     const [professionResult, genderResult, ethnicityResult, stateResult, cityResult, degreeResult, schoolResult, majorResult, timezoneResult] = await Promise.all([
       pool.query<ProfessionOptionRow>(
       `
@@ -84,6 +88,12 @@ export async function GET(request: Request) {
           `,
           [stateCode]
         )
+        // If no state is provided, return an empty array of cities.
+        // query must return a Promise
+        //“Return a successful Promise whose value is { rows: [] }.”
+        // as CityOptionRow[] is type assertion. without it, 
+        // the type might be inferred as { rows: never[] }
+
         : Promise.resolve({ rows: [] as CityOptionRow[] }),
       pool.query<NamedOptionRow>("SELECT name FROM degrees ORDER BY name ASC"),
       pool.query<NamedOptionRow>("SELECT name FROM schools ORDER BY name ASC"),
@@ -91,9 +101,17 @@ export async function GET(request: Request) {
       pool.query<NamedOptionRow>("SELECT name FROM timezones ORDER BY name ASC"),
     ]);
     return NextResponse.json({
+
       professions: professionResult.rows.map((row: ProfessionOptionRow) => row.name),
       genders: otherLast(genderResult.rows.map((row: NamedOptionRow) => row.name)),
       ethnicities: ethnicityResult.rows.map((row: NamedOptionRow) => row.name),
+      // Keep the API contract to only the fields the client needs.
+      // Example: if the SQL later selects `s.id`, in stateResult.rows, each row will have an `id` field.
+      // if we don't map the rows to only the fields we need, the response will include the `id` field.
+      // this will expose the shape of row
+      // with explicit mapping, we can ensure the response only includes the fields we want.
+      // this response still returns `{ name: "California", code: "CA" }` without leaking `id`.
+
       states: stateResult.rows.map((row: StateOptionRow) => ({
         name: row.name,
         code: row.code,

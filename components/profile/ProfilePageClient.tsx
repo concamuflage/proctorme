@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import EducationFields, { EMPTY_EDUCATION, type EducationInput } from "@/components/account/EducationFields";
+import EducationFields, { EMPTY_EDUCATION } from "@/components/account/EducationFields";
+import type { EducationInput } from "@/components/account/proctor-application/formTypes";
 import ProfileChangeRequestList from "@/components/profile/ProfileChangeRequestList";
 import UploadField from "@/components/account/UploadField";
 import UsAddressFields from "@/components/account/UsAddressFields";

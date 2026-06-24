@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import EducationFields, { type EducationInput } from "@/components/account/EducationFields";
+import EducationFields from "@/components/account/EducationFields";
 import { FormSection } from "@/components/account/proctor-application/StepLayout";
+import type { EducationInput } from "@/components/account/proctor-application/formTypes";
 
 type EducationStepProps = {
   degreeOptions: string[];

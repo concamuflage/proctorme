@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 // Question:how to understand the FieldPath and FieldPathValue signatures in React Hook Form?
 import { useFieldArray, useForm, type FieldPath, type FieldPathValue } from "react-hook-form";
-import { EMPTY_EDUCATION, type EducationInput } from "@/components/account/EducationFields";
+import { EMPTY_EDUCATION } from "@/components/account/EducationFields";
+import type { EducationInput, ProctorApplicationFormValues } from "@/components/account/proctor-application/formTypes";
 import { ALLOWED_DOCUMENT_FILE_TYPES, ALLOWED_PROFILE_IMAGE_FILE_TYPES, MAX_UPLOAD_FILE_BYTES } from "@/lib/uploadFileSpecs";
 
 type StateOption = {
@@ -28,26 +29,6 @@ type ApplicationFileUploadOptions = {
   sizeError: string;
   /** Error used when the selected file MIME type is not allowed. Example: `Profile image must be a JPG, PNG, or WebP file.` */
   typeError: string;
-};
-
-type ProctorApplicationFormValues = {
-  profession: string;
-  gender: string;
-  ethnicity: string;
-  dateOfBirth: string;
-  bio: string;
-  street: string;
-  city: string;
-  customCity: string;
-  stateValue: string;
-  zipCode: string;
-  timezone: string;
-  hourlyRate: string;
-  minimumHours: string;
-  maximumHours: string;
-  imageUrls: string[];
-  governmentIdUrls: string[];
-  education: EducationInput[];
 };
 
 export const FORM_STEPS = [
@@ -334,30 +315,77 @@ export function useProctorApplicationForm() {
       // else, we want to show the actual status. if the actual status is undefined, we want to show null.
 
       setApplicationStatus(app.status === "draft" ? null : app.status ?? null);
+
       const savedProfession = typeof app.profession === "string" ? app.profession : "";
-      const professionChoices = Array.isArray(optionsPayload?.professions) ? optionsPayload.professions : [];
       const savedGender = typeof app.gender === "string" ? app.gender : "";
+      const professionChoices = Array.isArray(optionsPayload?.professions) ? optionsPayload.professions : [];
       const genderChoices = Array.isArray(optionsPayload?.genders) ? optionsPayload.genders : [];
-      // Custom gender entry is disabled, so saved custom values cannot be edited through this select.
-      // Example: saved `gender: "Prefer to self-describe"` renders as blank unless that exact option exists.
+      // Before hydration, the shape might be the following:
+      // with no customSchool, customMajor, or diplomaUrl
+      // {
+      //   degree: "Bachelor's Degree",
+      //   school: "Boston University",
+      //   major: "Computer Science",
+      //   diplomaUrls: ["gcs://bucket/old-diploma.pdf"],
+      // }
+
+      // After hydration, the form receives a full EducationInput row:
+      // {
+      //   ...EMPTY_EDUCATION,
+      //   degree: "Bachelor's Degree",
+      //   school: "Other",
+      //   customSchool: "Boston University",
+      //   major: "Computer Science",
+      //   diplomaUrl: "gcs://bucket/old-diploma.pdf",
+      // }
       const hydratedEducation = Array.isArray(app.education) && app.education.length > 0
+        // item may contain some fields from EducationInput
+        //and it may also have an old field called diplomaUrls
+        // the app allowed multiple diploma URLs in the past so we need to handle that case
         ? app.education.map((item: Partial<EducationInput> & { diplomaUrls?: string[] }) => ({
+            // Start with a full blank education object, then overwrite it with saved values from item.
             ...EMPTY_EDUCATION,
+            // Overwrite the blank education object with saved values from item.
+            // like educationVerificationAuthorized, which doesn't need special handling
             ...item,
+
+            // the following fields need special handling due to the legacy shape
+
+
             // Read old saved drafts with `diplomaUrls`, but keep current form state as one `diplomaUrl`.
+            // 1. Check whether item.diplomaUrls is an array.
+            // 2. If it is an array, find the first element that is a string.
+            // 3. If no string is found, .find(...) returns undefined, not null.
+            // 4. Use ?? "" to convert undefined/null into an empty string.
+            // 5. If item.diplomaUrls is not an array, use an empty string.
             diplomaUrl: item.diplomaUrl || (Array.isArray(item.diplomaUrls) ? item.diplomaUrls.find((url): url is string => typeof url === "string") ?? "" : ""),
             degree: item.degree && Array.isArray(optionsPayload?.degrees) && optionsPayload.degrees.includes(item.degree) ? item.degree : "",
+            // if the school is in the list of available schools
+            // school: "University of California, Los Angeles"
+            // customSchool: ""
+            // if the school is not in the list of available schools
+            // school: "Other"
+            // customSchool: "theCustomSchool"
             school: item.school && Array.isArray(optionsPayload?.schools) && !optionsPayload.schools.includes(item.school) ? "Other" : item.school ?? "",
             customSchool: item.school && Array.isArray(optionsPayload?.schools) && !optionsPayload.schools.includes(item.school) ? item.school : "",
+            // if the major is in the list of available majors
+            // major: "Computer Science"
+            // customMajor: ""
+            // if the major is not in the list of available majors
+            // major: "Other"
+            // customMajor: "theCustomMajor"
             major: item.major && Array.isArray(optionsPayload?.majors) && !optionsPayload.majors.includes(item.major) ? "Other" : item.major ?? "",
             customMajor: item.major && Array.isArray(optionsPayload?.majors) && !optionsPayload.majors.includes(item.major) ? item.major : "",
           }))
         : [{ ...EMPTY_EDUCATION }];
+        
       // Hydrate React Hook Form in one reset so watched values and the education field array update together.
       // Example: a saved draft with `profession: "Accountant"` and one education row becomes the new form defaults.
       form.reset({
         ...DEFAULT_FORM_VALUES,
         profession: savedProfession && professionChoices.includes(savedProfession) ? savedProfession : "",
+        // Custom gender entry is disabled, so saved custom values cannot be edited through this select.
+        // Example: saved `gender: "Prefer to self-describe"` renders as blank unless that exact option exists.
         gender: savedGender && (genderChoices.length === 0 || genderChoices.includes(savedGender)) ? savedGender : "",
         ethnicity: typeof app.ethnicity === "string" ? app.ethnicity : "",
         dateOfBirth: typeof app.dateOfBirth === "string" ? app.dateOfBirth : accountDateOfBirth,
@@ -874,7 +902,7 @@ export function useProctorApplicationForm() {
     // however, by the time the second call is made, the first one has already been processed and the application status will be updated to "pending" or "approved".
     // the second request will produce an error because the application is no longer in a state where it can be submitted.
     // the double submission is mainly prevented by the backend logic, which checks the application status before trying to write data into the database.
-    
+
     if (isReadOnlyApplication) {
       setError("This proctor application is already pending or approved and cannot be edited.");
       return;
