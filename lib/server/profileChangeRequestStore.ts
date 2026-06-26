@@ -1,4 +1,5 @@
 import pool from "@/lib/server/database/pool";
+import { isOptionalEducationEmailAddress } from "@/lib/schoolEmail";
 import { getCachedOrResolvedCityTimeZone } from "@/lib/server/proctorStore";
 
 export type ProfileChangeRequestStatus = "pending" | "approved" | "rejected";
@@ -315,6 +316,15 @@ export async function getCurrentProctorEducations(userId: number): Promise<Educa
  * @returns The result used by the surrounding flow.
  */
 export async function submitProfileChangeRequest(userId: number, changeType: ProfileChangeType, newValues: Record<string, unknown>) {
+  if (changeType === "education") {
+    const educationValues = normalizeEducationValues(newValues);
+    // Profile education edits share the same optional school email rule as the proctor application form.
+    // Example: `student@ucla.edu` is accepted, while `student@gmail.com` is rejected before review storage.
+    if (educationValues.some((education) => !isOptionalEducationEmailAddress(education.schoolEmail))) {
+      throw new Error("School email address must end with .edu.");
+    }
+  }
+
   const oldValues = changeType === "address"
     ? await getCurrentProctorAddress(userId)
     : changeType === "education"

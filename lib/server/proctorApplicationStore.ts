@@ -1,4 +1,5 @@
 import pool from "@/lib/server/database/pool";
+import { isEducationEmailAddress, isOptionalEducationEmailAddress } from "@/lib/schoolEmail";
 import {
   buildSchoolEmailVerificationLink,
   createSchoolEmailVerificationToken,
@@ -559,8 +560,8 @@ export async function sendSchoolEmailVerificationForUser({
   schoolEmail: string;
 }) {
   const normalizedEmail = text(schoolEmail).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    throw new Error("A valid school email is required.");
+  if (!isEducationEmailAddress(normalizedEmail)) {
+    throw new Error("School email address must end with .edu.");
   }
   if (educationIndex < 0) throw new Error("A valid education entry is required.");
 
@@ -715,6 +716,22 @@ export function normalizeProctorApplicationInput(payload: unknown): ProctorAppli
 }
 
 /**
+ * Validates optional school email values without requiring the full application to be complete.
+ *
+ * @param input - Proctor application payload, for example an education row with `schoolEmail: "student@ucla.edu"`.
+ * @returns An error message for non-`.edu` school emails, or null when all provided values are education emails.
+ */
+export function validateProctorApplicationSchoolEmails(input: ProctorApplicationInput) {
+  // Draft saves are allowed to be incomplete, but any provided school email must still be an education address.
+  // Example: `student@ucla.edu` is accepted on PATCH, while `student@gmail.com` is rejected before it is saved.
+  if (input.education.some((education) => !isOptionalEducationEmailAddress(education.schoolEmail))) {
+    return "School email address must end with .edu.";
+  }
+
+  return null;
+}
+
+/**
  * Runs the validate proctor application input logic for this module.
  *
  * @param input - Input used by validate proctor application input.
@@ -722,6 +739,9 @@ export function normalizeProctorApplicationInput(payload: unknown): ProctorAppli
  * @returns The result used by the surrounding flow.
  */
 export function validateProctorApplicationInput(input: ProctorApplicationInput) {
+  const schoolEmailError = validateProctorApplicationSchoolEmails(input);
+  if (schoolEmailError) return schoolEmailError;
+
   if (!input.profession) return "Profession is required.";
   if (input.profession === "Other") return "Choose a listed profession.";
   if (!input.gender) return "Gender is required.";

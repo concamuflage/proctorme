@@ -78,3 +78,41 @@ export type ApplicationFileUploadOptions = {
 export type CityOptionsResponse = {
   cities: string[];
 };
+
+/**
+ * Row shape returned by the professions option query.
+ *
+ * Example: `{ name: "Accountant" }`.
+ */
+export type ProfessionOptionRow = {
+  name: string;
+};
+
+/**
+ * Row shape returned by the United States states option query.
+ *
+ * Example: `{ name: "California", code: "CA" }`.
+ */
+export type StateOptionRow = {
+  name: string;
+  code: string;
+};
+
+/**
+ * Row shape returned by the city option query.
+ *
+ * Example: `{ name: "Los Angeles" }`.
+ */
+export type CityOptionRow = {
+  name: string;
+};
+
+/**
+ * Shared row shape for option tables that only select a `name` column.
+ *
+ * Example: the degree, school, major, gender, ethnicity, and timezone queries
+ * each return rows like `{ name: "Bachelor's Degree" }`.
+ */
+export type NamedOptionRow = {
+  name: string;
+};

@@ -9,6 +9,7 @@ import {
   saveProctorApplication,
   saveProctorApplicationDraft,
   validateProctorApplicationInput,
+  validateProctorApplicationSchoolEmails,
 } from "@/lib/server/proctorApplicationStore";
 
 /**
@@ -48,6 +49,10 @@ async function handleProctorApplicationMutation({
 
   const payload = await request.json().catch(() => null);
   const input = normalizeProctorApplicationInput(payload);
+  const schoolEmailError = validateProctorApplicationSchoolEmails(input);
+  if (schoolEmailError) {
+    return NextResponse.json({ error: schoolEmailError }, { status: 400 });
+  }
   // a validator is passed in for the final-submit (POST) request, but not for the draft-save (PATCH) request.
   const validationError = validateInput?.(input);
   if (validationError) {

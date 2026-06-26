@@ -1,23 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/server/database/pool";
 import { resolveSessionUserId } from "@/lib/server/sessionUser";
-
-type ProfessionOptionRow = {
-  name: string;
-};
-
-type StateOptionRow = {
-  name: string;
-  code: string;
-};
-
-type CityOptionRow = {
-  name: string;
-};
-
-type NamedOptionRow = {
-  name: string;
-};
+import type { CityOptionRow, NamedOptionRow, ProfessionOptionRow, StateOptionRow } from "@/components/account/proctor-application/formTypes";
 
 /**
  * Put the "Other" option at the end of the array, so it's always the last option in the list.

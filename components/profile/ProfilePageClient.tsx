@@ -11,6 +11,7 @@ import { useCart } from "@/components/cart/CartContext";
 import AlertMessage from "@/components/ui/AlertMessage";
 import { formatUsd } from "@/lib/formatters";
 import { SITE_NAME } from "@/lib/proctor";
+import { isOptionalEducationEmailAddress } from "@/lib/schoolEmail";
 import { ALLOWED_DOCUMENT_FILE_TYPES, ALLOWED_PROFILE_IMAGE_FILE_TYPES, MAX_UPLOAD_FILE_BYTES } from "@/lib/uploadFileSpecs";
 
 type ProfileData = {
@@ -627,6 +628,12 @@ export default function ProfilePageClient(_props: { initialSection?: string } = 
       }
       if (!item.diplomaUrl) {
         setEducationError("A diploma upload is required for each education entry.");
+        return;
+      }
+      // Optional school email still has to be an education email when supplied.
+      // Example: `student@ucla.edu` can be submitted for review, but `student@gmail.com` is rejected.
+      if (!isOptionalEducationEmailAddress(item.schoolEmail)) {
+        setEducationError("School email address must end with .edu.");
         return;
       }
       if (!item.educationVerificationAuthorized) {

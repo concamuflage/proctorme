@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { useFieldArray, useForm, type FieldPath, type FieldPathValue } from "react-hook-form";
 import { EMPTY_EDUCATION } from "@/components/account/EducationFields";
 import type { ApplicationFileUploadOptions, CityOptionsResponse, EducationInput, ProctorApplicationFormValues, StateOption } from "@/components/account/proctor-application/formTypes";
+import { isOptionalEducationEmailAddress } from "@/lib/schoolEmail";
 import { ALLOWED_DOCUMENT_FILE_TYPES, ALLOWED_PROFILE_IMAGE_FILE_TYPES, MAX_UPLOAD_FILE_BYTES } from "@/lib/uploadFileSpecs";
 
 export const FORM_STEPS = [
@@ -18,6 +19,8 @@ export const FORM_STEPS = [
 ] as const;
 
 export const INPUT_CLASS = "w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900";
+
+const ACTIVE_STEP_SESSION_STORAGE_KEY = "proctorme:proctor-application:active-step";
 
 const COUNTRY_CURRENCY = {
   "United States": {
@@ -45,6 +48,48 @@ const DEFAULT_FORM_VALUES: ProctorApplicationFormValues = {
   governmentIdUrls: [],
   education: [{ ...EMPTY_EDUCATION }],
 };
+
+/**
+ * Keeps a wizard step index inside the valid `FORM_STEPS` bounds.
+ *
+ * @param value - Candidate step index, for example `3` for the Education step.
+ * @returns A valid step index, for example `4` stays `4` while `99` becomes the last step index.
+ */
+function normalizeActiveStep(value: number) {
+  if (!Number.isInteger(value)) return 0;
+  return Math.min(Math.max(value, 0), FORM_STEPS.length - 1);
+}
+
+/**
+ * Reads the previously viewed proctor application step for this browser tab.
+ *
+ * @returns The stored step index, for example `2` after refreshing on "Rates and session length".
+ */
+function readInitialActiveStep() {
+  if (typeof window === "undefined") return 0;
+  try {
+    const storedValue = window.sessionStorage.getItem(ACTIVE_STEP_SESSION_STORAGE_KEY);
+    return normalizeActiveStep(Number(storedValue));
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Persists the active proctor application step for refreshes in the same browser tab.
+ *
+ * @param step - Step index to store, for example `3` when the user is on the Education step.
+ * @returns Nothing; the value is written to session storage when available.
+ */
+function storeActiveStep(step: number) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(ACTIVE_STEP_SESSION_STORAGE_KEY, String(normalizeActiveStep(step)));
+  } catch {
+    // If storage is blocked, navigation still works for the current render; only refresh persistence is skipped.
+    // Example: a browser privacy mode can reject `sessionStorage.setItem`, but `activeStep` still updates in React state.
+  }
+}
 
 /**
  * Checks whether the date of birth is at least the requested age.
@@ -164,7 +209,7 @@ export function useProctorApplicationForm() {
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   // Government ID upload in-flight flag. setUploadingGovernmentId wraps uploadGovernmentId() so submit and upload controls can disable during the upload.
   const [uploadingGovernmentId, setUploadingGovernmentId] = useState(false);
-  // Current wizard step index. setActiveStep advances after a successful draft save and moves back from the Back button.
+  // Current wizard step index. setActiveStep starts at Step 1 for stable rendering, then restores the same-tab stored step after mount.
   const [activeStep, setActiveStep] = useState(0);
 
   const currency = COUNTRY_CURRENCY["United States"];
@@ -179,7 +224,14 @@ export function useProctorApplicationForm() {
   // "Application submitted...", so the Back/Continue/Submit button area is hidden.
   const isSubmitted = applicationStatus === "pending" && Boolean(notice);
 
+  useEffect(() => {
+    // Restore the last viewed step after the browser APIs are available.
+    // Example: refreshing while on Step 4 stores `3`, then this effect returns the user to Education.
+    setActiveStep(readInitialActiveStep());
+  }, []);
 
+  // The following values are extracted from the formValues object.
+  // which are assigned to the
   const {
     bio,
     city,
@@ -225,6 +277,20 @@ export function useProctorApplicationForm() {
     form.setValue("education", updater(form.getValues("education") ?? []), { shouldDirty: true });
   }
 
+  /**
+   * Updates the active wizard step and stores it for same-tab page refreshes.
+   *
+   * @param updater - Receives the current step and returns the next step, for example `current => current + 1`.
+   * @returns Nothing; React rerenders and `sessionStorage` receives the normalized step.
+   */
+  function setStoredActiveStep(updater: (current: number) => number) {
+    setActiveStep((current) => {
+      const nextStep = normalizeActiveStep(updater(current));
+      storeActiveStep(nextStep);
+      return nextStep;
+    });
+  }
+
 
 
 // Fetch dropdown options like professions, genders, schools, majors.
@@ -251,6 +317,10 @@ export function useProctorApplicationForm() {
       // cache: "no-store" tells fetch to bypass the browser's cache and always fetch from the server.
       const [applicationResponse, optionsResponse] = await Promise.all([
         fetch("/api/account/proctor-application", { cache: "no-store" }),
+        // This doesn't contain the state
+        // so city options are not included in the initial options response.
+        // in the form.reset(), stateValue is updated, which will trigger another useEffect that depends on the stateValue.
+        // in which second useEffect , city options are fetched based on the updated stateValue.
         fetch("/api/account/proctor-application/options", { cache: "no-store" }),
       ]);
 
@@ -395,6 +465,8 @@ export function useProctorApplicationForm() {
     };
   }, [router, status]);
 // Load city options when the state value changes.
+// form.reset in this file will change the default state value to the saved state of the user.
+// and trigger this useEffect.
   useEffect(() => {
     // if status is loading or unauthenticated 
     // or if there is no state value, clear the city options.
@@ -425,36 +497,55 @@ export function useProctorApplicationForm() {
   }, [stateValue, status]);
 
   useEffect(() => {
+    // Only normalize a selected city after the city dropdown has loaded for the current state.
+    // Example: when `city` is already "Other", `customCity` already stores the user's typed city.
+    // `!city` example: the user has not picked a city yet, so there is nothing to normalize.
+    // `city === "Other"` example: the city select already points to the custom-city input.
+    // `cityOptions.length === 0` example: the state-specific city list has not loaded yet, so every saved city would look invalid.
     if (!city || city === "Other" || cityOptions.length === 0) return;
     if (!cityOptions.includes(city)) {
+      // Saved drafts can contain a city that is no longer in the current state's dropdown.
+      // Example: saved `city: "Cambridge"` with California options becomes `city: "Other"` and `customCity: "Cambridge"`.
       setFormValue("customCity", city);
       setFormValue("city", "Other");
     }
   }, [city, cityOptions]);
 
+  // this is to update the school email verification status for all pending education records.
+  // when the user returns to the education step after opening a school email verification link.
+
   useEffect(() => {
     if (activeStep !== 3) return;
+    // filter out all the education records that have email verification pending.
     const pendingIndexes = education
+      // if the school email is not empty and the verification status is pending, include the index
       .map((item, index) => item.schoolEmail.trim() && item.schoolEmailVerificationStatus === "pending" ? index : -1)
       .filter((index) => index >= 0);
+    // If no pending verification is found, there's nothing to do.
     if (pendingIndexes.length === 0) return;
 
     /**
-     * Refreshes pending school email rows when the user returns after opening a verification link.
+     * update the school email verification status for all pending education records.
      *
      * @returns Nothing.
      */
-    function refreshPendingSchoolEmails() {
+    function updatePendingSchoolEmails() {
       pendingIndexes.forEach((index) => {
-        void refreshSchoolEmailVerificationStatus(index);
+        void updateSchoolEmailVerificationStatus(index);
       });
     }
 
-    window.addEventListener("focus", refreshPendingSchoolEmails);
-    const intervalId = window.setInterval(refreshPendingSchoolEmails, 5000);
+    // Refresh immediately when the applicant returns to this tab after opening the school email verification link.
+    // Example: if the school email was verified in another tab, focusing this window updates the row from "pending" to "verified".
+    // 
+    window.addEventListener("focus", updatePendingSchoolEmails);
+    const intervalId = window.setInterval(updatePendingSchoolEmails, 5000);
 
+    // clear up function called when the effect unmounts.
+    // what counts as effect unmounting? eg, when the component is unmounted or the effect is re-run.
     return () => {
-      window.removeEventListener("focus", refreshPendingSchoolEmails);
+      // Remove the focus listener when pending rows change or the effect unmounts so old row indexes are not refreshed.
+      window.removeEventListener("focus", updatePendingSchoolEmails);
       window.clearInterval(intervalId);
     };
   }, [activeStep, education]);
@@ -536,7 +627,18 @@ export function useProctorApplicationForm() {
   function goToPreviousStep() {
     setError(null);
     setNotice(null);
-    setActiveStep((current) => Math.max(current - 1, 0));
+    setStoredActiveStep((current) => current - 1);
+  }
+
+  /**
+   * Moves read-only applications to the next step without saving form data.
+   *
+   * @returns Nothing; the active step changes from values like `1` to `2`.
+   */
+  function goToNextReadOnlyStep() {
+    setError(null);
+    setNotice(null);
+    setStoredActiveStep((current) => current + 1);
   }
 
   /**
@@ -678,6 +780,9 @@ export function useProctorApplicationForm() {
         if (!item.degree || !school || !major) return "Degree, school, and major are required for each education entry.";
         if (!item.diplomaUrl) return "A diploma upload is required for each education entry.";
         if (!item.educationVerificationAuthorized) return "Check the education verification authorization box for each education entry before continuing.";
+        // Optional school email must still be a real education address when provided.
+        // Example: `student@ucla.edu` is accepted, but `student@gmail.com` is blocked before verification.
+        if (!isOptionalEducationEmailAddress(item.schoolEmail)) return "School email address must end with .edu.";
         if (item.schoolEmail.trim() && item.schoolEmailVerificationStatus !== "verified") return "Send and verify each provided school email before continuing.";
       }
       return null;
@@ -760,25 +865,31 @@ export function useProctorApplicationForm() {
   }
 
   /**
-   * Refreshes one school email verification status from the server.
+   * Fetches the latest school email verification status from the server/database through an API call.
+   * Then, update the corresponding education row's schoolEmailVerificationStatus in the form state
    *
    * @param index - Education row index, for example `0`.
    * @returns Nothing.
    */
-  async function refreshSchoolEmailVerificationStatus(index: number) {
+  async function updateSchoolEmailVerificationStatus(index: number) {
     const item = education[index];
+    // if item is not null or undefined, trim its schoolEmail
+    // if the trimmed schoolEmail is empty, return early
     if (!item?.schoolEmail.trim()) return;
 
+    // construct the query parameters
     const params = new URLSearchParams({
       educationIndex: String(index),
       schoolEmail: item.schoolEmail.trim(),
     });
+    // the api checks if the email is verified or not
     const response = await fetch(`/api/account/proctor-application/send-school-email-verification?${params.toString()}`, {
       cache: "no-store",
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || typeof payload?.status !== "string") return;
-
+    // setEducationRows automatically has the access to the current education array.
+    // which is the current in the updater.
     setEducationRows((current) => current.map((currentItem, itemIndex) =>
       itemIndex === index
         ? {
@@ -801,6 +912,10 @@ export function useProctorApplicationForm() {
     const item = education[index];
     if (!item?.schoolEmail.trim()) {
       setError("Enter a school email address before sending verification.");
+      return;
+    }
+    if (!isOptionalEducationEmailAddress(item.schoolEmail)) {
+      setError("School email address must end with .edu.");
       return;
     }
     const school = item.school === "Other" ? item.customSchool.trim() : item.school;
@@ -867,7 +982,7 @@ export function useProctorApplicationForm() {
       return;
     }
 
-    setActiveStep((current) => Math.min(current + 1, FORM_STEPS.length - 1));
+    setStoredActiveStep((current) => current + 1);
   };
 
   /**
@@ -943,6 +1058,7 @@ export function useProctorApplicationForm() {
     ethnicityOptions,
     gender,
     genderOptions,
+    goToNextReadOnlyStep,
     goToPreviousStep,
     governmentIdUrls,
     handleSubmit,

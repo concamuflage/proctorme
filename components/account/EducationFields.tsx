@@ -3,6 +3,7 @@
 import React from "react";
 import UploadField from "@/components/account/UploadField";
 import type { EducationInput } from "@/components/account/proctor-application/formTypes";
+import { EDUCATION_EMAIL_PATTERN } from "@/lib/schoolEmail";
 
 /**
  * Empty education row used when a user starts the form or clicks "Add education".
@@ -204,7 +205,11 @@ export default function EducationFields({
                   value={item.schoolEmail}
                   onChange={(e) => onChange(index, "schoolEmail", e.target.value)}
                   className={inputClassName}
+                  // Optional values may be blank, but any typed school email must be an education address.
+                  // Example: `student@ucla.edu` matches this pattern, while `student@gmail.com` does not.
+                  pattern={EDUCATION_EMAIL_PATTERN}
                   placeholder="name@school.edu"
+                  title="Use a school email address that ends with .edu, for example student@ucla.edu."
                 />
                 {/* School email verification is optional, so whitespace-only values count as empty.
                     Example: clearing `student@bu.edu` back to `""` hides this verification UI and skips verification validation. */}
