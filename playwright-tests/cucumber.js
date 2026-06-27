@@ -14,8 +14,8 @@ module.exports = {
     publishQuiet: true,
   },
   api: {
-    // Feature files describe the API scenarios in plain language.
-    paths: ["tests/api/features/**/*.feature"],
+    // Feature paths are supplied by npm scripts or direct CLI arguments so one API feature can run independently.
+    // Example: `test:api` passes the full glob, while `cucumber-js --profile api tests/api/features/login.feature` passes one file.
     requireModule: ["tsx/cjs"],
     // Support files create shared test state; step definitions bind Gherkin text
     // to executable JavaScript.
