@@ -167,25 +167,3 @@ export async function findProctorApplicationByEmail(email: string): Promise<Stor
 
   return result.rows[0] ?? null;
 }
-
-/**
- * Deletes a generated user's proctor application before shared user cleanup runs.
- *
- * @param email - Generated applicant email, for example the current scenario user's address.
- * @returns Nothing after any matching application has been deleted.
- */
-export async function deleteProctorApplicationByEmail(email: string | null | undefined) {
-  if (!email?.trim()) return;
-
-  await testDbPool.query(
-    `
-      DELETE FROM proctor_applications
-      WHERE user_id IN (
-        SELECT id
-        FROM users
-        WHERE lower(email) = lower($1)
-      )
-    `,
-    [email.trim()]
-  );
-}
