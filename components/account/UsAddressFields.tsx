@@ -92,7 +92,9 @@ export default function UsAddressFields({
 
       <div className={`grid gap-3 ${city === "Other" ? "grid-cols-2 md:col-span-2" : ""}`}>
         <Field label="City">
-          <select value={city} onChange={(event) => onCityChange(event.target.value)} className={inputClassName} required disabled={!state}>
+          {/* Explicit names keep automated and assistive-technology labels independent of changing option text.
+              Example: the disabled placeholder "Select a state first" does not become part of the City control's name. */}
+          <select aria-label="City" value={city} onChange={(event) => onCityChange(event.target.value)} className={inputClassName} required disabled={!state}>
             <option value="">{state ? "Select a city" : "Select a state first"}</option>
             {cityOptions.map((option) => (
               <option key={option} value={option}>
@@ -117,6 +119,7 @@ export default function UsAddressFields({
 
       <Field label="State">
         <select
+          aria-label="State"
           value={state}
           onChange={(event) => onStateChange(event.target.value)}
           className={inputClassName}
