@@ -28,8 +28,8 @@ module.exports = {
     publishQuiet: true,
   },
   ui: {
-    // UI feature files describe browser workflows in plain language.
-    paths: ["tests/ui/features/**/*.feature"],
+    // Feature paths are supplied by npm scripts so callers can run all UI features or one specific file.
+    // Example: `test:ui` passes the full feature glob, while a direct `cucumber-js --profile ui <file>` command can pass one file.
     requireModule: ["tsx/cjs"],
     // UI support launches the browser; UI step definitions interact with pages.
     require: [

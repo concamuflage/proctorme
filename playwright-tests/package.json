@@ -7,8 +7,8 @@
     "test": "npm run test:api",
     "test:api": "cucumber-js --profile api",
     "test:cucumber": "cucumber-js",
-    "test:ui": "cucumber-js --profile ui",
-    "test:ui:headed": "cucumber-js --profile ui",
+    "test:ui": "cucumber-js --profile ui \"tests/ui/features/**/*.feature\"",
+    "test:ui:headed": "cucumber-js --profile ui \"tests/ui/features/**/*.feature\"",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

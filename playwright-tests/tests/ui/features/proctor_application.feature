@@ -2,6 +2,8 @@ Feature: Proctor application
 
   Scenario: verified user can submit a proctor application
     Given I have a verified generated user with base email "unodostreszlm@gmail.com"
+    And I open the login page
+    Then I should be on the login page
     When  I login in as the generated user
     Then I should be asked to choose a role 
     And  I choose "Become a Proctor"
