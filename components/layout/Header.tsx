@@ -130,6 +130,7 @@ function UserIcon() {
  * The header uses the browser-visible NextAuth session only to decide which UI
  * controls to show; protected data is still loaded through server-verified API
  * routes.
+ * The role-choice route omits the profile link until the user chooses an account role.
  */
 export default function Header() {
   // useSession reads the SessionProvider state in the browser. When needed,
@@ -160,6 +161,9 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const openedFromAuthPage = pathname === "/login" || pathname === "/signup";
+  // A new account has no role-specific profile to inspect while choosing its first role.
+  // Example: `/account/role-choice` still shows Sign out, but omits the link to `/profile`.
+  const showProfileLink = pathname !== "/account/role-choice";
   const trialBannerText =
     "Book verified proctors for interviews, assessments, and hiring events at the location you specify. Choose a proctor, select the session window, confirm the site address, and pay securely before the assignment is scheduled.";
   // useEffect with a dependency on session?.user runs after the component mounts and whenever the session user changes.
@@ -330,13 +334,15 @@ export default function Header() {
                   {activeRoleLabel}
                 </div>
               ) : null}
-              <Link
-                href="/profile"
-                aria-label="Open profile"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
-              >
-                <UserIcon />
-              </Link>
+              {showProfileLink ? (
+                <Link
+                  href="/profile"
+                  aria-label="Open profile"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
+                >
+                  <UserIcon />
+                </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={handleSignOut}

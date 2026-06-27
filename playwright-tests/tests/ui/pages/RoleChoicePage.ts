@@ -13,13 +13,15 @@ export class RoleChoicePage {
   }
 
   /**
-   * Runs the wait for loaded logic for this module.
+   * Waits for role choice and verifies that a roleless user has no profile navigation.
    *
-   * @returns The result used by the surrounding flow.
+   * @returns Nothing after the role-choice heading is visible and the profile link is absent.
    */
   async waitForLoaded() {
     await expect(this.page).toHaveURL(/\/account\/role-choice/, { timeout: 15_000 });
     await expect(this.heading).toBeVisible();
+    // Example: Sign out remains available, while the "Open profile" icon is hidden until a role is selected.
+    await expect(this.page.getByRole("link", { name: "Open profile" })).toHaveCount(0);
   }
 
   /**
