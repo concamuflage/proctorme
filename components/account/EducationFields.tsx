@@ -36,6 +36,7 @@ type EducationFieldsProps = {
   onSendSchoolEmailVerification?: (index: number) => void;
   schoolOptions: string[];
   sendingSchoolEmailIndex?: number | null;
+  showAddEducationButton?: boolean;
   siteName: string;
   uploadingEducationIndex: number | null;
 };
@@ -82,7 +83,7 @@ function schoolEmailStatusLabel(status: string) {
 /**
  * Renders editable education entries for account and proctor application forms.
  *
- * @param props - Education form data and callbacks, for example an education entry with one `diplomaUrl` value.
+ * @param props - Education form data and callbacks. For example, `showAddEducationButton={false}` lets a wizard render that action in its footer instead.
  *
  * @returns The education form section.
  */
@@ -98,6 +99,7 @@ export default function EducationFields({
   onSendSchoolEmailVerification,
   schoolOptions,
   sendingSchoolEmailIndex = null,
+  showAddEducationButton = true,
   siteName,
   uploadingEducationIndex,
 }: EducationFieldsProps) {
@@ -132,7 +134,7 @@ export default function EducationFields({
               <button
                 type="button"
                 onClick={() => onRemoveEducation(index)}
-                className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 hover:border-red-300 hover:text-red-700"
+                className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:border-red-300 hover:text-red-700"
               >
                 Remove education
               </button>
@@ -238,12 +240,19 @@ export default function EducationFields({
             </div>
           </div>
           {/* The applicant must explicitly authorize education and diploma verification before this row is valid. */}
-          <label className="flex items-start gap-3 text-sm text-zinc-700 md:col-span-4">
+          {/* Example: an unchecked row uses gray emphasis; checking it removes the visible background and border without shifting the layout. */}
+          <label
+            className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm md:col-span-4 ${
+              item.educationVerificationAuthorized
+                ? "border-transparent bg-transparent text-zinc-700"
+                : "border-zinc-400 bg-zinc-100 text-zinc-950 shadow-sm"
+            }`}
+          >
             <input
               type="checkbox"
               checked={item.educationVerificationAuthorized}
               onChange={(e) => onChange(index, "educationVerificationAuthorized", e.target.checked)}
-              className="mt-1"
+              className="mt-0.5 h-5 w-5 shrink-0 accent-zinc-900"
               required
             />
             <span>I authorize {siteName} to verify this education record and the validity of the uploaded diploma.</span>
@@ -251,9 +260,11 @@ export default function EducationFields({
         </div>
       );
       })}
-      <button type="button" onClick={onAddEducation} className="w-fit rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium hover:border-zinc-500">
-        Add education
-      </button>
+      {showAddEducationButton ? (
+        <button type="button" onClick={onAddEducation} className="w-fit rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium hover:border-zinc-500">
+          Add education
+        </button>
+      ) : null}
     </div>
   );
 }

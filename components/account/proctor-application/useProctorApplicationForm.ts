@@ -50,13 +50,16 @@ const DEFAULT_FORM_VALUES: ProctorApplicationFormValues = {
 };
 
 /**
- * Keeps a wizard step index inside the valid `FORM_STEPS` bounds.
+ * Clamps a wizard step index inside the valid `FORM_STEPS` bounds.
  *
  * @param value - Candidate step index, for example `3` for the Education step.
  * @returns A valid step index, for example `4` stays `4` while `99` becomes the last step index.
  */
-function normalizeActiveStep(value: number) {
+function clampActiveStep(value: number) {
   if (!Number.isInteger(value)) return 0;
+  // if value is negative, set it to 0
+  // if the value is not negative, still have to clamp it to the valid range
+  // eg: if the value is 99, it becomes the last step index.
   return Math.min(Math.max(value, 0), FORM_STEPS.length - 1);
 }
 
@@ -69,7 +72,8 @@ function readInitialActiveStep() {
   if (typeof window === "undefined") return 0;
   try {
     const storedValue = window.sessionStorage.getItem(ACTIVE_STEP_SESSION_STORAGE_KEY);
-    return normalizeActiveStep(Number(storedValue));
+    // if the stored value is out of range, return to a step that makes sense;
+    return clampActiveStep(Number(storedValue));
   } catch {
     return 0;
   }
@@ -82,12 +86,16 @@ function readInitialActiveStep() {
  * @returns Nothing; the value is written to session storage when available.
  */
 function storeActiveStep(step: number) {
+  // This checks whether the code is running in the browser.
+  // In Next.js, some code may run on the server. On the server, there is no window.
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(ACTIVE_STEP_SESSION_STORAGE_KEY, String(normalizeActiveStep(step)));
+    window.sessionStorage.setItem(ACTIVE_STEP_SESSION_STORAGE_KEY, String(clampActiveStep(step)));
   } catch {
     // If storage is blocked, navigation still works for the current render; only refresh persistence is skipped.
     // Example: a browser privacy mode can reject `sessionStorage.setItem`, but `activeStep` still updates in React state.
+    // If sessionStorage.setItem(...) throws an error, the catch block catches it.
+    // The error is ignored/swallowed, and the app continues to function normally.
   }
 }
 
@@ -278,17 +286,53 @@ export function useProctorApplicationForm() {
   }
 
   /**
-   * Updates the active wizard step and stores it for same-tab page refreshes.
+   * Moves the active wizard step by a delta and stores the result in `sessionStorage`.
    *
-   * @param updater - Receives the current step and returns the next step, for example `current => current + 1`.
+   * @param stepDelta - Step movement, for example `1` in `continueToNextStep` or `-1` in `goToPreviousStep`.
    * @returns Nothing; React rerenders and `sessionStorage` receives the normalized step.
    */
-  function setStoredActiveStep(updater: (current: number) => number) {
-    setActiveStep((current) => {
-      const nextStep = normalizeActiveStep(updater(current));
+  function moveActiveStep(stepDelta: number) {
+    setActiveStep((currentStep) => {
+      // Use React's current state so batched clicks or async handlers do not calculate from a stale `activeStep`.
+      // Example: moving back from Step 1 with `-1` clamps to `0`; moving next from the last step clamps to the final index.
+      const nextStep = clampActiveStep(currentStep + stepDelta);
       storeActiveStep(nextStep);
       return nextStep;
     });
+  }
+
+  /**
+   * Opens the wizard section identified by an application API validation code.
+   *
+   * @param errorCode - Stable API code, for example `INVALID_CURRENT_ADDRESS` opens Step 2.
+   * @returns Nothing; unknown and non-validation codes leave the current step unchanged.
+   */
+  function moveToApplicationErrorStep(errorCode: unknown) {
+    let errorStepIndex: number | null = null;
+
+    // Multiple field errors can belong to one section. For example, both an invalid diploma and school email open Education.
+    switch (errorCode) {
+      case "INVALID_PROFILE_BASICS":
+        errorStepIndex = 0;
+        break;
+      case "INVALID_CURRENT_ADDRESS":
+        errorStepIndex = 1;
+        break;
+      case "INVALID_RATES":
+        errorStepIndex = 2;
+        break;
+      case "INVALID_EDUCATION":
+      case "INVALID_SCHOOL_EMAIL":
+        errorStepIndex = 3;
+        break;
+      case "INVALID_IDENTITY_MEDIA":
+        errorStepIndex = 4;
+        break;
+    }
+
+    if (errorStepIndex === null) return;
+    setActiveStep(errorStepIndex);
+    storeActiveStep(errorStepIndex);
   }
 
 
@@ -627,7 +671,7 @@ export function useProctorApplicationForm() {
   function goToPreviousStep() {
     setError(null);
     setNotice(null);
-    setStoredActiveStep((current) => current - 1);
+    moveActiveStep(-1);
   }
 
   /**
@@ -638,7 +682,7 @@ export function useProctorApplicationForm() {
   function goToNextReadOnlyStep() {
     setError(null);
     setNotice(null);
-    setStoredActiveStep((current) => current + 1);
+    moveActiveStep(1);
   }
 
   /**
@@ -841,7 +885,7 @@ export function useProctorApplicationForm() {
   /**
    * Saves the current application values as a draft.
    *
-   * @returns The draft save API payload, for example `{ application: { status: "draft" } }`.
+   * @returns The draft save API payload, for example `{ application: { status: "draft" } }`. An invalid saved school email moves the wizard to Education before throwing the API error.
    */
   async function saveApplicationDraft() {
     if (isReadOnlyApplication) {
@@ -856,6 +900,8 @@ export function useProctorApplicationForm() {
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
+        // Example: an invalid saved school email returns `INVALID_SCHOOL_EMAIL` and opens Education before the alert renders.
+        moveToApplicationErrorStep(payload?.errorCode);
         throw new Error(payload?.error ?? "Unable to save this section.");
       }
       return payload;
@@ -982,7 +1028,7 @@ export function useProctorApplicationForm() {
       return;
     }
 
-    setStoredActiveStep((current) => current + 1);
+    moveActiveStep(1);
   };
 
   /**
@@ -1030,6 +1076,9 @@ export function useProctorApplicationForm() {
     setLoading(false);
 
     if (!response.ok) {
+      // Final validation can identify any section; open that section before displaying its error.
+      // Example: `INVALID_CURRENT_ADDRESS` moves from Step 5 back to Step 2.
+      moveToApplicationErrorStep(payload?.errorCode);
       setError(payload?.error ?? "Unable to submit application.");
       return;
     }

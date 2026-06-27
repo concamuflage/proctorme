@@ -56,6 +56,7 @@ export default function EducationStep({
         onSendSchoolEmailVerification={onSendSchoolEmailVerification}
         schoolOptions={schoolOptions}
         sendingSchoolEmailIndex={sendingSchoolEmailIndex}
+        showAddEducationButton={false}
         siteName={siteName}
         uploadingEducationIndex={uploadingEducationIndex}
       />

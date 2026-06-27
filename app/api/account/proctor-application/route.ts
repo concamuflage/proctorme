@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { resolveSessionUserId } from "@/lib/server/sessionUser";
 import {
   getProctorApplicationForUser,
+  getProctorApplicationSchoolEmailValidationError,
+  getProctorApplicationValidationError,
   getUserDateOfBirth,
   LOCKED_PROCTOR_APPLICATION_MESSAGE,
   normalizeProctorApplicationInput,
   type ProctorApplicationInput,
   saveProctorApplication,
   saveProctorApplicationDraft,
-  validateProctorApplicationInput,
-  validateProctorApplicationSchoolEmails,
+  type ProctorApplicationValidationError,
 } from "@/lib/server/proctorApplicationStore";
 
 /**
@@ -27,14 +28,17 @@ type ProctorApplicationMutationOptions = {
   /** Persists the normalized payload for the authenticated user. */
   saveApplication: (userId: number, input: ProctorApplicationInput) => Promise<unknown>;
   /** Optional final-submit validator; omitted for draft PATCH requests so partial drafts can save. */
-  validateInput?: (input: ProctorApplicationInput) => string | null;
+  validateInput?: (input: ProctorApplicationInput) => ProctorApplicationValidationError | null;
 };
 
 /**
- * Handles the shared request flow for proctor application mutations.
+ * This function handles both POST (submit) and PATCH (save draft) requests for the proctor application.
+ * In a POST request, this function is called with a validator to ensure the application is complete and valid before submission.
+ * In a Patch request, this function is called without a validator, allowing partial drafts to be saved.
+ * This function always validates the school email address, regardless of the request type.
  *
  * @param options - Mutation behavior, for example POST passes `validateProctorApplicationInput` while PATCH omits validation so incomplete drafts can save.
- * @returns A JSON response containing the saved application, a validation error, a locked-application conflict, or a generic save error.
+ * @returns A JSON response containing the saved application, a validation error, a locked-application conflict, or a generic save error. For example, an invalid school email returns `{ error: "School email address must end with .edu.", errorCode: "INVALID_SCHOOL_EMAIL" }`.
  */
 async function handleProctorApplicationMutation({
   fallbackError,
@@ -49,14 +53,17 @@ async function handleProctorApplicationMutation({
 
   const payload = await request.json().catch(() => null);
   const input = normalizeProctorApplicationInput(payload);
-  const schoolEmailError = validateProctorApplicationSchoolEmails(input);
+  // Always validate the school email address, no matter a validateInput is provided or not
+  const schoolEmailError = getProctorApplicationSchoolEmailValidationError(input);
   if (schoolEmailError) {
-    return NextResponse.json({ error: schoolEmailError }, { status: 400 });
+    // The stable code lets the wizard open Education without depending on wording intended for display.
+    // Example: Step 1 can receive this response while saving a draft that contains `student@gmail.com` in Step 4.
+    return NextResponse.json({ error: schoolEmailError.message, errorCode: schoolEmailError.errorCode }, { status: 400 });
   }
   // a validator is passed in for the final-submit (POST) request, but not for the draft-save (PATCH) request.
   const validationError = validateInput?.(input);
   if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 });
+    return NextResponse.json({ error: validationError.message, errorCode: validationError.errorCode }, { status: 400 });
   }
 
   try {
@@ -116,14 +123,14 @@ export async function POST(request: Request) {
     logLabel: "proctor application save error",
     request,
     saveApplication: saveProctorApplication,
-    validateInput: validateProctorApplicationInput,
+    validateInput: getProctorApplicationValidationError,
   });
 }
 
 /**
  * Handles PATCH requests for the /api/account/proctor-application route.
  * When user saves a draft of their proctor application, this is used.
- * Whenever user clicks continue/next step, a draft is saved. This route doesn't validate the application before saving it.
+ * Whenever user clicks continue/next step, a draft is saved. This route doesn't validate the form data before saving it.
  *
  * The PATCH route saves drafts without final-submit validation; for example, an applicant can save Step 1 before uploading government ID files.
  *

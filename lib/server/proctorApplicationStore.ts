@@ -8,6 +8,27 @@ import {
 
 export type ProctorApplicationStatus = "draft" | "pending" | "approved" | "rejected";
 
+/**
+ * Identifies the wizard section containing a proctor application validation error.
+ *
+ * Example: `INVALID_CURRENT_ADDRESS` directs the account form to Step 2 without inspecting the human-readable error message.
+ */
+export type ProctorApplicationValidationErrorCode =
+  | "INVALID_PROFILE_BASICS"
+  | "INVALID_CURRENT_ADDRESS"
+  | "INVALID_RATES"
+  | "INVALID_EDUCATION"
+  | "INVALID_SCHOOL_EMAIL"
+  | "INVALID_IDENTITY_MEDIA";
+
+/** Describes a validation failure and the wizard section responsible for it. */
+export type ProctorApplicationValidationError = {
+  /** Message displayed to the applicant, for example `Profession is required.` */
+  message: string;
+  /** Stable section code consumed by the account form, for example `INVALID_PROFILE_BASICS`. */
+  errorCode: ProctorApplicationValidationErrorCode;
+};
+
 export const LOCKED_PROCTOR_APPLICATION_MESSAGE = "This proctor application is already pending or approved and cannot be edited.";
 
 export type ProctorApplicationEducation = {
@@ -716,51 +737,73 @@ export function normalizeProctorApplicationInput(payload: unknown): ProctorAppli
 }
 
 /**
- * Validates optional school email values without requiring the full application to be complete.
+ * Gets detailed school-email validation information without requiring a complete application.
  *
- * @param input - Proctor application payload, for example an education row with `schoolEmail: "student@ucla.edu"`.
- * @returns An error message for non-`.edu` school emails, or null when all provided values are education emails.
+ * @param input - Proctor application payload, for example an education row with `schoolEmail: "student@gmail.com"`.
+ * @returns An Education validation object for a non-`.edu` address, or null when every provided address is valid.
  */
-export function validateProctorApplicationSchoolEmails(input: ProctorApplicationInput) {
+export function getProctorApplicationSchoolEmailValidationError(input: ProctorApplicationInput): ProctorApplicationValidationError | null {
   // Draft saves are allowed to be incomplete, but any provided school email must still be an education address.
   // Example: `student@ucla.edu` is accepted on PATCH, while `student@gmail.com` is rejected before it is saved.
   if (input.education.some((education) => !isOptionalEducationEmailAddress(education.schoolEmail))) {
-    return "School email address must end with .edu.";
+    return {
+      message: "School email address must end with .edu.",
+      errorCode: "INVALID_SCHOOL_EMAIL",
+    };
   }
 
   return null;
 }
 
 /**
- * Runs the validate proctor application input logic for this module.
+ * Validates optional school email values without requiring the full application to be complete.
  *
- * @param input - Input used by validate proctor application input.
- *
- * @returns The result used by the surrounding flow.
+ * @param input - Proctor application payload, for example an education row with `schoolEmail: "student@ucla.edu"`.
+ * @returns An error message for non-`.edu` school emails, or null when all provided values are education emails.
  */
-export function validateProctorApplicationInput(input: ProctorApplicationInput) {
-  const schoolEmailError = validateProctorApplicationSchoolEmails(input);
+export function validateProctorApplicationSchoolEmails(input: ProctorApplicationInput) {
+  return getProctorApplicationSchoolEmailValidationError(input)?.message ?? null;
+}
+
+/**
+ * Gets complete application validation details for API responses.
+ *
+ * @param input - Normalized application input, for example a payload with an empty `profession`.
+ * @returns The first validation failure and its section code, or null when the application is valid.
+ */
+export function getProctorApplicationValidationError(input: ProctorApplicationInput): ProctorApplicationValidationError | null {
+  const schoolEmailError = getProctorApplicationSchoolEmailValidationError(input);
   if (schoolEmailError) return schoolEmailError;
 
-  if (!input.profession) return "Profession is required.";
-  if (input.profession === "Other") return "Choose a listed profession.";
-  if (!input.gender) return "Gender is required.";
-  if (!input.ethnicity) return "Ethnicity is required.";
-  if (!input.dateOfBirth) return "Date of birth is required.";
-  if (!isAtLeastAge(input.dateOfBirth, 18)) return "You must be at least 18 years old to apply as a proctor.";
-  if (!input.bio || input.bio.length < 40) return "Self-introduction must be at least 40 characters.";
-  if (!input.street || !input.city || !input.state || !input.country || !input.zipCode) return "Full service address is required.";
-  if (!input.timezone) return "IANA timezone is required.";
-  if (!Number.isFinite(input.hourlyRate) || input.hourlyRate <= 0) return "Hourly rate must be greater than zero.";
-  if (!Number.isInteger(input.hourlyRate)) return "Hourly rate must be a whole dollar amount.";
-  if (!Number.isFinite(input.minimumHours) || !Number.isFinite(input.maximumHours) || input.maximumHours < input.minimumHours) return "Session hours are invalid.";
-  if (input.education.length === 0) return "At least one education entry is required.";
-  if (input.education.some((education) => !education.diplomaUrl)) return "A diploma upload is required for each education entry.";
-  if (input.education.some((education) => !education.educationVerificationAuthorized)) return "Check the education verification authorization box for each education entry before continuing.";
-  if (input.education.some((education) => education.schoolEmail && education.schoolEmailVerificationStatus !== "verified")) return "Verify each provided school email before submitting.";
-  if (input.imageUrls.length === 0) return "At least one profile image URL is required.";
-  if (input.governmentIdUrls.length === 0) return "A government-issued ID upload is required.";
+  if (!input.profession) return { message: "Profession is required.", errorCode: "INVALID_PROFILE_BASICS" };
+  if (input.profession === "Other") return { message: "Choose a listed profession.", errorCode: "INVALID_PROFILE_BASICS" };
+  if (!input.gender) return { message: "Gender is required.", errorCode: "INVALID_PROFILE_BASICS" };
+  if (!input.ethnicity) return { message: "Ethnicity is required.", errorCode: "INVALID_PROFILE_BASICS" };
+  if (!input.dateOfBirth) return { message: "Date of birth is required.", errorCode: "INVALID_PROFILE_BASICS" };
+  if (!isAtLeastAge(input.dateOfBirth, 18)) return { message: "You must be at least 18 years old to apply as a proctor.", errorCode: "INVALID_PROFILE_BASICS" };
+  if (!input.bio || input.bio.length < 40) return { message: "Self-introduction must be at least 40 characters.", errorCode: "INVALID_PROFILE_BASICS" };
+  if (!input.street || !input.city || !input.state || !input.country || !input.zipCode) return { message: "Full service address is required.", errorCode: "INVALID_CURRENT_ADDRESS" };
+  if (!input.timezone) return { message: "IANA timezone is required.", errorCode: "INVALID_CURRENT_ADDRESS" };
+  if (!Number.isFinite(input.hourlyRate) || input.hourlyRate <= 0) return { message: "Hourly rate must be greater than zero.", errorCode: "INVALID_RATES" };
+  if (!Number.isInteger(input.hourlyRate)) return { message: "Hourly rate must be a whole dollar amount.", errorCode: "INVALID_RATES" };
+  if (!Number.isFinite(input.minimumHours) || !Number.isFinite(input.maximumHours) || input.maximumHours < input.minimumHours) return { message: "Session hours are invalid.", errorCode: "INVALID_RATES" };
+  if (input.education.length === 0) return { message: "At least one education entry is required.", errorCode: "INVALID_EDUCATION" };
+  if (input.education.some((education) => !education.diplomaUrl)) return { message: "A diploma upload is required for each education entry.", errorCode: "INVALID_EDUCATION" };
+  if (input.education.some((education) => !education.educationVerificationAuthorized)) return { message: "Check the education verification authorization box for each education entry before continuing.", errorCode: "INVALID_EDUCATION" };
+  if (input.education.some((education) => education.schoolEmail && education.schoolEmailVerificationStatus !== "verified")) return { message: "Verify each provided school email before submitting.", errorCode: "INVALID_EDUCATION" };
+  if (input.imageUrls.length === 0) return { message: "At least one profile image URL is required.", errorCode: "INVALID_IDENTITY_MEDIA" };
+  if (input.governmentIdUrls.length === 0) return { message: "A government-issued ID upload is required.", errorCode: "INVALID_IDENTITY_MEDIA" };
   return null;
+}
+
+/**
+ * Runs complete proctor application validation for callers that only need display text.
+ *
+ * @param input - Normalized application input, for example a payload with an empty `profession`.
+ * @returns The first validation message, or null when the application is valid.
+ */
+export function validateProctorApplicationInput(input: ProctorApplicationInput) {
+  return getProctorApplicationValidationError(input)?.message ?? null;
 }
 
 /**

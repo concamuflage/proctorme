@@ -67,7 +67,12 @@ export default function ProctorApplicationClient() {
           <form className="mt-8 grid gap-6" onSubmit={form.handleSubmit}>
             {/* Keep step validation in one shared location. Example: an under-18 date of birth and a short bio both render here, not under individual fields. */}
             {form.error ? <AlertMessage role="alert" tone="error">{form.error}</AlertMessage> : null}
-            {form.isReadOnlyApplication ? (
+            {/* Render success feedback in the same message area as errors and warnings.
+                Example: "Application submitted..." appears above the active step instead of below its fields. */}
+            {form.notice ? <AlertMessage role="status" tone="success">{form.notice}</AlertMessage> : null}
+            {/* Immediately after submission, the success notice already explains the pending state.
+                Example: a newly submitted application shows only "Application submitted..."; after refresh, the generic pending warning appears instead. */}
+            {form.isReadOnlyApplication && !form.isSubmitted ? (
               <AlertMessage role="status" tone="warning">
                 This proctor application is {form.applicationStatus}. Edits are locked while it is pending review or already approved.
               </AlertMessage>
@@ -160,8 +165,6 @@ export default function ProctorApplicationClient() {
               ) : null}
             </fieldset>
 
-            {form.notice ? <AlertMessage role="status" tone="success">{form.notice}</AlertMessage> : null}
-
             {form.isReadOnlyApplication ? (
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-5">
                 <button
@@ -182,29 +185,38 @@ export default function ProctorApplicationClient() {
                 </button>
               </div>
             ) : !form.isSubmitted ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-5">
-                <button
-                  type="button"
-                  onClick={form.goToPreviousStep}
-                  disabled={form.activeStep === 0 || form.loading || form.draftSaving}
-                  className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-800 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Back
-                </button>
-                {form.isLastStep ? (
-                  <button type="submit" disabled={form.loading || form.uploadingGovernmentId} className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-70">
-                    {form.loading ? "Submitting..." : "Submit for admin review"}
+              <div className="grid gap-5 border-t border-zinc-100 pt-5">
+                {/* Keep the Education-specific action below the same divider that separates all step controls.
+                    Example: on Step 4, the divider now appears before "Add education" instead of after it. */}
+                {form.activeStep === 3 ? (
+                  <button type="button" onClick={form.addEducation} className="w-fit rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium hover:border-zinc-500">
+                    Add education
                   </button>
-                ) : (
+                ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <button
                     type="button"
-                    onClick={form.continueToNextStep}
-                    disabled={form.loading || form.draftSaving || form.uploadingEducationIndex !== null || form.uploadingProfileImage || form.uploadingGovernmentId}
-                    className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-70"
+                    onClick={form.goToPreviousStep}
+                    disabled={form.activeStep === 0 || form.loading || form.draftSaving}
+                    className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-800 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {form.draftSaving ? "Saving..." : "Continue"}
+                    Back
                   </button>
-                )}
+                  {form.isLastStep ? (
+                    <button type="submit" disabled={form.loading || form.uploadingGovernmentId} className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-70">
+                      {form.loading ? "Submitting..." : "Submit for admin review"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={form.continueToNextStep}
+                      disabled={form.loading || form.draftSaving || form.uploadingEducationIndex !== null || form.uploadingProfileImage || form.uploadingGovernmentId}
+                      className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-70"
+                    >
+                      {form.draftSaving ? "Saving..." : "Continue"}
+                    </button>
+                  )}
+                </div>
               </div>
             ) : null}
           </form>
