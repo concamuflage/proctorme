@@ -65,9 +65,11 @@ export class ProctorApplicationPage {
    */
   async completeCurrentAddress() {
     await this.page.getByLabel("Street address").fill("123 Test Street");
-    await this.selectFirstAvailableOption(this.page.getByLabel("State"));
-    await expect(this.page.getByLabel("City")).toBeEnabled();
-    await this.selectFirstAvailableOption(this.page.getByLabel("City"), { avoidOther: true });
+    // Exact matching prevents the City placeholder "Select a state first" from also matching the State locator.
+    // Example: `getByLabel("State", { exact: true })` resolves only the State select instead of two controls.
+    await this.selectFirstAvailableOption(this.page.getByLabel("State", { exact: true }));
+    await expect(this.page.getByLabel("City", { exact: true })).toBeEnabled();
+    await this.selectFirstAvailableOption(this.page.getByLabel("City", { exact: true }), { avoidOther: true });
     await this.page.getByLabel("Zip code").fill("02118");
     await this.selectFirstAvailableOption(this.page.getByLabel("IANA timezone"));
   }
@@ -178,23 +180,31 @@ export class ProctorApplicationPage {
    * @param select - Select element locator.
    * @param options - Selection rules, for example `{ avoidOther: true }` to skip custom free-text branches.
    *
-   * @returns Nothing after an option has been selected.
+   * @returns Nothing after an asynchronously loaded listed option has been selected.
    */
   private async selectFirstAvailableOption(select: Locator, options: { avoidOther?: boolean } = {}) {
     await expect(select).toBeVisible();
-    const value = await select.locator("option").evaluateAll((optionElements, avoidOther) => {
-      for (const optionElement of optionElements) {
-        const option = optionElement as HTMLOptionElement;
-        const value = option.value.trim();
-        const label = option.textContent?.trim() ?? "";
-        if (!value || option.disabled) continue;
-        if (avoidOther && (value === "Other" || label === "Other")) continue;
-        return value;
-      }
-      return "";
-    }, options.avoidOther === true);
+    let value = "";
+    // Dropdowns render before their API-backed choices arrive, so poll the actual options instead of checking once.
+    // Example: Profession initially contains only its blank placeholder, then receives listed professions after the options request completes.
+    await expect.poll(async () => {
+      value = await select.locator("option").evaluateAll((optionElements, avoidOther) => {
+        for (const optionElement of optionElements) {
+          const option = optionElement as HTMLOptionElement;
+          const optionValue = option.value.trim();
+          const label = option.textContent?.trim() ?? "";
+          if (!optionValue || option.disabled) continue;
+          if (avoidOther && (optionValue === "Other" || label === "Other")) continue;
+          return optionValue;
+        }
+        return "";
+      }, options.avoidOther === true);
+      return value;
+    }, {
+      message: "Expected select control to contain at least one usable option.",
+      timeout: 15_000,
+    }).not.toBe("");
 
-    expect(value, "Expected select control to contain at least one usable option.").not.toBe("");
     await select.selectOption(value);
   }
 
