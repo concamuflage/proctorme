@@ -30,8 +30,8 @@ Given<ApiWorld>("the institution user is signed in", async function () {
 });
 
 When<ApiWorld>("the institution user rates the completed booking", async function () {
-  assert.ok(this.api, "API request context was not created.");
-  this.responses.completed = await this.api.post(`/api/bookings/${this.bookingIds.completed}/rating`, {
+  assert.ok(this.requestContext, "API request context was not created.");
+  this.responses.completed = await this.requestContext.post(`/api/bookings/${this.bookingIds.completed}/rating`, {
     data: {
       rating: 5,
       comment: "The proctor handled the completed session professionally.",
@@ -45,8 +45,8 @@ Then<ApiWorld>("the completed booking rating is saved", async function () {
 });
 
 When<ApiWorld>("the institution user rates the normal booking", async function () {
-  assert.ok(this.api, "API request context was not created.");
-  this.responses.normal = await this.api.post(`/api/bookings/${this.bookingIds.normal}/rating`, {
+  assert.ok(this.requestContext, "API request context was not created.");
+  this.responses.normal = await this.requestContext.post(`/api/bookings/${this.bookingIds.normal}/rating`, {
     data: {
       rating: 4,
       comment: "This rating should not be accepted yet.",

@@ -53,8 +53,8 @@ export class ApiWorld {
   loginResponse: APIResponse | null = null;
 
   // Playwright APIRequestContext is the HTTP client used by API tests.
-  // It is created before each scenario and disposed after each scenario.
-  api: APIRequestContext | null = null;
+  // `requestContext` is created before each scenario, passed to API clients, and disposed after the scenario.
+  requestContext: APIRequestContext | null = null;
 
   // API helper clients are created once per scenario from the shared request context.
   authApi!: AuthApi;
@@ -69,9 +69,9 @@ setWorldConstructor(ApiWorld);
 
 // Before every scenario, create a fresh API request context and API clients.
 Before<ApiWorld>(async function () {
-  this.api = await request.newContext({ baseURL: this.baseURL });
-  this.authApi = new AuthApi(this.api);
-  this.signupApi = new SignupApi(this.api);
+  this.requestContext = await request.newContext({ baseURL: this.baseURL });
+  this.authApi = new AuthApi(this.requestContext);
+  this.signupApi = new SignupApi(this.requestContext);
 });
 
 // After every scenario
@@ -80,7 +80,7 @@ After<ApiWorld>(async function () {
   // The proctor_applications.user_id foreign key uses ON DELETE CASCADE, so deleting the generated user also removes its application.
   // Example: a submitted pending application is removed by the same user cleanup used by UI scenarios.
   await deleteUserByEmail(this.signUpUser?.email);
-  await this.api?.dispose(); // close the API request context.
+  await this.requestContext?.dispose(); // close the API request context.
 });
 
 // After the whole API test run, close the shared Postgres pool.

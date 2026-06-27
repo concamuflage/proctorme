@@ -41,9 +41,9 @@ const scenarioStates = new WeakMap<ApiWorld, ProctorApplicationScenarioState>();
 function scenarioState(world: ApiWorld) {
   let state = scenarioStates.get(world);
   if (!state) {
-    assert.ok(world.api, "API request context was not created.");
+    assert.ok(world.requestContext, "API request context was not created.");
     state = {
-      client: new ProctorApplicationApi(world.api),
+      client: new ProctorApplicationApi(world.requestContext),
       requestPayload: null,
       response: null,
       lockedApplicationBeforeChange: null,
@@ -51,16 +51,6 @@ function scenarioState(world: ApiWorld) {
     scenarioStates.set(world, state);
   }
   return state;
-}
-
-/**
- * Reads a response body as a JSON object for status and contract assertions.
- *
- * @param response - Playwright API response, for example a rejected POST response with `errorCode`.
- * @returns Parsed JSON response object.
- */
-async function responseJson(response: APIResponse) {
-  return response.json() as Promise<Record<string, unknown>>;
 }
 
 /**
@@ -127,17 +117,6 @@ async function buildValidApplicationPayload(world: ApiWorld): Promise<ProctorApp
   };
 }
 
-/**
- * Returns the generated applicant email required for database assertions.
- *
- * @param world - Current Cucumber world populated by the verified-user background step.
- * @returns Generated user email, for example a unique Gmail plus-address.
- */
-function applicantEmail(world: ApiWorld) {
-  assert.ok(world.signUpUser, "Proctor application API user was not prepared.");
-  return world.signUpUser.email;
-}
-
 Given<ApiWorld>("I have a verified proctor application API user", async function () {
   this.signUpUser = await createVerifiedUserWithNoRoles(this.baseURL);
 });
@@ -170,13 +149,14 @@ Then<ApiWorld>("the proctor application draft is saved", async function () {
   const response = scenarioState(this).response;
   assert.ok(response, "Proctor application draft response was not captured.");
   assert.equal(response.status(), 200);
-  const payload = await responseJson(response);
+  const payload = await response.json() as Record<string, unknown>;
   const application = payload.application as Record<string, unknown> | undefined;
   assert.equal(application?.status, "draft");
 });
 
 Then<ApiWorld>("the saved proctor application has draft status", async function () {
-  const application = await findProctorApplicationByEmail(applicantEmail(this));
+  assert.ok(this.signUpUser, "Proctor application API user was not prepared.");
+  const application = await findProctorApplicationByEmail(this.signUpUser.email);
   assert.ok(application, "Saved proctor application was not found in the database.");
   assert.equal(application.status, "draft");
 });
@@ -197,13 +177,14 @@ Then<ApiWorld>("the proctor application API rejects the school email address", a
 Then<ApiWorld>("the response identifies the school email validation error", async function () {
   const response = scenarioState(this).response;
   assert.ok(response, "School email validation response was not captured.");
-  const payload = await responseJson(response);
+  const payload = await response.json() as Record<string, unknown>;
   assert.equal(payload.errorCode, "INVALID_SCHOOL_EMAIL");
   assert.equal(payload.error, "School email address must end with .edu.");
 });
 
 Then<ApiWorld>("the invalid proctor application draft is not saved", async function () {
-  assert.equal(await findProctorApplicationByEmail(applicantEmail(this)), null);
+  assert.ok(this.signUpUser, "Proctor application API user was not prepared.");
+  assert.equal(await findProctorApplicationByEmail(this.signUpUser.email), null);
 });
 
 Given<ApiWorld>("I have a complete proctor application payload with one invalid form section", async function () {
@@ -228,12 +209,15 @@ Then<ApiWorld>("the proctor application API rejects the submission", async funct
 Then<ApiWorld>("the response identifies the invalid form section", async function () {
   const response = scenarioState(this).response;
   assert.ok(response, "Proctor application submission response was not captured.");
-  const payload = await responseJson(response);
+  const payload = await response.json() as Record<string, unknown>;
+  // It does not verify that the UI navigates to Step 2. That belongs in a UI test because the API only returns the error code;
+  //  the frontend maps that code to the step.
   assert.equal(payload.errorCode, "INVALID_CURRENT_ADDRESS");
 });
 
 Then<ApiWorld>("the invalid proctor application is not submitted", async function () {
-  assert.equal(await findProctorApplicationByEmail(applicantEmail(this)), null);
+  assert.ok(this.signUpUser, "Proctor application API user was not prepared.");
+  assert.equal(await findProctorApplicationByEmail(this.signUpUser.email), null);
 });
 
 Given<ApiWorld>("I have a complete valid proctor application payload", async function () {
@@ -244,13 +228,14 @@ Then<ApiWorld>("the proctor application is submitted", async function () {
   const response = scenarioState(this).response;
   assert.ok(response, "Proctor application submission response was not captured.");
   assert.equal(response.status(), 200);
-  const payload = await responseJson(response);
+  const payload = await response.json() as Record<string, unknown>;
   const application = payload.application as Record<string, unknown> | undefined;
   assert.equal(application?.status, "pending");
 });
 
 Then<ApiWorld>("the submitted proctor application has pending status", async function () {
-  const application = await findProctorApplicationByEmail(applicantEmail(this));
+  assert.ok(this.signUpUser, "Proctor application API user was not prepared.");
+  const application = await findProctorApplicationByEmail(this.signUpUser.email);
   assert.ok(application, "Submitted proctor application was not found in the database.");
   assert.equal(application.status, "pending");
 });
@@ -264,7 +249,8 @@ Given<ApiWorld>("I have a locked proctor application", async function () {
     ...payload,
     bio: `${payload.bio} This rejected edit must not be stored.`,
   };
-  state.lockedApplicationBeforeChange = await findProctorApplicationByEmail(applicantEmail(this));
+  assert.ok(this.signUpUser, "Proctor application API user was not prepared.");
+  state.lockedApplicationBeforeChange = await findProctorApplicationByEmail(this.signUpUser.email);
   assert.ok(state.lockedApplicationBeforeChange, "Locked proctor application was not stored during setup.");
 });
 
@@ -278,12 +264,13 @@ Then<ApiWorld>("the proctor application API rejects the change as a conflict", a
   const response = scenarioState(this).response;
   assert.ok(response, "Locked application response was not captured.");
   assert.equal(response.status(), 409);
-  const payload = await responseJson(response);
+  const payload = await response.json() as Record<string, unknown>;
   assert.equal(payload.error, "This proctor application is already pending or approved and cannot be edited.");
 });
 
 Then<ApiWorld>("the locked proctor application is unchanged", async function () {
   const state = scenarioState(this);
-  const applicationAfterChange = await findProctorApplicationByEmail(applicantEmail(this));
+  assert.ok(this.signUpUser, "Proctor application API user was not prepared.");
+  const applicationAfterChange = await findProctorApplicationByEmail(this.signUpUser.email);
   assert.deepEqual(applicationAfterChange, state.lockedApplicationBeforeChange);
 });

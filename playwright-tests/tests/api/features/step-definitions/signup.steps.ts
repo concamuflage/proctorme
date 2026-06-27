@@ -128,7 +128,7 @@ When<ApiWorld>("the verification email sender should be correct", function () {
 When<ApiWorld>(
   "I click the link in the verification email without using a browser",
   async function () {
-    assert.ok(this.api, "API request context was not created.");
+    assert.ok(this.requestContext, "API request context was not created.");
     assert.ok(
       this.verificationEmail?.verificationLink,
       "No verification link was found.",
@@ -141,7 +141,7 @@ When<ApiWorld>(
     assert.ok(email, "Verification link did not include an email parameter.");
     assert.ok(token, "Verification link did not include a token parameter.");
 
-    this.verificationResponse = await this.api.get("/api/auth/verify-email", {
+    this.verificationResponse = await this.requestContext.get("/api/auth/verify-email", {
       params: { email, token },
     });
   },
