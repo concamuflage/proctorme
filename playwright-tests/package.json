@@ -5,7 +5,7 @@
   "scripts": {
     "install:browsers": "playwright install",
     "test": "npm run test:api",
-    "test:api": "cucumber-js --profile api",
+    "test:api": "cucumber-js --profile api \"tests/api/features/**/*.feature\"",
     "test:cucumber": "cucumber-js",
     "test:ui": "cucumber-js --profile ui \"tests/ui/features/**/*.feature\"",
     "test:ui:headed": "cucumber-js --profile ui \"tests/ui/features/**/*.feature\"",
