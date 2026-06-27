@@ -2,6 +2,18 @@ import type { PoolClient } from "pg";
 import bcrypt from "bcryptjs";
 import { testDbPool } from "../../../support/database/databasePool";
 
+/** Represents persisted fields used by proctor application API assertions. */
+export type StoredProctorApplication = {
+  id: number;
+  status: string;
+  profession: string;
+  bio: string;
+  education: unknown;
+  image_urls: unknown;
+  government_id_urls: unknown;
+  updated_at: Date;
+};
+
 /**
  * Runs the with db logic for this module.
  *
@@ -124,4 +136,56 @@ export async function cleanupRatingScenario(email: string, bookingIds: number[])
     }
     await client.query("DELETE FROM users WHERE lower(email) = lower($1)", [email]);
   });
+}
+
+/**
+ * Finds the proctor application owned by a generated test user.
+ *
+ * @param email - Generated applicant email, for example a plus-address created for one scenario.
+ * @returns The stored application fields used by assertions, or null when no application was saved.
+ */
+export async function findProctorApplicationByEmail(email: string): Promise<StoredProctorApplication | null> {
+  const result = await testDbPool.query<StoredProctorApplication>(
+    `
+      SELECT
+        pa.id,
+        pa.status,
+        pa.profession,
+        pa.bio,
+        pa.education,
+        pa.image_urls,
+        pa.government_id_urls,
+        pa.updated_at
+      FROM proctor_applications pa
+      JOIN users u
+        ON u.id = pa.user_id
+      WHERE lower(u.email) = lower($1)
+      LIMIT 1
+    `,
+    [email]
+  );
+
+  return result.rows[0] ?? null;
+}
+
+/**
+ * Deletes a generated user's proctor application before shared user cleanup runs.
+ *
+ * @param email - Generated applicant email, for example the current scenario user's address.
+ * @returns Nothing after any matching application has been deleted.
+ */
+export async function deleteProctorApplicationByEmail(email: string | null | undefined) {
+  if (!email?.trim()) return;
+
+  await testDbPool.query(
+    `
+      DELETE FROM proctor_applications
+      WHERE user_id IN (
+        SELECT id
+        FROM users
+        WHERE lower(email) = lower($1)
+      )
+    `,
+    [email.trim()]
+  );
 }

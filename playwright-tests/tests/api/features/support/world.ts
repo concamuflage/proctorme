@@ -10,7 +10,7 @@ import {
   type APIRequestContext,
   type APIResponse,
 } from "@playwright/test";
-import { cleanupRatingScenario } from "./db";
+import { cleanupRatingScenario, deleteProctorApplicationByEmail } from "./db";
 import { endTestDbPool } from "../../../support/database/databasePool";
 import { deleteUserByEmail } from "../../../support/database/databaseCleanup";
 import type { VerificationEmail } from "../../../support/gmailVerificationClient";
@@ -77,6 +77,9 @@ Before<ApiWorld>(async function () {
 // After every scenario
 After<ApiWorld>(async function () {
   await cleanupRatingScenario(this.email, this.rawBookingIds);
+  // Proctor application rows belong to the generated user, so remove them before deleting that user.
+  // Example: a successful submission leaves a pending row that must not survive the scenario.
+  await deleteProctorApplicationByEmail(this.signUpUser?.email);
   await deleteUserByEmail(this.signUpUser?.email);
   await this.api?.dispose(); // close the API request context.
 });
