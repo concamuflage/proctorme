@@ -118,6 +118,25 @@ function isAtLeastAge(dateOfBirth: string, age: number) {
 }
 
 /**
+ * Resolves a custom value to its canonical listed option when one already exists.
+ *
+ * @param customValue - User-entered custom value, for example `" boston "`.
+ * @param listedOptions - Available dropdown values, for example `["Boston", "Cambridge", "Other"]`.
+ * @returns The canonical listed value, for example `"Boston"`, or the trimmed custom value when it is genuinely new.
+ */
+function resolveCustomOption(customValue: string, listedOptions: string[]) {
+  const trimmedCustomValue = customValue.trim();
+  const normalizedCustomValue = trimmedCustomValue.toLocaleLowerCase();
+  if (!normalizedCustomValue) return "";
+
+  // Silently use the canonical option instead of asking the applicant to reselect it.
+  // Example: custom `" boston "` resolves to listed `"Boston"`, while `"New City"` remains `"New City"`.
+  return listedOptions.find((option) => (
+    option !== "Other" && option.trim().toLocaleLowerCase() === normalizedCustomValue
+  )) ?? trimmedCustomValue;
+}
+
+/**
  * Validates and uploads one proctor application file through a multipart API route.
  *
  * @param options - Upload configuration, for example a government ID file sent to `/api/account/proctor-application/government-id-upload`.
@@ -788,7 +807,7 @@ export function useProctorApplicationForm() {
    * @returns An error string, for example `Send and verify each provided school email before continuing.`, or null when valid.
    */
   const validateActiveStep = () => {
-    const resolvedCity = city === "Other" ? customCity.trim() : city;
+    const resolvedCity = city === "Other" ? resolveCustomOption(customCity, cityOptions) : city;
     const minHours = Number(minimumHours);
     const maxHours = Number(maximumHours);
 
@@ -822,6 +841,11 @@ export function useProctorApplicationForm() {
         const school = item.school === "Other" ? item.customSchool.trim() : item.school;
         const major = item.major === "Other" ? item.customMajor.trim() : item.major;
         if (!item.degree || !school || !major) return "Degree, school, and major are required for each education entry.";
+        // Month inputs use sortable `YYYY-MM` values, so lexical order matches chronological order.
+        // Example: `2026-07` followed by `2026-01` is invalid, while equal months are allowed.
+        if (item.startMonth && item.endMonth && item.startMonth > item.endMonth) {
+          return "Education start date cannot be later than the end date.";
+        }
         if (!item.diplomaUrl) return "A diploma upload is required for each education entry.";
         if (!item.educationVerificationAuthorized) return "Check the education verification authorization box for each education entry before continuing.";
         // Optional school email must still be a real education address when provided.
@@ -846,11 +870,13 @@ export function useProctorApplicationForm() {
    * @returns The API payload, for example `education: [{ degree: "Bachelor's Degree", school: "Boston University", major: "Computer Science", diplomaUrl: "gcs://bucket/path/diploma.pdf" }]`.
    */
   const buildApplicationPayload = () => {
-    const resolvedCity = city === "Other" ? customCity.trim() : city;
+    // Existing options typed through an Other field are submitted with their canonical listed value.
+    // Example: `city="Other"` and `customCity=" boston "` produces `city="Boston"` in the API payload.
+    const resolvedCity = city === "Other" ? resolveCustomOption(customCity, cityOptions) : city;
     const resolvedEducation = education.map((item) => ({
       degree: item.degree,
-      school: item.school === "Other" ? item.customSchool.trim() : item.school,
-      major: item.major === "Other" ? item.customMajor.trim() : item.major,
+      school: item.school === "Other" ? resolveCustomOption(item.customSchool, schoolOptions) : item.school,
+      major: item.major === "Other" ? resolveCustomOption(item.customMajor, majorOptions) : item.major,
       startMonth: item.startMonth,
       endMonth: item.endMonth,
       diplomaUrl: item.diplomaUrl,
