@@ -20,13 +20,12 @@ type ProctorCardProps = {
 };
 
 /**
- * Runs the profile image src logic for this module.
+ * Converts a private GCS profile-image URI into the public profile-image API URL.
  *
- * @param url - Input used by profile image src.
- *
- * @returns The result used by the surrounding flow.
+ * @param url - Stored image location, for example `gcs://bucket/proctor-applications/206/profile-images/headshot.png`.
+ * @returns An API URL for GCS images, or the unchanged URL for values such as `/uploads/headshot.png`.
  */
-function profileImageSrc(url: string) {
+function gcsProfileImageToApiUrl(url: string) {
   return url.startsWith("gcs://")
     ? `/api/proctor-files/profile-image?url=${encodeURIComponent(url)}`
     : url;
@@ -55,7 +54,7 @@ export default function ProctorCard({ proctor }: ProctorCardProps) {
     >
       <div className="flex aspect-[4/3] w-full items-center justify-center bg-zinc-100 p-6">
         {proctor.imageUrl ? (
-          <img src={profileImageSrc(proctor.imageUrl)} alt={proctor.name} className="h-full w-full object-contain" />
+          <img src={gcsProfileImageToApiUrl(proctor.imageUrl)} alt={proctor.name} className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-28 w-28 items-center justify-center rounded-full border border-zinc-300 bg-white text-3xl font-semibold text-zinc-900 shadow-sm transition group-hover:scale-[1.02]">
             {initials}

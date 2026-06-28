@@ -29,13 +29,12 @@ function isImageUrl(value: string) {
 }
 
 /**
- * Runs the profile image src logic for this module.
+ * Converts a private GCS profile-image URI into the public profile-image API URL.
  *
- * @param url - Input used by profile image src.
- *
- * @returns The result used by the surrounding flow.
+ * @param url - Stored image location, for example `gcs://bucket/proctor-applications/206/profile-images/headshot.png`.
+ * @returns An API URL for GCS images, or the unchanged URL for values such as `/uploads/headshot.png`.
  */
-function profileImageSrc(url: string) {
+function gcsProfileImageToApiUrl(url: string) {
   return url.startsWith("gcs://")
     ? `/api/proctor-files/profile-image?url=${encodeURIComponent(url)}`
     : url;
@@ -132,7 +131,7 @@ export default function ProctorGallery({ photos, alt, initialIndex = 0 }: Procto
               aria-label={`View proctor credential ${idx + 1}`}
             >
               {isImageUrl(src) ? (
-                <img src={profileImageSrc(src)} alt={`${alt} ${idx + 1}`} className="h-full w-full object-contain" />
+                <img src={gcsProfileImageToApiUrl(src)} alt={`${alt} ${idx + 1}`} className="h-full w-full object-contain" />
               ) : (
                 `Ref ${idx + 1}`
               )}
@@ -150,7 +149,7 @@ export default function ProctorGallery({ photos, alt, initialIndex = 0 }: Procto
         <div className="relative overflow-hidden rounded-lg border border-zinc-200 bg-white">
           <div className="flex aspect-square w-full flex-col items-center justify-center bg-zinc-100 p-8 text-center">
             {isImageUrl(activePhoto) ? (
-              <img src={profileImageSrc(activePhoto)} alt={alt} className="h-full w-full object-contain" />
+              <img src={gcsProfileImageToApiUrl(activePhoto)} alt={alt} className="h-full w-full object-contain" />
             ) : (
               <>
                 <div className="flex h-36 w-36 items-center justify-center rounded-full border border-zinc-300 bg-white text-5xl font-semibold text-zinc-900 shadow-sm">
