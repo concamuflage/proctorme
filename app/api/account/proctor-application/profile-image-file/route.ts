@@ -1,6 +1,4 @@
-import { NextResponse } from "next/server";
-import { getPrivateObjectReadUrl, isGcsUri, parseGcsUri } from "@/lib/server/gcsUploads";
-import { resolveSessionUserId } from "@/lib/server/sessionUser";
+import { redirectToProctorApplicationFile } from "@/lib/server/proctorApplicationFileRoute";
 
 export const runtime = "nodejs";
 
@@ -9,33 +7,12 @@ export const runtime = "nodejs";
  *
  * @param request - Input used by get.
  *
- * @returns A Next.js response for the request.
+ * @returns A redirect to a temporary GCS read URL, or a JSON error when the file is missing or unauthorized.
  */
 export async function GET(request: Request) {
-  const userId = await resolveSessionUserId();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const url = searchParams.get("url") || "";
-  if (url.startsWith("/uploads/")) {
-    return NextResponse.redirect(new URL(url, request.url));
-  }
-
-  if (!isGcsUri(url)) {
-    return NextResponse.json({ error: "Profile image not found." }, { status: 404 });
-  }
-
-  const parsed = parseGcsUri(url);
-  if (!parsed.objectName.startsWith(`proctor-applications/${userId}/profile-images/`)) {
-    return NextResponse.json({ error: "Profile image not found." }, { status: 404 });
-  }
-
-  const signedUrl = await getPrivateObjectReadUrl(url);
-  if (!signedUrl) {
-    return NextResponse.json({ error: "Profile image not found." }, { status: 404 });
-  }
-
-  return NextResponse.redirect(signedUrl);
+  return redirectToProctorApplicationFile(request, {
+    allowLegacyUploads: true,
+    folder: "profile-images",
+    notFoundError: "Profile image not found.",
+  });
 }
